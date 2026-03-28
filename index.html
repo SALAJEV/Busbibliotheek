@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content=Busbibliotheek voor bussen van De Lijn: zoek een voertuig en volg het live.">
+<meta name="description" content="Busbibliotheek voor bussen van De Lijn: zoek een voertuig en volg het live.">
 <meta name="theme-color" content="#f4f7fb">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Busbibliotheek">
@@ -520,6 +521,7 @@ function isIosInstallable() {
 
 function loadSettings() {
   try {
+    if (!window.localStorage) return;
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (!raw) return;
     const parsed = JSON.parse(raw);
@@ -531,7 +533,12 @@ function loadSettings() {
 }
 
 function saveSettings() {
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  try {
+    if (!window.localStorage) return;
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  } catch (e) {
+    console.warn("Settings opslaan mislukt", e);
+  }
 }
 
 function applyTheme(theme) {
@@ -687,15 +694,25 @@ function hideFunnyModal() {
 
 function loadFavorites() {
   try {
+    if (!window.localStorage) {
+      favorites = [];
+      return;
+    }
     favorites = JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]");
     if (!Array.isArray(favorites)) favorites = [];
   } catch (e) {
+    console.warn("Favorites laden mislukt", e);
     favorites = [];
   }
 }
 
 function saveFavorites() {
-  localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+  try {
+    if (!window.localStorage) return;
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+  } catch (e) {
+    console.warn("Favorites opslaan mislukt", e);
+  }
 }
 
 function renderFavorites() {
@@ -1098,7 +1115,7 @@ function buildSuggestionLabel(vehicle) {
 // Custom bus pin as DivIcon so we can rotate the image based on bearing
 const busIcon = L.divIcon({
   className: 'bus-div-icon',
-  html: `<img src="media/navicon.png" style="width:36px;height:36px;transform:rotate(0deg);display:block;transform-origin:18px 28px;transition: transform 0.25s linear;"/>`,
+  html: '<img src="media/navicon.png" style="width:36px;height:36px;transform:rotate(0deg);display:block;transform-origin:18px 28px;transition:transform 0.25s linear;" alt="Bus"/>',
   iconSize: [36,36],
   iconAnchor: [18,36]
 });
@@ -1741,13 +1758,19 @@ if ('serviceWorker' in navigator) {
     .catch(err => console.error('Service Worker registratie mislukt:', err));
 }
 
-if (prefersDarkScheme?.addEventListener) {
-  prefersDarkScheme.addEventListener("change", () => {
-    if (settings.theme === "auto") updateSystemUiThemeColor();
+// Dark scheme preference listener
+const prefersColorScheme = window.matchMedia("(prefers-color-scheme: dark)");
+if (prefersColorScheme?.addEventListener) {
+  prefersColorScheme.addEventListener("change", () => {
+    if (window.settings && window.settings.theme === "auto") {
+      if (window.updateSystemUiThemeColor) window.updateSystemUiThemeColor();
+    }
   });
-} else if (prefersDarkScheme?.addListener) {
-  prefersDarkScheme.addListener(() => {
-    if (settings.theme === "auto") updateSystemUiThemeColor();
+} else if (prefersColorScheme?.addListener) {
+  prefersColorScheme.addListener(() => {
+    if (window.settings && window.settings.theme === "auto") {
+      if (window.updateSystemUiThemeColor) window.updateSystemUiThemeColor();
+    }
   });
 }
 </script>
