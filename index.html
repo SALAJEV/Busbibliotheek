@@ -1577,31 +1577,6 @@ async function updateRealtime(id){
       return;
     }
 
-    // DEBUG LOGGING VOOR VOERTUIG 2159
-    if (normalizedRequestedId === "2159") {
-      console.group("🚌 DEBUG Voertuig 2159 - updateRealtime()");
-      console.log("1. Gevonden GPS Entity:", gpsEntity);
-      console.log("2. GPS Position:", gps.vehicle?.position);
-      console.log("3. GPS Trip/Vehicle Descriptor:", {
-        tripId: gps.vehicle?.trip?.tripId || gps.vehicle?.trip?.trip_id,
-        routeId: gps.vehicle?.trip?.routeId || gps.vehicle?.trip?.route_id,
-        headsign: gps.vehicle?.trip?.tripHeadsign || gps.vehicle?.trip?.trip_headsign
-      });
-      console.log("4. Alle entities count:", entities.length);
-      console.log("5. TripUpdate gevonden:", !!tripUpdate);
-      if (tripUpdate) {
-        console.log("   - TripUpdate descriptor:", extractTripDescriptor(tripUpdate));
-        console.log("   - Current stop updates:", tripUpdate?.stopTimeUpdate?.length || 0);
-      }
-      console.log("6. Descriptor na merge:", descriptor);
-      console.log("7. Trip data gevonden:", !!tripData);
-      console.log("8. Route data gevonden:", !!routeData);
-      console.log("9. Stops map size:", stopsById.size);
-      console.log("10. Current stop ID:", currentStopId);
-      console.log("11. Current stop found:", !!currentStop);
-      console.groupEnd();
-    }
-
     const v=gps.vehicle;
     const vehicleDescriptor = extractTripDescriptor(v);
     let tripUpdate = getTripUpdateForVehicle(entities, id, vehicleDescriptor.tripId);
@@ -1736,7 +1711,7 @@ async function updateRealtime(id){
       const el = marker.getElement && marker.getElement();
       if(el){
         const img = el.querySelector('img');
-        if(img) img.style.transform = `rotate(${bearing}deg)';
+        if(img) img.style.transform = `rotate(${bearing}deg)`;
       }
     } else {
       marker = L.marker([v.position.latitude,v.position.longitude], { icon: busIcon })
