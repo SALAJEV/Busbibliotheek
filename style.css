@@ -722,11 +722,14 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   font-family: "Space Grotesk", "Inter", "Segoe UI", sans-serif;
-  line-height: 1.45;
+  line-height: 1.5;
+  letter-spacing: 0.3px;
   color: var(--text);
-  background: linear-gradient(180deg, var(--bg-gradient-top), var(--bg-gradient-bottom));
+  background: linear-gradient(135deg, var(--bg-gradient-top), var(--bg-gradient-bottom));
   background-size: 100% 100%;
+  background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   animation: none;
 }
 
@@ -750,9 +753,9 @@ a {
 }
 
 .container {
-  width: min(1160px, calc(100% - 2.4rem));
+  width: min(1200px, calc(100% - 2.8rem));
   margin-inline: auto;
-  padding: 2.2rem 0 3rem;
+  padding: 2.4rem 0 3.2rem;
 }
 
 .header-intro {
@@ -761,10 +764,11 @@ a {
 
 h1 {
   font-family: "Manrope", "Space Grotesk", sans-serif;
-  font-size: clamp(2rem, 3.2vw, 2.9rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.08;
+  font-size: clamp(2.1rem, 3.4vw, 3.2rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  color: var(--text);
 }
 
 p {
@@ -772,16 +776,19 @@ p {
 }
 
 #appSubtitle {
-  margin-top: 0.38rem;
+  margin-top: 0.52rem;
   max-width: 56ch;
-  font-size: 0.98rem;
+  font-size: 1.01rem;
+  font-weight: 500;
+  line-height: 1.5;
 }
 
 .app-context-line {
-  margin-top: 0.34rem;
-  color: color-mix(in srgb, var(--text) 76%, var(--muted));
-  font-size: 0.92rem;
-  font-weight: 600;
+  margin-top: 0.56rem;
+  color: var(--muted);
+  font-size: 0.93rem;
+  font-weight: 500;
+  line-height: 1.45;
 }
 
 /* ===============================
@@ -793,8 +800,9 @@ p {
   justify-content: space-between;
   align-items: flex-start;
   flex-wrap: wrap;
-  gap: 1rem 1.25rem;
-  margin-bottom: 1.4rem;
+  gap: 1.2rem 1.6rem;
+  margin-bottom: 1.8rem;
+  padding: 0.2rem 0;
 }
 
 .header-actions {
@@ -808,19 +816,22 @@ p {
 
 .icon-btn {
   margin-top: 0;
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   padding: 0;
   border-radius: var(--icon-radius);
-  font-size: 1.16rem;
+  font-size: 1.22rem;
   line-height: 1;
   border: 1px solid var(--stroke-strong);
   background: var(--surface-strong);
   color: var(--text);
+  transition: all 0.2s ease;
 }
 
 .icon-btn:hover {
-  filter: brightness(1.05);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent-soft) 50%, var(--surface-strong));
+  transform: translateY(-1px);
 }
 
 .icon-btn.active {
@@ -897,14 +908,15 @@ select {
   background: var(--surface-strong);
   color: var(--text);
   font: inherit;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transition: all 0.2s ease;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 input {
-  padding: 0.92rem 1.02rem;
-  margin-bottom: 0.34rem;
+  padding: 0.98rem 1.12rem;
+  margin-bottom: 0.42rem;
   backdrop-filter: blur(var(--blur));
+  font-size: 1rem;
 }
 
 input::placeholder {
@@ -927,48 +939,50 @@ select {
 input:focus-visible,
 select:focus-visible {
   outline: none;
-  border-color: color-mix(in srgb, var(--accent) 80%, white 20%);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--surface-strong) 95%, var(--accent) 5%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    0 0 0 4px color-mix(in srgb, var(--accent-soft) 80%, transparent 20%);
+    inset 0 1px 2px rgba(0, 0, 0, 0.05),
+    0 0 0 3px color-mix(in srgb, var(--accent-soft) 100%, transparent);
 }
 
 button,
 .btn {
-  margin-top: 0.8rem;
-  min-height: 44px;
-  min-width: 44px;
-  padding: 0.78rem 1.26rem;
+  margin-top: 0.82rem;
+  min-height: 46px;
+  min-width: 46px;
+  padding: 0.82rem 1.42rem;
   border-radius: var(--button-radius);
-  border: 1px solid color-mix(in srgb, var(--accent) 48%, transparent);
+  border: 1px solid var(--accent);
   background: var(--accent);
-  color: #f8fafc;
+  color: #ffffff;
   font-family: "Manrope", "Space Grotesk", sans-serif;
-  font-size: 0.93rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.015em;
   text-decoration: none;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
+  gap: 0.48rem;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    var(--shadow-soft);
-  transition: box-shadow 0.18s ease, filter 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+    0 4px 12px color-mix(in srgb, var(--accent) 28%, transparent);
+  transition: all 0.22s ease;
 }
 
 button:hover,
 .btn:hover {
-  filter: brightness(1.05);
-  border-color: color-mix(in srgb, var(--accent) 60%, white 25%);
-  box-shadow: var(--shadow-soft);
+  transform: translateY(-1px);
+  box-shadow:
+    0 6px 16px color-mix(in srgb, var(--accent) 32%, transparent);
 }
 
 button:active,
 .btn:active {
-  filter: brightness(0.94);
+  transform: translateY(0px);
+  box-shadow:
+    0 2px 4px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 button:focus-visible,
@@ -1003,8 +1017,8 @@ button:disabled,
   display: flex;
   align-items: stretch;
   flex-wrap: nowrap;
-  gap: 0.56rem;
-  margin: 0.15rem 0 0.62rem;
+  gap: 0.68rem;
+  margin: 0.28rem 0 0.82rem;
 }
 
 .search-row input {
@@ -1015,20 +1029,22 @@ button:disabled,
 
 #searchBtn {
   margin-top: 0;
-  width: 46px;
-  min-width: 46px;
+  width: 50px;
+  min-width: 50px;
   padding: 0;
   border-radius: calc(var(--button-radius) + 2px);
-  background: linear-gradient(
-    140deg,
-    color-mix(in srgb, var(--accent) 86%, white 14%),
-    var(--accent)
-  );
-  border-color: color-mix(in srgb, var(--accent) 68%, white 20%);
+  background: var(--accent);
+  border: 1px solid var(--accent);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.34),
-    0 10px 20px color-mix(in srgb, var(--accent) 24%, transparent);
+    0 4px 12px color-mix(in srgb, var(--accent) 28%, transparent);
   flex: 0 0 auto;
+  transition: all 0.22s ease;
+}
+
+#searchBtn:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 6px 16px color-mix(in srgb, var(--accent) 32%, transparent);
 }
 
 .search-btn-icon {
@@ -1076,11 +1092,12 @@ button:disabled,
 }
 
 #suggestielijst li {
-  padding: 0.7rem 0.94rem;
+  padding: 0.78rem 1.02rem;
   cursor: pointer;
   background: transparent;
   color: var(--text);
-  transition: background-color 0.16s ease;
+  transition: all 0.18s ease;
+  font-weight: 500;
 }
 
 #suggestielijst li + li {
@@ -1088,7 +1105,8 @@ button:disabled,
 }
 
 #suggestielijst li:hover {
-  background: color-mix(in srgb, var(--accent-soft) 60%, white 25%);
+  background: color-mix(in srgb, var(--accent-soft) 80%, transparent);
+  padding-left: 1.18rem;
 }
 
 /* ===============================
@@ -1096,14 +1114,16 @@ button:disabled,
 ================================ */
 
 .stack-card {
-  margin-top: 1rem;
-  padding: 1rem 1.05rem;
+  margin-top: 1.2rem;
+  padding: 1.24rem 1.32rem;
   border-radius: var(--radius-lg);
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 98%, var(--accent-soft) 2%);
   border: 1px solid var(--stroke);
-  box-shadow: var(--shadow-soft);
+  box-shadow:
+    0 4px 16px color-mix(in srgb, var(--accent) 8%, transparent),
+    var(--shadow-soft);
   backdrop-filter: blur(var(--blur));
-  animation: riseIn 0.45s ease both;
+  animation: riseIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .stack-card h3 {
@@ -1132,19 +1152,24 @@ button:disabled,
 
 .chip {
   margin-top: 0;
-  min-height: 36px;
-  padding: 0.46rem 0.82rem;
+  min-height: 38px;
+  padding: 0.52rem 0.96rem;
   border-radius: 999px;
-  font-size: 0.84rem;
+  font-size: 0.87rem;
+  font-weight: 500;
   border: 1px solid var(--stroke-strong);
   background: var(--surface-strong);
   color: var(--text);
-  box-shadow: none;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--text) 8%, transparent);
+  transition: all 0.2s ease;
+  cursor: pointer;
 }
 
 .chip:hover {
-  background: color-mix(in srgb, var(--accent-soft) 80%, var(--surface-strong));
-  filter: brightness(1.03);
+  background: color-mix(in srgb, var(--accent) 15%, var(--surface-strong));
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 .chip:active {
@@ -1161,13 +1186,20 @@ button:disabled,
   border-radius: 14px;
   border: 1px solid var(--stroke-soft);
   background: var(--surface-alt);
-  padding: 0.58rem 0.64rem;
+  padding: 0.72rem 0.78rem;
+  transition: all 0.2s ease;
+}
+
+.settings-grid > div:focus-within {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent-soft) 30%, var(--surface-alt));
 }
 
 .settings-grid label {
   display: block;
-  margin-bottom: 0.28rem;
-  font-size: 0.84rem;
+  margin-bottom: 0.38rem;
+  font-size: 0.87rem;
+  font-weight: 500;
   color: var(--muted);
 }
 
@@ -1379,28 +1411,34 @@ body.funny-open {
 .card {
   display: flex;
   flex-direction: column;
-  min-height: 305px;
-  padding: 1.24rem;
+  min-height: 320px;
+  padding: 1.48rem 1.56rem;
   border-radius: var(--radius-lg);
   border: 1px solid var(--stroke);
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
+  background: color-mix(in srgb, var(--surface) 98%, var(--accent-soft) 2%);
+  box-shadow:
+    0 4px 20px color-mix(in srgb, var(--accent) 10%, transparent),
+    var(--shadow-card);
   backdrop-filter: blur(var(--blur)) saturate(140%);
   -webkit-backdrop-filter: blur(var(--blur)) saturate(140%);
-  transition: box-shadow 0.22s ease, border-color 0.22s ease;
+  transition: all 0.24s ease;
 }
 
 .card:hover {
-  box-shadow: var(--shadow-card);
-  border-color: color-mix(in srgb, var(--accent) 34%, var(--stroke));
+  box-shadow:
+    0 8px 32px color-mix(in srgb, var(--accent) 14%, transparent),
+    var(--shadow-card);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--stroke));
+  transform: translateY(-2px);
 }
 
 .card h2 {
-  margin-bottom: 0.56rem;
+  margin-bottom: 0.72rem;
   font-family: "Manrope", "Space Grotesk", sans-serif;
-  font-size: 1.08rem;
+  font-size: 1.12rem;
   font-weight: 700;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.01em;
+  color: var(--text);
 }
 
 table {
