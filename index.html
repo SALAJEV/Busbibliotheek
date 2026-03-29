@@ -91,6 +91,13 @@
 
 </div>
 
+<div id="pageLoadingOverlay" class="page-loading-overlay" hidden aria-hidden="true">
+  <div class="page-loading-shell">
+    <span class="page-loading-spinner" aria-hidden="true"></span>
+    <p id="pageLoadingText" class="page-loading-text">Gegevens worden geladen...</p>
+  </div>
+</div>
+
 <div id="settingsBackdrop" class="settings-backdrop"></div>
 <aside id="settingsPanel" class="settings-panel" aria-hidden="true" inert>
   <div class="settings-panel-header">
@@ -256,6 +263,8 @@ const disclaimerTextEl = document.getElementById("disclaimerText");
 const feedStatusEl = document.getElementById("feedStatus");
 const funnyModalEl = document.getElementById("funnyModal");
 const funnyModalCloseBtn = document.getElementById("funnyModalCloseBtn");
+const pageLoadingOverlayEl = document.getElementById("pageLoadingOverlay");
+const pageLoadingTextEl = document.getElementById("pageLoadingText");
 
 let voertuigen = [];
 let trips = [];
@@ -323,6 +332,53 @@ const VEHICLE_DISPLAY_FIELD_MAP = {
   operator: "Vervoersmaatschappij",
   notes: "Opmerkingen"
 };
+const VEHICLE_FIELD_TRANSLATION_FALLBACKS = {
+  voertuignummer: {
+    nl: "Voertuignummer",
+    fr: "Numero de vehicule",
+    en: "Vehicle number",
+    de: "Fahrzeugnummer",
+    pl: "Numer pojazdu",
+    es: "Numero de vehiculo",
+    ru: "Номер транспорта"
+  },
+  "gespot?": {
+    nl: "Gespot?",
+    fr: "Repere ?",
+    en: "Spotted?",
+    de: "Gesichtet?",
+    pl: "Zauwazony?",
+    es: "Visto?",
+    ru: "Замечен?"
+  },
+  "intern nummer": {
+    nl: "Intern nummer",
+    fr: "Numero interne",
+    en: "Internal number",
+    de: "Interne Nummer",
+    pl: "Numer wewnetrzny",
+    es: "Numero interno",
+    ru: "Внутренний номер"
+  },
+  vin: {
+    nl: "VIN",
+    fr: "VIN",
+    en: "VIN",
+    de: "FIN",
+    pl: "VIN",
+    es: "VIN",
+    ru: "VIN"
+  },
+  opmerkingen: {
+    nl: "Opmerkingen",
+    fr: "Remarques",
+    en: "Notes",
+    de: "Notizen",
+    pl: "Uwagi",
+    es: "Notas",
+    ru: "Заметки"
+  }
+};
 
 function normalizeUpdateIntervalMs(intervalMs) {
   const value = Number(intervalMs);
@@ -377,6 +433,9 @@ function normalizeFieldKey(key) {
 function translateVehicleFieldLabel(key) {
   const normalized = normalizeFieldKey(key);
   return (
+    VEHICLE_FIELD_TRANSLATION_FALLBACKS[normalized]?.[settings.language] ||
+    VEHICLE_FIELD_TRANSLATION_FALLBACKS[normalized]?.[FALLBACK_LANG] ||
+    VEHICLE_FIELD_TRANSLATION_FALLBACKS[normalized]?.[DEFAULT_LANG] ||
     vehicleFieldLabels[settings.language]?.[normalized] ||
     vehicleFieldLabels[FALLBACK_LANG]?.[normalized] ||
     vehicleFieldLabels[DEFAULT_LANG]?.[normalized] ||
@@ -417,6 +476,14 @@ function updateVehiclePhotoTexts() {
   const captionTemplate = translateTemplate("photoCaption", "Voertuig {id}");
   vehiclePhotoImgEl.alt = fillTemplate(altTemplate, currentPhotoVehicleId);
   vehiclePhotoCaptionEl.textContent = fillTemplate(captionTemplate, currentPhotoVehicleId);
+}
+
+function setPageLoading(active) {
+  if (!pageLoadingOverlayEl || !pageLoadingTextEl) return;
+  pageLoadingTextEl.textContent = t("loading");
+  pageLoadingOverlayEl.hidden = !active;
+  pageLoadingOverlayEl.setAttribute("aria-hidden", String(!active));
+  document.body.classList.toggle("page-loading", !!active);
 }
 
 function hideVehiclePhotoCard() {
@@ -623,6 +690,7 @@ function applyTranslations() {
   updateVehiclePhotoTexts();
   disclaimerTitleEl.textContent = t("disclaimerTitle");
   disclaimerTextEl.textContent = t("disclaimerText");
+  if (pageLoadingTextEl) pageLoadingTextEl.textContent = t("loading");
   lastUpdateEl.textContent = `${t("lastUpdate")}: -`;
   lastUpdateEl.hidden = true;
   if (!currentVehicleId) {
@@ -633,6 +701,12 @@ function applyTranslations() {
   updateFavoriteButtonState();
   if (realtimePausedByInactivity && currentVehicleId) {
     realtimeEl.textContent = t("idlePaused");
+  }
+  if (currentVehicleId) {
+    toonVasteData(currentVehicleId);
+    if (!realtimePausedByInactivity) {
+      void updateRealtime(currentVehicleId);
+    }
   }
 }
 
@@ -743,10 +817,15 @@ function renderFavorites() {
     return;
   }
   favorites.forEach((id) => {
+    const bus = findBusById(id);
+    const vehicleType = normalize(bus?.Type);
     const chip = document.createElement("button");
     chip.type = "button";
     chip.className = "chip";
-    chip.textContent = id;
+    chip.innerHTML = `
+      <span class="chip-title">${escapeHtml(id)}</span>
+      ${vehicleType ? `<span class="chip-subtitle">${escapeHtml(vehicleType)}</span>` : ""}
+    `;
     chip.addEventListener("click", () => {
       voertuigInput.value = id;
       setFavoritesPanel(false);
@@ -854,6 +933,7 @@ function initAppPreferences() {
   applyTranslations();
   setSettingsPanel(false);
   setFavoritesPanel(false);
+  hideVehiclePhotoCard();
   renderFavorites();
   loadFeedStatus();
   updateFavoriteButtonState();
@@ -1172,6 +1252,7 @@ async function laadVoertuigen() {
   voertuigen = regels.slice(1)
     .filter((regel) => regel.trim())
     .map((regel) => mapVehicleRecord(headers, parseCSVLine(regel, ";")));
+  renderFavorites();
 }
 
 async function laadTrips() {
@@ -1277,15 +1358,18 @@ async function zoekAlles() {
   markUserInteraction();
   const query = voertuigInput.value.trim();
   if(!query) return;
+  setPageLoading(true);
   setFavoritesPanel(false);
   if (query.toLowerCase() === "best") {
     suggestieLijst.innerHTML = "";
     showFunnyModal();
+    setPageLoading(false);
     return;
   }
   if (query.toLowerCase() === "bus beih") {
     suggestieLijst.innerHTML = "";
     window.open("https://salajev.github.io/bus.be-fcl/index.html", "_blank", "noopener,noreferrer");
+    setPageLoading(false);
     return;
   }
   if (voertuigen.length === 0) await laadVoertuigen();
@@ -1326,6 +1410,7 @@ async function zoekAlles() {
       clearInterval(refresh);
       refresh = null;
     }
+    setPageLoading(false);
     return;
   }
 
@@ -1399,6 +1484,7 @@ function toonVasteData(id){
   for(const [k,v] of Object.entries(bus)){
     if(k==="Vervoersmaatschappij"||k==="Voertuignummer"||k==="Type"||k===vehicleHideVinFieldKey) continue;
     if (k === "VIN" && shouldHideVin) continue;
+    if (k === "Gespot?" || k === "Opmerkingen") continue;
 
     let waarde = v;
     const key = k.toLowerCase();
@@ -1777,6 +1863,8 @@ async function updateRealtime(id){
     mapEl.classList.add("hidden");
     lastUpdateEl.textContent = `${t("lastUpdate")}: -`;
     lastUpdateEl.hidden = true;
+  } finally {
+    setPageLoading(false);
   }
 }
 </script>
