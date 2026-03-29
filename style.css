@@ -731,7 +731,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   animation: none;
-  padding: max(0.7rem, env(safe-area-inset-top)) 0 max(0.9rem, env(safe-area-inset-bottom));
+  padding: 0;
 }
 
 body::before {
@@ -754,22 +754,15 @@ a {
 }
 
 .container {
-  width: min(1100px, calc(100% - 1.5rem));
+  width: 100%;
   margin-inline: auto;
-  min-height: calc(100dvh - 1.6rem);
-  padding: 1rem 1rem 1.4rem;
-  border-radius: 32px;
-  border: 1px solid color-mix(in srgb, var(--stroke-strong) 88%, white 12%);
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 94%, white 6%), color-mix(in srgb, var(--surface) 92%, transparent)),
-    radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 11%, transparent), transparent 38%),
-    radial-gradient(circle at top right, color-mix(in srgb, var(--accent-2) 10%, transparent), transparent 34%);
-  box-shadow:
-    0 18px 48px rgba(15, 23, 42, 0.08),
-    0 42px 110px color-mix(in srgb, var(--accent) 12%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.62);
-  backdrop-filter: blur(calc(var(--blur) - 2px)) saturate(112%);
-  -webkit-backdrop-filter: blur(calc(var(--blur) - 2px)) saturate(112%);
+  max-width: 1280px;
+  min-height: 100dvh;
+  padding:
+    max(0.9rem, env(safe-area-inset-top))
+    clamp(0.75rem, 2vw, 1.4rem)
+    max(1rem, env(safe-area-inset-bottom))
+    clamp(0.75rem, 2vw, 1.4rem);
 }
 
 .header-intro {
@@ -820,17 +813,17 @@ p {
   align-items: flex-start;
   flex-wrap: wrap;
   gap: 1.2rem 1.6rem;
-  margin-bottom: 1rem;
-  padding: 0.3rem 0.2rem 0.95rem;
+  margin-bottom: 1.15rem;
+  padding: 0.5rem 0 0.9rem;
   position: sticky;
   top: 0;
   z-index: 40;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 95%, transparent), color-mix(in srgb, var(--surface-strong) 78%, transparent)),
-    radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 8%, transparent), transparent 55%);
-  backdrop-filter: blur(calc(var(--blur) + 2px));
-  -webkit-backdrop-filter: blur(calc(var(--blur) + 2px));
-  border-bottom: 1px solid color-mix(in srgb, var(--stroke-soft) 88%, transparent);
+    linear-gradient(180deg, color-mix(in srgb, var(--bg) 90%, transparent), color-mix(in srgb, var(--bg) 72%, transparent)),
+    radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 6%, transparent), transparent 58%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid color-mix(in srgb, var(--stroke-soft) 80%, transparent);
 }
 
 .header-actions {
@@ -904,11 +897,11 @@ p {
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 96%, white 4%), color-mix(in srgb, var(--surface) 92%, transparent)),
     radial-gradient(circle at top right, color-mix(in srgb, var(--accent) 8%, transparent), transparent 42%);
-  box-shadow: var(--shadow-strong);
+  box-shadow: 0 18px 42px color-mix(in srgb, var(--text) 10%, transparent);
   backdrop-filter: blur(calc(var(--blur) - 1px)) saturate(112%);
   -webkit-backdrop-filter: blur(calc(var(--blur) - 1px)) saturate(112%);
   transform-origin: top right;
-  animation: panelDropIn 0.2s ease both;
+  animation: panelDropIn 0.16s ease both;
 }
 
 .favorites-panel h3 {
@@ -1058,9 +1051,6 @@ button:disabled,
   gap: 0;
   margin: 0.2rem 0 0.9rem;
   padding: 0.28rem;
-  position: sticky;
-  top: 6.8rem;
-  z-index: 35;
   border-radius: 26px;
   border: 1px solid color-mix(in srgb, var(--stroke-strong) 80%, transparent);
   background:
@@ -1069,8 +1059,8 @@ button:disabled,
   box-shadow:
     0 14px 36px color-mix(in srgb, var(--text) 7%, transparent),
     inset 0 1px 0 rgba(255, 255, 255, 0.55);
-  backdrop-filter: blur(calc(var(--blur) + 2px));
-  -webkit-backdrop-filter: blur(calc(var(--blur) + 2px));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .search-row input {
@@ -1109,9 +1099,14 @@ button:disabled,
 }
 
 .search-btn-icon {
-  font-size: 1.28rem;
-  line-height: 1;
-  transform: translateY(0.5px) scale(1.05);
+  width: 20px;
+  height: 20px;
+  display: block;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
 }
 
 :root[data-theme="dark"][data-color-theme="classic"] #searchBtn {
@@ -1178,13 +1173,13 @@ button:disabled,
   margin-top: 1.2rem;
   padding: 1.24rem 1.32rem;
   border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--surface) 98%, var(--accent-soft) 2%);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 97%, white 3%), color-mix(in srgb, var(--surface) 92%, transparent)),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--accent) 7%, transparent), transparent 36%);
   border: 1px solid var(--stroke);
   box-shadow:
-    0 4px 16px color-mix(in srgb, var(--accent) 8%, transparent),
-    var(--shadow-soft);
-  backdrop-filter: blur(var(--blur));
-  animation: riseIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    0 8px 24px color-mix(in srgb, var(--text) 6%, transparent);
+  backdrop-filter: blur(10px);
 }
 
 .stack-card h3 {
@@ -1320,10 +1315,12 @@ button:disabled,
   padding: 0.95rem 1rem 1.05rem;
   border-radius: var(--radius-lg);
   border: 1px solid var(--stroke-strong);
-  background: var(--surface-strong);
-  box-shadow: var(--shadow-strong);
-  backdrop-filter: blur(calc(var(--blur) + 1px)) saturate(114%);
-  -webkit-backdrop-filter: blur(calc(var(--blur) + 1px)) saturate(114%);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 97%, white 3%), color-mix(in srgb, var(--surface) 92%, transparent)),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--accent) 8%, transparent), transparent 38%);
+  box-shadow: 0 24px 50px color-mix(in srgb, var(--text) 12%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   opacity: 0;
   transform: translateY(-10px) scale(0.96);
   pointer-events: none;
@@ -1403,9 +1400,9 @@ body.settings-open .settings-panel {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent 38%),
     var(--surface-strong);
-  box-shadow: var(--shadow-strong);
+  box-shadow: 0 20px 48px color-mix(in srgb, var(--text) 12%, transparent);
   padding: 1rem 1rem 1.1rem;
-  animation: riseIn 0.24s ease both;
+  animation: panelDropIn 0.16s ease both;
 }
 
 .funny-modal-card h3 {
@@ -1436,19 +1433,11 @@ body.funny-open {
 
 .results-wrap.show {
   display: block;
-  animation: riseIn 0.5s ease 0.08s both;
+  animation: riseIn 0.22s ease both;
 }
 
 .results-wrap.show .card {
-  animation: cardReveal 0.4s ease both;
-}
-
-.results-wrap.show .card:nth-child(2) {
-  animation-delay: 0.08s;
-}
-
-.results-wrap.show .card:nth-child(3) {
-  animation-delay: 0.16s;
+  animation: none;
 }
 
 .grid {
@@ -1458,13 +1447,13 @@ body.funny-open {
   gap: 1.35rem;
   margin-top: 0;
   opacity: 0;
-  transform: translateY(22px) scale(0.99);
-  transition: opacity 0.44s ease, transform 0.44s ease;
+  transform: translateY(10px);
+  transition: opacity 0.22s ease, transform 0.22s ease;
 }
 
 .grid.show {
   opacity: 1;
-  transform: translateY(0) scale(1);
+  transform: translateY(0);
 }
 
 .close-btn {
@@ -1501,20 +1490,17 @@ body.funny-open {
     radial-gradient(circle at top right, color-mix(in srgb, var(--accent) 9%, transparent), transparent 34%),
     radial-gradient(circle at bottom left, color-mix(in srgb, var(--accent-2) 7%, transparent), transparent 30%);
   box-shadow:
-    0 12px 34px color-mix(in srgb, var(--accent) 10%, transparent),
-    var(--shadow-card);
-  backdrop-filter: blur(var(--blur)) saturate(140%);
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(140%);
-  transition: all 0.24s ease;
+    0 10px 30px color-mix(in srgb, var(--text) 7%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
   isolation: isolate;
 }
 
 .card:hover {
   box-shadow:
-    0 16px 42px color-mix(in srgb, var(--accent) 14%, transparent),
-    var(--shadow-card);
-  border-color: color-mix(in srgb, var(--accent) 40%, var(--stroke));
-  transform: translateY(-2px);
+    0 14px 34px color-mix(in srgb, var(--text) 8%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--stroke));
 }
 
 .card h2 {
@@ -1767,7 +1753,7 @@ tr + tr td {
     radial-gradient(circle at top, color-mix(in srgb, var(--accent) 16%, transparent), transparent 46%);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  animation: pageLoadingFade 0.22s ease;
+  animation: pageLoadingFade 0.16s ease;
 }
 
 .page-loading-overlay[hidden] {
@@ -2045,7 +2031,7 @@ footer {
   color: var(--muted);
   font-size: 0.9rem;
   animation: none;
-  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--surface-strong) 36%, transparent));
+  background: transparent;
 }
 
 footer h3 {
@@ -2092,7 +2078,7 @@ footer h3 {
 @keyframes riseIn {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -2103,40 +2089,11 @@ footer h3 {
 @keyframes panelDropIn {
   from {
     opacity: 0;
-    transform: translateY(-8px) scale(0.96);
+    transform: translateY(-6px) scale(0.985);
   }
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes cardReveal {
-  from {
-    opacity: 0;
-    transform: translateY(12px) scale(0.985);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes bgShift {
-  0% {
-    background-position: 0% 0%, 100% 0%, 50% 100%, 0% 0%;
-  }
-  100% {
-    background-position: 6% 2%, 94% 4%, 48% 96%, 0% 0%;
-  }
-}
-
-@keyframes frostDrift {
-  0% {
-    transform: translate3d(0, 0, 0);
-  }
-  100% {
-    transform: translate3d(-1.2%, 1%, 0);
   }
 }
 
@@ -2146,9 +2103,9 @@ footer h3 {
 
 @media (max-width: 980px) {
   .container {
-    width: min(1160px, calc(100% - 2rem));
-    min-height: calc(100dvh - 1rem);
-    padding-top: 0.9rem;
+    width: 100%;
+    min-height: 100dvh;
+    padding-top: max(0.8rem, env(safe-area-inset-top));
   }
 
   .grid {
@@ -2162,16 +2119,20 @@ footer h3 {
 
 @media (max-width: 700px) {
   .container {
-    width: min(1160px, calc(100% - 0.8rem));
-    min-height: calc(100dvh - 0.45rem);
-    padding: 0.72rem 0.72rem 1.2rem;
-    border-radius: 26px;
+    width: 100%;
+    min-height: 100dvh;
+    padding:
+      max(0.7rem, env(safe-area-inset-top))
+      0.7rem
+      max(1rem, env(safe-area-inset-bottom))
+      0.7rem;
+    border-radius: 0;
   }
 
   .header-bar {
     align-items: flex-start;
     margin-bottom: 1.05rem;
-    top: -0.02rem;
+    top: 0;
     padding-bottom: 0.78rem;
   }
 
@@ -2196,7 +2157,6 @@ footer h3 {
   }
 
   .search-row {
-    top: 6.15rem;
     border-radius: 20px;
     padding: 0.24rem;
   }
@@ -2250,9 +2210,9 @@ footer h3 {
 
 @media (max-width: 440px) {
   .container {
-    width: min(1160px, calc(100% - 0.45rem));
+    width: 100%;
     padding-inline: 0.58rem;
-    border-radius: 22px;
+    border-radius: 0;
   }
 
   .stack-card,
