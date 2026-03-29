@@ -731,6 +731,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   animation: none;
+  padding: max(0.7rem, env(safe-area-inset-top)) 0 max(0.9rem, env(safe-area-inset-bottom));
 }
 
 body::before {
@@ -753,22 +754,40 @@ a {
 }
 
 .container {
-  width: min(1200px, calc(100% - 2.8rem));
+  width: min(1100px, calc(100% - 1.5rem));
   margin-inline: auto;
-  padding: 2.4rem 0 3.2rem;
+  min-height: calc(100dvh - 1.6rem);
+  padding: 1rem 1rem 1.4rem;
+  border-radius: 32px;
+  border: 1px solid color-mix(in srgb, var(--stroke-strong) 88%, white 12%);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 94%, white 6%), color-mix(in srgb, var(--surface) 92%, transparent)),
+    radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 11%, transparent), transparent 38%),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--accent-2) 10%, transparent), transparent 34%);
+  box-shadow:
+    0 18px 48px rgba(15, 23, 42, 0.08),
+    0 42px 110px color-mix(in srgb, var(--accent) 12%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.62);
+  backdrop-filter: blur(calc(var(--blur) - 2px)) saturate(112%);
+  -webkit-backdrop-filter: blur(calc(var(--blur) - 2px)) saturate(112%);
 }
 
 .header-intro {
   max-width: min(64ch, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
 }
 
 h1 {
   font-family: "Manrope", "Space Grotesk", sans-serif;
   font-size: clamp(2.1rem, 3.4vw, 3.2rem);
   font-weight: 800;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.05em;
   line-height: 1.05;
   color: var(--text);
+  text-wrap: balance;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.24);
 }
 
 p {
@@ -778,17 +797,17 @@ p {
 #appSubtitle {
   margin-top: 0.52rem;
   max-width: 56ch;
-  font-size: 1.01rem;
-  font-weight: 500;
-  line-height: 1.5;
+  font-size: 1.02rem;
+  font-weight: 600;
+  line-height: 1.55;
 }
 
 .app-context-line {
   margin-top: 0.56rem;
-  color: var(--muted);
-  font-size: 0.93rem;
-  font-weight: 500;
-  line-height: 1.45;
+  color: color-mix(in srgb, var(--muted) 92%, var(--text) 8%);
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.5;
 }
 
 /* ===============================
@@ -801,8 +820,17 @@ p {
   align-items: flex-start;
   flex-wrap: wrap;
   gap: 1.2rem 1.6rem;
-  margin-bottom: 1.8rem;
-  padding: 0.2rem 0;
+  margin-bottom: 1rem;
+  padding: 0.3rem 0.2rem 0.95rem;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 95%, transparent), color-mix(in srgb, var(--surface-strong) 78%, transparent)),
+    radial-gradient(circle at top left, color-mix(in srgb, var(--accent) 8%, transparent), transparent 55%);
+  backdrop-filter: blur(calc(var(--blur) + 2px));
+  -webkit-backdrop-filter: blur(calc(var(--blur) + 2px));
+  border-bottom: 1px solid color-mix(in srgb, var(--stroke-soft) 88%, transparent);
 }
 
 .header-actions {
@@ -823,9 +851,12 @@ p {
   font-size: 1.22rem;
   line-height: 1;
   border: 1px solid var(--stroke-strong);
-  background: var(--surface-strong);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 96%, white 4%), color-mix(in srgb, var(--surface-alt) 92%, transparent));
   color: var(--text);
   transition: all 0.2s ease;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 8px 18px color-mix(in srgb, var(--text) 7%, transparent);
 }
 
 .icon-btn:hover {
@@ -870,7 +901,9 @@ p {
   padding: 0.9rem 0.95rem 0.95rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--stroke-strong);
-  background: var(--surface-strong);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 96%, white 4%), color-mix(in srgb, var(--surface) 92%, transparent)),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--accent) 8%, transparent), transparent 42%);
   box-shadow: var(--shadow-strong);
   backdrop-filter: blur(calc(var(--blur) - 1px)) saturate(112%);
   -webkit-backdrop-filter: blur(calc(var(--blur) - 1px)) saturate(112%);
@@ -957,7 +990,7 @@ button,
   padding: 0.82rem 1.42rem;
   border-radius: var(--button-radius);
   border: 1px solid var(--accent);
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent-2) 78%, white 22%));
   color: #ffffff;
   font-family: "Manrope", "Space Grotesk", sans-serif;
   font-size: 0.95rem;
@@ -970,7 +1003,8 @@ button,
   justify-content: center;
   gap: 0.48rem;
   box-shadow:
-    0 4px 12px color-mix(in srgb, var(--accent) 28%, transparent);
+    0 10px 24px color-mix(in srgb, var(--accent) 26%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
   transition: all 0.22s ease;
 }
 
@@ -978,7 +1012,8 @@ button:hover,
 .btn:hover {
   transform: translateY(-1px);
   box-shadow:
-    0 6px 16px color-mix(in srgb, var(--accent) 32%, transparent);
+    0 14px 28px color-mix(in srgb, var(--accent) 30%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32);
 }
 
 button:active,
@@ -1021,25 +1056,44 @@ button:disabled,
   align-items: stretch;
   flex-wrap: nowrap;
   gap: 0.68rem;
-  margin: 0.28rem 0 0.82rem;
+  margin: 0.2rem 0 0.9rem;
+  padding: 0.4rem;
+  position: sticky;
+  top: 6.8rem;
+  z-index: 35;
+  border-radius: 24px;
+  border: 1px solid color-mix(in srgb, var(--stroke-strong) 80%, transparent);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--surface-strong) 96%, white 4%), color-mix(in srgb, var(--surface-alt) 90%, transparent)),
+    radial-gradient(circle at left center, color-mix(in srgb, var(--accent) 10%, transparent), transparent 30%);
+  box-shadow:
+    0 14px 36px color-mix(in srgb, var(--text) 7%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(calc(var(--blur) + 2px));
+  -webkit-backdrop-filter: blur(calc(var(--blur) + 2px));
 }
 
 .search-row input {
   margin-bottom: 0;
   flex: 1 1 auto;
   min-width: 0;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface) 78%, white 22%);
+  border-color: color-mix(in srgb, var(--stroke) 78%, white 22%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.38);
 }
 
 #searchBtn {
   margin-top: 0;
-  width: 50px;
-  min-width: 50px;
+  width: 54px;
+  min-width: 54px;
   padding: 0;
-  border-radius: calc(var(--button-radius) + 2px);
-  background: var(--accent);
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent-2) 76%, white 24%));
   border: 1px solid var(--accent);
   box-shadow:
-    0 4px 12px color-mix(in srgb, var(--accent) 28%, transparent);
+    0 10px 22px color-mix(in srgb, var(--accent) 28%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
   flex: 0 0 auto;
   transition: all 0.22s ease;
 }
@@ -1053,7 +1107,7 @@ button:disabled,
 .search-btn-icon {
   font-size: 1.28rem;
   line-height: 1;
-  transform: translateY(0.5px);
+  transform: translateY(0.5px) scale(1.05);
 }
 
 :root[data-theme="dark"][data-color-theme="classic"] #searchBtn {
@@ -1373,6 +1427,7 @@ body.funny-open {
   display: none;
   position: relative;
   margin-top: 1.9rem;
+  padding-top: 0.25rem;
 }
 
 .results-wrap.show {
@@ -1437,18 +1492,22 @@ body.funny-open {
   padding: 1.48rem 1.56rem;
   border-radius: var(--radius-lg);
   border: 1px solid var(--stroke);
-  background: color-mix(in srgb, var(--surface) 98%, var(--accent-soft) 2%);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 96%, white 4%), color-mix(in srgb, var(--surface) 92%, transparent)),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--accent) 9%, transparent), transparent 34%),
+    radial-gradient(circle at bottom left, color-mix(in srgb, var(--accent-2) 7%, transparent), transparent 30%);
   box-shadow:
-    0 4px 20px color-mix(in srgb, var(--accent) 10%, transparent),
+    0 12px 34px color-mix(in srgb, var(--accent) 10%, transparent),
     var(--shadow-card);
   backdrop-filter: blur(var(--blur)) saturate(140%);
   -webkit-backdrop-filter: blur(var(--blur)) saturate(140%);
   transition: all 0.24s ease;
+  isolation: isolate;
 }
 
 .card:hover {
   box-shadow:
-    0 8px 32px color-mix(in srgb, var(--accent) 14%, transparent),
+    0 16px 42px color-mix(in srgb, var(--accent) 14%, transparent),
     var(--shadow-card);
   border-color: color-mix(in srgb, var(--accent) 40%, var(--stroke));
   transform: translateY(-2px);
@@ -1457,10 +1516,12 @@ body.funny-open {
 .card h2 {
   margin-bottom: 0.72rem;
   font-family: "Manrope", "Space Grotesk", sans-serif;
-  font-size: 1.12rem;
+  font-size: 1.08rem;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
   color: var(--text);
+  opacity: 0.88;
 }
 
 table {
@@ -1478,14 +1539,16 @@ td {
 
 th {
   width: 43%;
-  color: var(--muted);
-  font-size: 0.86rem;
+  color: color-mix(in srgb, var(--muted) 92%, var(--text) 8%);
+  font-size: 0.81rem;
   font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 td {
-  font-size: 0.92rem;
-  font-weight: 500;
+  font-size: 0.95rem;
+  font-weight: 600;
   color: var(--text);
 }
 
@@ -1548,9 +1611,9 @@ tr + tr td {
 
 .vehicle-type {
   margin-bottom: 0.8rem;
-  font-size: 1.08rem;
+  font-size: 1rem;
   font-weight: 700;
-  color: var(--text);
+  color: color-mix(in srgb, var(--muted) 76%, var(--text) 24%);
 }
 
 .hansea-number-display {
@@ -1712,7 +1775,9 @@ tr + tr td {
   padding: 1.2rem 1.3rem;
   border-radius: 24px;
   border: 1px solid var(--stroke-strong);
-  background: color-mix(in srgb, var(--surface-strong) 90%, white 10%);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 96%, white 4%), color-mix(in srgb, var(--surface) 90%, transparent)),
+    radial-gradient(circle at top, color-mix(in srgb, var(--accent) 10%, transparent), transparent 44%);
   box-shadow: var(--shadow-strong);
   display: flex;
   align-items: center;
@@ -1971,11 +2036,12 @@ body.page-loading {
 
 footer {
   margin-top: 3.2rem;
-  padding: 1.6rem 1.2rem 0.4rem;
+  padding: 0.35rem 0.45rem max(0.9rem, env(safe-area-inset-bottom));
   border-top: 1px solid var(--stroke);
   color: var(--muted);
   font-size: 0.9rem;
   animation: none;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--surface-strong) 36%, transparent));
 }
 
 footer h3 {
@@ -2077,7 +2143,8 @@ footer h3 {
 @media (max-width: 980px) {
   .container {
     width: min(1160px, calc(100% - 2rem));
-    padding-top: 1.75rem;
+    min-height: calc(100dvh - 1rem);
+    padding-top: 0.9rem;
   }
 
   .grid {
@@ -2091,13 +2158,17 @@ footer h3 {
 
 @media (max-width: 700px) {
   .container {
-    width: min(1160px, calc(100% - 1.35rem));
-    padding-bottom: 2.2rem;
+    width: min(1160px, calc(100% - 0.8rem));
+    min-height: calc(100dvh - 0.45rem);
+    padding: 0.72rem 0.72rem 1.2rem;
+    border-radius: 26px;
   }
 
   .header-bar {
     align-items: flex-start;
     margin-bottom: 1.05rem;
+    top: -0.02rem;
+    padding-bottom: 0.78rem;
   }
 
   .header-actions {
@@ -2122,6 +2193,8 @@ footer h3 {
 
   .search-row {
     gap: 0.45rem;
+    top: 6.15rem;
+    border-radius: 20px;
   }
 
   .btn,
@@ -2139,6 +2212,7 @@ footer h3 {
     width: 44px;
     min-width: 44px;
     padding: 0;
+    border-radius: 16px;
   }
 
   .close-btn {
@@ -2171,7 +2245,9 @@ footer h3 {
 
 @media (max-width: 440px) {
   .container {
-    width: min(1160px, calc(100% - 1rem));
+    width: min(1160px, calc(100% - 0.45rem));
+    padding-inline: 0.58rem;
+    border-radius: 22px;
   }
 
   .stack-card,
