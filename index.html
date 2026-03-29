@@ -281,6 +281,7 @@ let vehiclePhotoLookupToken = 0;
 let vehiclePlateFieldKey = "";
 let oldVehicleNumbersFieldKey = "";
 let oldLicensePlatesFieldKey = "";
+let vehicleHideVinFieldKey = "";
 const INACTIVITY_LIMIT_MS = 5 * 60 * 1000;
 const INACTIVITY_CHECK_MS = 15000;
 let lastUserInteractionAt = Date.now();
@@ -305,6 +306,23 @@ const FALLBACK_LANG = "en";
 const ALLOWED_COLOR_THEMES = ["classic", "blue", "green", "yellow", "red"];
 const ALLOWED_UPDATE_INTERVALS = [10000, 15000, 30000];
 const REQUEST_TIMEOUT_MS = 12000;
+const VEHICLE_DISPLAY_FIELD_MAP = {
+  vehicle_id: "Voertuignummer",
+  bus: "Type",
+  license_plate: "Nummerplaat",
+  id_date: "In dienst",
+  ud_date: "Uit dienst",
+  owner: "Eigenaar",
+  spotted: "Gespot?",
+  hansea_id: "Hansea nummer",
+  intern_id: "Intern nummer",
+  vin: "VIN",
+  "hide-vin": "hide-vin",
+  old_vehicle_id: "Oude voertuignummers",
+  old_license_plate: "Oude nummerplaten",
+  operator: "Vervoersmaatschappij",
+  notes: "Opmerkingen"
+};
 
 function normalizeUpdateIntervalMs(intervalMs) {
   const value = Number(intervalMs);
@@ -925,7 +943,7 @@ document.addEventListener("keydown", (event) => {
 });
 
 // Helper: CSV parser that respects quoted fields
-function parseCSVLine(line){
+function parseCSVLine(line, delimiter = ','){
   const fields = [];
   let cur = "";
   let inQuotes = false;
@@ -934,7 +952,7 @@ function parseCSVLine(line){
     if(ch === '"'){
       if(inQuotes && line[i+1] === '"') { cur += '"'; i++; }
       else { inQuotes = !inQuotes; }
-    } else if(ch === ',' && !inQuotes){
+    } else if(ch === delimiter && !inQuotes){
       fields.push(cur);
       cur = "";
     } else { cur += ch; }
@@ -1050,6 +1068,27 @@ function getVehicleField(vehicle, fieldKey) {
   return value == null ? "" : value.toString().trim();
 }
 
+function normalizeVehicleSourceKey(key) {
+  return normalizeFieldKey(key).replace(/\s+/g, "_");
+}
+
+function mapVehicleRecord(headers, values) {
+  const rawRecord = {};
+  headers.forEach((header, index) => {
+    rawRecord[header] = values[index] || "/";
+  });
+
+  const mappedRecord = {};
+  headers.forEach((header) => {
+    const normalizedHeader = normalizeVehicleSourceKey(header);
+    const targetKey = VEHICLE_DISPLAY_FIELD_MAP[normalizedHeader];
+    if (!targetKey) return;
+    mappedRecord[targetKey] = rawRecord[header] || "/";
+  });
+
+  return mappedRecord;
+}
+
 function splitLegacyValues(rawValue, splitOnSpaces = false) {
   const value = normalize(rawValue);
   if (!value || value === "/") return [];
@@ -1124,22 +1163,15 @@ async function laadVoertuigen() {
   const res = await fetchWithTimeout(`${BASE_URL}/vehicles.txt`, { cache: "no-store" });
   const text = await res.text();
   const regels = text.trim().split(/\r?\n/);
-  const headers = regels[0].split(";");
-  const headerByNormalizedName = new Map();
-  headers.forEach((header) => {
-    const trimmed = header.trim();
-    headerByNormalizedName.set(normalizeFieldKey(trimmed), trimmed);
-  });
-  vehiclePlateFieldKey = headerByNormalizedName.get("nummerplaat") || "";
-  oldVehicleNumbersFieldKey = headerByNormalizedName.get("oude voertuignummers") || "";
-  oldLicensePlatesFieldKey = headerByNormalizedName.get("oude nummerplaten") || "";
+  const headers = parseCSVLine(regels[0], ";").map((header) => header.trim());
+  vehiclePlateFieldKey = "Nummerplaat";
+  oldVehicleNumbersFieldKey = "Oude voertuignummers";
+  oldLicensePlatesFieldKey = "Oude nummerplaten";
+  vehicleHideVinFieldKey = "hide-vin";
 
-  voertuigen = regels.slice(1).map(r => {
-    const v = r.split(";");
-    const obj = {};
-    headers.forEach((h,i)=>obj[h.trim()] = v[i]?.trim() || "/");
-    return obj;
-  });
+  voertuigen = regels.slice(1)
+    .filter((regel) => regel.trim())
+    .map((regel) => mapVehicleRecord(headers, parseCSVLine(regel, ";")));
 }
 
 async function laadTrips() {
@@ -1340,12 +1372,8 @@ function findBusById(id) {
 
 function isOutOfService(bus) {
   if (!bus) return false;
-  const outKeys = Object.keys(bus).filter(k => k.toLowerCase().includes("uit dienst"));
-  for (const k of outKeys) {
-    const val = (bus[k] || "").toString().trim();
-    if (val && val !== "/") return true;
-  }
-  return false;
+  const outOfServiceDate = getVehicleField(bus, "Uit dienst");
+  return !!outOfServiceDate && outOfServiceDate !== "/";
 }
 
 function toonVasteData(id){
@@ -1367,8 +1395,10 @@ function toonVasteData(id){
   let html=`<div class="vehicle-title-row"><p class="voertuignummer-display">${bus.Voertuignummer}</p><button id="favoriteInlineBtn" class="${favoriteClass}" type="button" title="${favoriteLabel}" aria-label="${favoriteLabel}" aria-pressed="${favorites.includes(id)}" data-id="${safeFavoriteId}">${favoriteStateSymbol}</button></div>`;
   if(bus.Type) html += `<p class="vehicle-type">${bus.Type}</p>`;
   html+="<table>";
+  const shouldHideVin = getVehicleField(bus, vehicleHideVinFieldKey) === "1" && normalize(getVehicleField(bus, "VIN")) !== "/";
   for(const [k,v] of Object.entries(bus)){
-    if(k==="Vervoersmaatschappij"||k==="Voertuignummer"||k==="Type") continue;
+    if(k==="Vervoersmaatschappij"||k==="Voertuignummer"||k==="Type"||k===vehicleHideVinFieldKey) continue;
+    if (k === "VIN" && shouldHideVin) continue;
 
     let waarde = v;
     const key = k.toLowerCase();
