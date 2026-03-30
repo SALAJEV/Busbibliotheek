@@ -1659,6 +1659,37 @@ body.pdf-modal-open {
   margin: 0;
 }
 
+.info-modal-body {
+  gap: 0.65rem;
+}
+
+.info-list {
+  display: grid;
+  gap: 0.58rem;
+}
+
+.info-row {
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.82rem 0.86rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--stroke);
+  background: color-mix(in srgb, var(--surface-alt) 88%, transparent);
+}
+
+.info-label {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.info-value {
+  color: var(--text);
+  font-size: 0.96rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
 /* ===============================
    RESULTS AREA
 ================================ */

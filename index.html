@@ -19,7 +19,7 @@
 <!-- Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="style.css?v=20260331-1">
+<link rel="stylesheet" href="style.css?v=20260331-2">
 </head>
 <body>
 <div id="splash" role="img" aria-label="Busbibliotheek laden">
@@ -253,6 +253,22 @@
   </div>
 </div>
 
+<div id="infoModal" class="pdf-modal" hidden role="dialog" aria-modal="true" aria-labelledby="infoModalTitle">
+  <div class="pdf-modal-card">
+    <div class="pdf-modal-header">
+      <div>
+        <h3 id="infoModalTitle">Site-info</h3>
+        <p class="pdf-modal-summary">Versie en laatste updates van de databronnen.</p>
+      </div>
+      <button id="infoModalCloseBtn" class="settings-close-btn" type="button" aria-label="Sluiten">&times;</button>
+    </div>
+    <div id="infoModalBody" class="pdf-modal-body info-modal-body"></div>
+    <div class="pdf-modal-actions">
+      <button id="infoModalOkBtn" class="btn" type="button">Sluiten</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="translations.js?v=20260218-1"></script>
 <script>
@@ -272,7 +288,6 @@ function hideSplash(ms = 260) {
 window.addEventListener('load', () => setTimeout(hideSplash, 520));
 splash?.addEventListener('click', () => hideSplash(150));
 document.addEventListener('touchstart', () => hideSplash(150), { once: true });
-if (currentYearEl) currentYearEl.textContent = String(new Date().getFullYear());
 
 // Install Prompt (beter gecontroleerde PWA-installatie)
 let deferredPrompt = null;
@@ -366,6 +381,10 @@ const vehiclePhotoCaptionEl = document.getElementById("vehiclePhotoCaption");
 const disclaimerTitleEl = document.getElementById("disclaimerTitle");
 const disclaimerTextEl = document.getElementById("disclaimerText");
 const currentYearEl = document.getElementById("currentYear");
+const infoModalEl = document.getElementById("infoModal");
+const infoModalBodyEl = document.getElementById("infoModalBody");
+const infoModalCloseBtn = document.getElementById("infoModalCloseBtn");
+const infoModalOkBtn = document.getElementById("infoModalOkBtn");
 const feedStatusEl = document.getElementById("feedStatus");
 const funnyModalEl = document.getElementById("funnyModal");
 const funnyModalCloseBtn = document.getElementById("funnyModalCloseBtn");
@@ -432,6 +451,16 @@ const INACTIVITY_CHECK_MS = 15000;
 let lastUserInteractionAt = Date.now();
 let realtimePausedByInactivity = false;
 let deeplinkHandled = false;
+const APP_VERSION = "2026.03.31-2";
+const dataLoadTimestamps = {
+  vehicles: 0,
+  trips: 0,
+  routes: 0,
+  stops: 0,
+  feedInfo: 0,
+  realtime: 0
+};
+if (currentYearEl) currentYearEl.textContent = String(new Date().getFullYear());
 let inactivityCheckHandle = null;
 let networkCheckHandle = null;
 let pdfModalVehicleId = "";
@@ -676,6 +705,49 @@ function sanitizeFileName(value, fallback = "bus") {
     .trim()
     .replace(/[. ]+$/g, "");
   return cleaned || fallback;
+}
+
+function formatInfoTimestamp(timestamp) {
+  if (!timestamp) return "Nog niet geladen";
+  return new Date(timestamp).toLocaleString(localeForLanguage(settings.language), {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  });
+}
+
+function showInfoModal() {
+  if (!infoModalEl || !infoModalBodyEl) return;
+  const rows = [
+    ["Websiteversie", APP_VERSION],
+    ["Voertuigen (vehicles.txt)", formatInfoTimestamp(dataLoadTimestamps.vehicles)],
+    ["Ritten (trips.txt)", formatInfoTimestamp(dataLoadTimestamps.trips)],
+    ["Lijnen (routes.txt)", formatInfoTimestamp(dataLoadTimestamps.routes)],
+    ["Haltes (stops.txt)", formatInfoTimestamp(dataLoadTimestamps.stops)],
+    ["Feed-info", formatInfoTimestamp(dataLoadTimestamps.feedInfo)],
+    ["Realtime API", formatInfoTimestamp(dataLoadTimestamps.realtime)]
+  ];
+  infoModalBodyEl.innerHTML = `
+    <div class="info-list">
+      ${rows.map(([label, value]) => `
+        <div class="info-row">
+          <span class="info-label">${escapeHtml(label)}</span>
+          <span class="info-value">${escapeHtml(value)}</span>
+        </div>
+      `).join("")}
+    </div>
+  `;
+  infoModalEl.hidden = false;
+  document.body.classList.add("pdf-modal-open");
+}
+
+function hideInfoModal() {
+  if (!infoModalEl) return;
+  infoModalEl.hidden = true;
+  document.body.classList.remove("pdf-modal-open");
 }
 
 function updateUrlState() {
@@ -1667,6 +1739,7 @@ async function loadFeedStatus() {
     if (index < 0) throw new Error("feed_end_date niet gevonden");
 
     feedEndDateValue = (values[index] || "").trim();
+    dataLoadTimestamps.feedInfo = Date.now();
   } catch (e) {
     console.warn("feed_info laden mislukt", e);
     feedEndDateValue = "";
@@ -2039,6 +2112,11 @@ pdfModalEl?.addEventListener("click", (event) => {
 compareModalEl?.addEventListener("click", (event) => {
   if (event.target === compareModalEl) hideCompareModal();
 });
+infoModalCloseBtn?.addEventListener("click", hideInfoModal);
+infoModalOkBtn?.addEventListener("click", hideInfoModal);
+infoModalEl?.addEventListener("click", (event) => {
+  if (event.target === infoModalEl) hideInfoModal();
+});
 offlineRetryBtn?.addEventListener("click", () => {
   verifyInternetConnection(true).catch(() => {});
 });
@@ -2048,6 +2126,10 @@ settingsBackdropEl.addEventListener("click", () => setSettingsPanel(false));
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !dashboardSetupModalEl?.hidden) {
     hideDashboardSetupModal();
+    return;
+  }
+  if (event.key === "Escape" && !infoModalEl?.hidden) {
+    hideInfoModal();
     return;
   }
   if (event.key === "Escape" && !compareModalEl?.hidden) {
@@ -2317,6 +2399,7 @@ async function laadVoertuigen() {
   voertuigen = regels.slice(1)
     .filter((regel) => regel.trim())
     .map((regel) => mapVehicleRecord(headers, parseCSVLine(regel, ";")));
+  dataLoadTimestamps.vehicles = Date.now();
   renderFavorites();
 }
 
@@ -2347,6 +2430,7 @@ async function laadTrips() {
     const routeKey = getRouteKey(routeId);
     addTripToLookup(tripsByRouteKey, routeKey, trip);
   });
+  dataLoadTimestamps.trips = Date.now();
   })();
   try {
     await tripsLoadPromise;
@@ -2379,6 +2463,7 @@ async function laadRoutes() {
     const routeKey = getRouteKey(routeId);
     if (routeKey && !routesByKey.has(routeKey)) routesByKey.set(routeKey, route);
   });
+  dataLoadTimestamps.routes = Date.now();
   })();
   try {
     await routesLoadPromise;
@@ -2410,6 +2495,7 @@ async function laadStops() {
     if (stopId) stopsById.set(stopId, stop);
     if (stopCode) stopsById.set(stopCode, stop);
   });
+  dataLoadTimestamps.stops = Date.now();
   })();
   try {
     await stopsLoadPromise;
@@ -2459,6 +2545,12 @@ async function zoekAlles() {
   if (query.toLowerCase() === "python") {
     suggestieLijst.innerHTML = "";
     startPythonDownload();
+    setPageLoading(false);
+    return;
+  }
+  if (query.toLowerCase() === "info") {
+    suggestieLijst.innerHTML = "";
+    showInfoModal();
     setPageLoading(false);
     return;
   }
@@ -2782,6 +2874,7 @@ async function updateRealtime(id){
   try{
     const res = await fetchWithTimeout(API_URL);
     const data = await res.json();
+    dataLoadTimestamps.realtime = Date.now();
     const entities = Array.isArray(data.entity) ? data.entity : [];
     const normalizedRequestedId = cleanText(id);
     const gpsEntity = [...entities].reverse().find((entity) => {
