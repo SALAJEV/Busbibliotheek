@@ -493,24 +493,30 @@ def _maak_eigenaar_html(eigenaar, data, include_retired=True, removed_bussen=Non
                 )
             header_html = f"""
             <div class="header hero">
-              <div class="hero-top">
-                <div>
+              <div class="hero-band">
+                <div class="hero-copy">
                   <a class="brand-link" href="{SITE_URL}">
-                    <div class="eyebrow">Busspotter 95</div>
+                    <div class="eyebrow">Busbibliotheek 95</div>
                   </a>
                   <h1>{titel}</h1>
                   <div class="sub">{subtitel}</div>
-                  <div class="datum">Exportdatum: {vandaag}</div>
                 </div>
                 {logo_html}
+              </div>
+              <div class="meta-strip">
+                <span class="meta-label">Exportdatum</span>
+                <span class="meta-value">{vandaag}</span>
               </div>
             </div>
             """
         else:
             header_html = f"""
             <div class="header vervolg">
-              <div class="mini-title">{titel}</div>
-              <div class="sub">Vervolg overzicht · {vandaag}</div>
+              <div>
+                <div class="mini-title">{titel}</div>
+                <div class="sub">Vervolg overzicht</div>
+              </div>
+              <div class="meta-chip">{vandaag}</div>
             </div>
             """
 
@@ -563,30 +569,37 @@ def _maak_eigenaar_html(eigenaar, data, include_retired=True, removed_bussen=Non
     .page-inner {{
       height: 100%;
       box-sizing: border-box;
-      background: #ffffff;
-      border-radius: 16px;
-      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
-      padding: 9mm 9mm 7mm 9mm;
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.96));
+      border-radius: 22px;
+      box-shadow: 0 18px 38px rgba(15, 23, 42, 0.08);
+      padding: 7mm 7mm 6mm 7mm;
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      border: 1px solid {kleuren["card_line"]};
     }}
     .header {{
-      margin-bottom: 6mm;
+      margin-bottom: 4.6mm;
     }}
-    .hero-top {{
+    .hero-band {{
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       gap: 8mm;
+      padding: 6mm 6.2mm 5.4mm 6.2mm;
+      border-radius: 16px;
+      background: linear-gradient(145deg, {kleuren["accent"]}, {kleuren["accent_soft"]});
+    }}
+    .hero-copy {{
+      min-width: 0;
     }}
     .eyebrow {{
       display: inline-block;
-      margin-bottom: 3.2mm;
-      padding: 1.4mm 3.4mm;
+      margin-bottom: 3mm;
+      padding: 1.3mm 3.4mm;
       border-radius: 999px;
-      background: {kleuren["badge_bg"]};
-      color: {kleuren["badge_fg"]};
+      background: rgba(255,255,255,0.2);
+      color: #ffffff;
       font-size: 9pt;
       font-weight: 700;
       letter-spacing: 0.3px;
@@ -598,49 +611,79 @@ def _maak_eigenaar_html(eigenaar, data, include_retired=True, removed_bussen=Non
     h1 {{
       margin: 0 0 2.8mm 0;
       font-size: 23pt;
-      color: #0f172a;
+      color: #ffffff;
       letter-spacing: 0.1px;
       line-height: 1.1;
     }}
     .sub {{
-      color: #64748b;
-      font-size: 10pt;
-    }}
-    .datum {{
-      margin-top: 2.4mm;
-      color: #475569;
-      font-size: 9.6pt;
+      color: rgba(255,255,255,0.9);
+      font-size: 10.4pt;
       font-weight: 600;
     }}
+    .meta-strip {{
+      margin-top: 3mm;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 3.2mm 4.2mm;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.82);
+      border: 1px solid {kleuren["card_line"]};
+    }}
+    .meta-label {{
+      color: #64748b;
+      font-size: 9.2pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }}
+    .meta-value {{
+      color: #0f172a;
+      font-size: 10pt;
+      font-weight: 700;
+    }}
     .logo {{
-      width: 24mm;
-      height: 24mm;
+      width: 19mm;
+      height: 19mm;
       object-fit: contain;
       flex: 0 0 auto;
-    }}
-    .hero {{
-      padding-bottom: 4.2mm;
-      border-bottom: 2px solid {kleuren["accent"]};
+      background: rgba(255,255,255,0.96);
+      border-radius: 14px;
+      padding: 2.4mm;
     }}
     .vervolg {{
       display: flex;
       justify-content: space-between;
-      align-items: baseline;
-      padding-bottom: 3.2mm;
-      border-bottom: 1px solid {kleuren["accent_soft"]};
+      align-items: center;
+      padding: 4mm 4.4mm;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.82);
+      border: 1px solid {kleuren["card_line"]};
     }}
     .mini-title {{
       font-size: 14pt;
       font-weight: 700;
       color: #0f172a;
     }}
+    .meta-chip {{
+      padding: 1.6mm 3.2mm;
+      border-radius: 999px;
+      background: {kleuren["badge_bg"]};
+      color: {kleuren["badge_fg"]};
+      font-size: 9pt;
+      font-weight: 700;
+    }}
     .kaarten {{
       flex: 1;
       overflow: hidden;
+      display: grid;
+      gap: 2.4mm;
     }}
     .buskaart {{
-      border-bottom: 1px solid {kleuren["card_line"]};
-      padding: 2.1mm 0 1.8mm 0;
+      border: 1px solid {kleuren["card_line"]};
+      border-radius: 14px;
+      padding: 3.2mm 3.6mm;
+      background: rgba(255,255,255,0.92);
       page-break-inside: avoid;
       break-inside: avoid;
     }}
@@ -660,9 +703,9 @@ def _maak_eigenaar_html(eigenaar, data, include_retired=True, removed_bussen=Non
     }}
     .nummer {{
       font-weight: 700;
-      font-size: 10.7pt;
+      font-size: 11pt;
       color: #0f172a;
-      min-width: 15mm;
+      min-width: 16mm;
     }}
     .type {{
       font-weight: 600;
@@ -676,7 +719,7 @@ def _maak_eigenaar_html(eigenaar, data, include_retired=True, removed_bussen=Non
       font-size: 9pt;
     }}
     .eigenaar-lijn {{
-      margin-bottom: 1mm;
+      margin: 1.1mm 0;
       color: #475569;
       font-size: 9pt;
     }}
@@ -694,9 +737,8 @@ def _maak_eigenaar_html(eigenaar, data, include_retired=True, removed_bussen=Non
     }}
     .page-footer {{
       margin-top: auto;
-      padding-top: 4mm;
+      padding-top: 3.4mm;
       padding-bottom: 1mm;
-      background: #ffffff;
       border-top: 1px solid {kleuren["accent_soft"]};
       font-size: 9pt;
       color: #64748b;

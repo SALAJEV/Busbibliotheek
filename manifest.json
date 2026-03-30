@@ -10,31 +10,31 @@
   "background_color": "#f4f7fb",
   "icons": [
     {
-      "src": "media/logo_light.png",
+      "src": "media/logo.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "media/logo_light.png",
+      "src": "media/logo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "media/logo_dark.png",
+      "src": "media/logo.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "media/logo_dark.png",
+      "src": "media/logo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "media/logo_light.png",
+      "src": "media/logo.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
@@ -43,7 +43,7 @@
   "categories": ["transportation"],
   "screenshots": [
     {
-      "src": "media/logo_light.png",
+      "src": "media/logo.png",
       "sizes": "540x720",
       "type": "image/png",
       "form_factor": "narrow"

@@ -8,8 +8,7 @@ const CORE_ASSETS = [
   '/translations.js',
   '/translations.js?v=20260218-1',
   '/media/logo.png',
-  '/media/logo_light.png',
-  '/media/logo_dark.png',
+  '/media/logo.png',
   '/media/navicon.png',
   '/media/hansea.png'
 ];
