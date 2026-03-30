@@ -57,6 +57,35 @@
   --shadow-soft: 0 1px 3px rgba(15, 23, 42, 0.08);
   --shadow-card: 0 2px 8px rgba(15, 23, 42, 0.08);
   --shadow-strong: 0 4px 12px rgba(15, 23, 42, 0.1);
+  --button-height: 42px;
+  --button-padding-x: 0.98rem;
+  --button-border: color-mix(in srgb, var(--accent) 58%, var(--stroke-strong));
+  --button-bg:
+    linear-gradient(145deg, color-mix(in srgb, var(--accent) 92%, white 8%), color-mix(in srgb, var(--accent-2) 82%, black 8%)),
+    radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.24), transparent 56%);
+  --button-bg-hover:
+    linear-gradient(145deg, color-mix(in srgb, var(--accent) 84%, white 16%), color-mix(in srgb, var(--accent-2) 74%, black 12%)),
+    radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.28), transparent 58%);
+  --button-bg-active:
+    linear-gradient(145deg, color-mix(in srgb, var(--accent) 76%, white 10%), color-mix(in srgb, var(--accent-2) 68%, black 18%)),
+    radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.14), transparent 54%);
+  --button-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 10px 24px color-mix(in srgb, var(--accent) 18%, transparent);
+  --button-shadow-hover:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 14px 28px color-mix(in srgb, var(--accent) 22%, transparent);
+  --button-text: #ffffff;
+  --button-secondary-border: color-mix(in srgb, var(--stroke-strong) 82%, var(--accent) 18%);
+  --button-secondary-bg:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 94%, white 6%), color-mix(in srgb, var(--surface-alt) 92%, transparent));
+  --button-secondary-bg-hover:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 88%, white 12%), color-mix(in srgb, var(--accent-soft) 42%, var(--surface-alt)));
+  --button-secondary-bg-active:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-alt) 88%, black 4%), color-mix(in srgb, var(--accent-soft) 56%, var(--surface-alt)));
+  --button-secondary-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 8px 20px rgba(15, 23, 42, 0.08);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -828,26 +857,28 @@ p {
 
 .icon-btn {
   margin-top: 0;
-  width: 38px;
-  height: 38px;
+  width: var(--button-height);
+  height: var(--button-height);
   padding: 0;
   border-radius: var(--icon-radius);
   font-size: 1.05rem;
   line-height: 1;
-  border: 1px solid var(--stroke-strong);
-  background: var(--surface-strong);
+  border: 1px solid var(--button-secondary-border);
+  background: var(--button-secondary-bg);
   color: var(--text);
-  transition: background 0.15s ease, border-color 0.15s ease;
-  box-shadow: none;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+  box-shadow: var(--button-secondary-shadow);
 }
 
 .icon-btn:hover {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent-soft) 24%, var(--surface-strong));
+  border-color: color-mix(in srgb, var(--accent) 54%, var(--button-secondary-border));
+  background: var(--button-secondary-bg-hover);
+  box-shadow: 0 12px 24px color-mix(in srgb, var(--accent-soft) 24%, transparent);
+  transform: translateY(-1px);
 }
 
 .icon-btn.active {
-  background: var(--surface-alt);
+  background: var(--button-secondary-bg-active);
   border-color: color-mix(in srgb, var(--accent) 52%, var(--stroke-strong));
 }
 
@@ -962,35 +993,42 @@ select:focus-visible {
 button,
 .btn {
   margin-top: 0.5rem;
-  min-height: 38px;
-  min-width: 38px;
-  padding: 0.54rem 0.9rem;
+  min-height: var(--button-height);
+  min-width: var(--button-height);
+  padding: 0.58rem var(--button-padding-x);
   border-radius: var(--button-radius);
-  border: 1px solid var(--accent);
-  background: var(--accent);
-  color: #ffffff;
+  border: 1px solid var(--button-border);
+  background: var(--button-bg);
+  color: var(--button-text);
   font-family: "Source Sans 3", "Segoe UI", Arial, sans-serif;
-  font-size: 0.9rem;
-  font-weight: 600;
-  letter-spacing: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
   text-decoration: none;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
-  box-shadow: none;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  gap: 0.5rem;
+  box-shadow: var(--button-shadow);
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
 }
 
 button:hover,
 .btn:hover {
-  background: color-mix(in srgb, var(--accent) 88%, black 12%);
+  background: var(--button-bg-hover);
+  border-color: color-mix(in srgb, var(--accent) 70%, white 8%);
+  box-shadow: var(--button-shadow-hover);
+  transform: translateY(-1px);
 }
 
 button:active,
 .btn:active {
-  background: color-mix(in srgb, var(--accent) 82%, black 18%);
+  background: var(--button-bg-active);
+  transform: translateY(0);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.12),
+    0 6px 16px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 button:focus-visible,
@@ -1009,8 +1047,10 @@ button:disabled,
   margin-top: 0;
   display: none;
   white-space: nowrap;
-  border-color: color-mix(in srgb, var(--success) 48%, transparent);
-  background: #059669;
+  border-color: color-mix(in srgb, var(--success) 54%, transparent);
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--success) 90%, white 10%), color-mix(in srgb, var(--success) 70%, black 18%)),
+    radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.22), transparent 58%);
 }
 
 #installBtn::before {
@@ -1049,21 +1089,24 @@ button:disabled,
 
 #searchBtn {
   margin-top: 0;
-  width: 42px;
-  min-width: 42px;
+  width: var(--button-height);
+  min-width: var(--button-height);
   padding: 0;
   align-self: stretch;
   border-radius: calc(var(--radius-md) - 1px);
-  background: var(--accent);
-  border: 1px solid var(--accent);
+  background: var(--button-bg);
+  border: 1px solid var(--button-border);
   margin-left: 0;
-  box-shadow: none;
+  box-shadow: var(--button-shadow);
   flex: 0 0 auto;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
 }
 
 #searchBtn:hover {
-  background: color-mix(in srgb, var(--accent) 88%, black 12%);
+  background: var(--button-bg-hover);
+  border-color: color-mix(in srgb, var(--accent) 70%, white 8%);
+  box-shadow: var(--button-shadow-hover);
+  transform: translateY(-1px);
 }
 
 .search-btn-icon {
@@ -1173,16 +1216,16 @@ button:disabled,
 
 .chip {
   margin-top: 0;
-  min-height: 32px;
-  padding: 0.36rem 0.68rem;
+  min-height: 38px;
+  padding: 0.5rem 0.82rem;
   border-radius: var(--radius-md);
-  font-size: 0.84rem;
-  font-weight: 500;
-  border: 1px solid var(--stroke-strong);
-  background: var(--surface-strong);
+  font-size: 0.86rem;
+  font-weight: 600;
+  border: 1px solid var(--button-secondary-border);
+  background: var(--button-secondary-bg);
   color: var(--text);
-  box-shadow: none;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  box-shadow: var(--button-secondary-shadow);
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -1206,12 +1249,15 @@ button:disabled,
 }
 
 .chip:hover {
-  background: color-mix(in srgb, var(--accent) 15%, var(--surface-strong));
-  border-color: var(--accent);
+  background: var(--button-secondary-bg-hover);
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--button-secondary-border));
+  box-shadow: 0 12px 24px color-mix(in srgb, var(--accent-soft) 24%, transparent);
+  transform: translateY(-1px);
 }
 
 .chip:active {
-  filter: brightness(0.96);
+  background: var(--button-secondary-bg-active);
+  transform: translateY(0);
 }
 
 .settings-grid {
@@ -1306,17 +1352,18 @@ button:disabled,
 
 .settings-close-btn {
   margin-top: 0;
-  width: 38px;
-  height: 38px;
-  min-width: 38px;
-  min-height: 38px;
+  width: var(--button-height);
+  height: var(--button-height);
+  min-width: var(--button-height);
+  min-height: var(--button-height);
   padding: 0;
   border-radius: var(--icon-radius);
-  border: 1px solid var(--stroke-strong);
-  background: var(--surface-alt);
+  border: 1px solid var(--button-secondary-border);
+  background: var(--button-secondary-bg);
   color: var(--text);
   font-size: 1.24rem;
   line-height: 1;
+  box-shadow: var(--button-secondary-shadow);
 }
 
 body.settings-open .settings-backdrop {
@@ -1724,11 +1771,14 @@ tr + tr td {
 
 .btn--instagram {
   margin-top: 0;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.24);
   background:
-    linear-gradient(45deg, rgba(250, 126, 30, 0.86), rgba(214, 41, 118, 0.84) 50%, rgba(79, 91, 213, 0.84)),
-    radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.26), transparent 58%);
+    linear-gradient(145deg, rgba(250, 126, 30, 0.94), rgba(214, 41, 118, 0.9) 52%, rgba(79, 91, 213, 0.88)),
+    radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.28), transparent 58%);
   color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 12px 24px rgba(214, 41, 118, 0.22);
 }
 
 .btn--instagram::before {
@@ -1745,10 +1795,10 @@ tr + tr td {
 
 .btn--pdf {
   margin-top: 0;
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.24);
   background:
-    linear-gradient(145deg, color-mix(in srgb, var(--accent) 90%, white 10%), color-mix(in srgb, var(--accent-2) 84%, black 6%)),
-    radial-gradient(circle at 18% 16%, rgba(255, 255, 255, 0.22), transparent 55%);
+    linear-gradient(145deg, color-mix(in srgb, var(--accent) 92%, white 8%), color-mix(in srgb, var(--accent-2) 82%, black 8%)),
+    radial-gradient(circle at 18% 16%, rgba(255, 255, 255, 0.24), transparent 55%);
   color: #fff;
 }
 
@@ -1766,11 +1816,14 @@ tr + tr td {
 
 .btn--story {
   margin-top: 0;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.24);
   background:
-    linear-gradient(145deg, rgba(245, 158, 11, 0.9), rgba(234, 88, 12, 0.84)),
+    linear-gradient(145deg, rgba(245, 158, 11, 0.94), rgba(234, 88, 12, 0.88)),
     radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.3), transparent 62%);
   color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 12px 24px rgba(234, 88, 12, 0.18);
 }
 
 .photo-card {
