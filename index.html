@@ -165,6 +165,29 @@
   </div>
 </div>
 
+<div id="pdfModal" class="pdf-modal" hidden role="dialog" aria-modal="true" aria-labelledby="pdfModalTitle">
+  <div class="pdf-modal-card">
+    <div class="pdf-modal-header">
+      <div>
+        <h3 id="pdfModalTitle">PDF downloaden</h3>
+        <p id="pdfModalSummary" class="pdf-modal-summary">Kies een thema voor deze busfiche.</p>
+      </div>
+      <button id="pdfModalCloseBtn" class="settings-close-btn" type="button" aria-label="Sluiten">&times;</button>
+    </div>
+    <div class="pdf-modal-body">
+      <label class="pdf-theme-field" for="pdfThemeSelect">
+        <span>Kleurthema</span>
+        <select id="pdfThemeSelect"></select>
+      </label>
+      <p class="pdf-modal-note">Na bevestigen opent het afdrukvenster van je browser, waar je “Opslaan als PDF” kunt kiezen.</p>
+    </div>
+    <div class="pdf-modal-actions">
+      <button id="pdfModalCancelBtn" type="button">Annuleren</button>
+      <button id="pdfModalConfirmBtn" class="btn btn--pdf" type="button">PDF downloaden</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="translations.js?v=20260218-1"></script>
 <script>
@@ -281,6 +304,12 @@ const pageLoadingOverlayEl = document.getElementById("pageLoadingOverlay");
 const pageLoadingTextEl = document.getElementById("pageLoadingText");
 const offlineOverlayEl = document.getElementById("offlineOverlay");
 const offlineRetryBtn = document.getElementById("offlineRetryBtn");
+const pdfModalEl = document.getElementById("pdfModal");
+const pdfModalSummaryEl = document.getElementById("pdfModalSummary");
+const pdfThemeSelectEl = document.getElementById("pdfThemeSelect");
+const pdfModalCloseBtn = document.getElementById("pdfModalCloseBtn");
+const pdfModalCancelBtn = document.getElementById("pdfModalCancelBtn");
+const pdfModalConfirmBtn = document.getElementById("pdfModalConfirmBtn");
 
 let voertuigen = [];
 let trips = [];
@@ -313,6 +342,7 @@ let lastUserInteractionAt = Date.now();
 let realtimePausedByInactivity = false;
 let inactivityCheckHandle = null;
 let networkCheckHandle = null;
+let pdfModalVehicleId = "";
 let settings = {
   intervalMs: 10000,
   theme: "auto",
@@ -810,30 +840,65 @@ function buildBusPdfHtml(bus, vehicleId, themeKey = "geel") {
 </html>`;
 }
 
-function exportBusPdf(vehicleId) {
+function getPdfPrintFrame() {
+  let frame = document.getElementById("pdfPrintFrame");
+  if (frame) return frame;
+
+  frame = document.createElement("iframe");
+  frame.id = "pdfPrintFrame";
+  frame.setAttribute("aria-hidden", "true");
+  frame.style.position = "fixed";
+  frame.style.width = "1px";
+  frame.style.height = "1px";
+  frame.style.right = "-9999px";
+  frame.style.bottom = "0";
+  frame.style.border = "0";
+  document.body.appendChild(frame);
+  return frame;
+}
+
+function showPdfModal(vehicleId) {
   const bus = findBusById(vehicleId);
   if (!bus) return;
 
-  const themeSelect = document.getElementById("busPdfThemeSelect");
-  const themeKey = themeSelect?.value || "geel";
-  const pdfWindow = window.open("", "_blank", "noopener,noreferrer,width=1024,height=1280");
-
-  if (!pdfWindow) {
-    window.alert("De PDF kon niet geopend worden. Controleer of pop-ups zijn toegestaan.");
-    return;
+  pdfModalVehicleId = vehicleId;
+  if (pdfThemeSelectEl) {
+    pdfThemeSelectEl.innerHTML = getBusPdfThemeOptionsMarkup("geel");
   }
+  if (pdfModalSummaryEl) {
+    const owner = getVehicleField(bus, "Eigenaar") || "-";
+    pdfModalSummaryEl.textContent = `${bus.Voertuignummer} · ${bus.Type || "Onbekend type"} · ${owner}`;
+  }
+  if (!pdfModalEl) return;
+  pdfModalEl.hidden = false;
+  document.body.classList.add("pdf-modal-open");
+}
+
+function hidePdfModal() {
+  pdfModalVehicleId = "";
+  if (!pdfModalEl) return;
+  pdfModalEl.hidden = true;
+  document.body.classList.remove("pdf-modal-open");
+}
+
+function exportBusPdf(vehicleId, themeKey = "geel") {
+  const bus = findBusById(vehicleId);
+  if (!bus) return;
 
   const html = buildBusPdfHtml(bus, vehicleId, themeKey);
-  pdfWindow.document.open();
-  pdfWindow.document.write(html);
-  pdfWindow.document.close();
-  pdfWindow.document.title = `${sanitizeFileName(`Bus ${vehicleId}`)}.pdf`;
-  pdfWindow.focus();
-  pdfWindow.addEventListener("load", () => {
+  const frame = getPdfPrintFrame();
+  frame.onload = () => {
     window.setTimeout(() => {
-      pdfWindow.print();
-    }, 250);
-  }, { once: true });
+      try {
+        frame.contentWindow?.focus();
+        frame.contentWindow?.print();
+      } catch (error) {
+        console.error("PDF printen mislukt", error);
+        window.alert("De PDF kon niet geopend worden. Probeer het opnieuw.");
+      }
+    }, 280);
+  };
+  frame.srcdoc = html;
 }
 
 function updateVehiclePhotoTexts() {
@@ -1408,7 +1473,7 @@ vasteDataEl.addEventListener("click", (event) => {
   const pdfButton = target.closest("#vehiclePdfBtn");
   if (pdfButton) {
     const id = pdfButton.getAttribute("data-id") || currentVehicleId || "";
-    exportBusPdf(id);
+    showPdfModal(id);
   }
 });
 intervalSelect.addEventListener("change", () => {
@@ -1439,6 +1504,18 @@ funnyModalCloseBtn?.addEventListener("click", hideFunnyModal);
 funnyModalEl?.addEventListener("click", (event) => {
   if (event.target === funnyModalEl) hideFunnyModal();
 });
+pdfModalCloseBtn?.addEventListener("click", hidePdfModal);
+pdfModalCancelBtn?.addEventListener("click", hidePdfModal);
+pdfModalConfirmBtn?.addEventListener("click", () => {
+  if (!pdfModalVehicleId) return;
+  const voertuigId = pdfModalVehicleId;
+  const themeKey = pdfThemeSelectEl?.value || "geel";
+  hidePdfModal();
+  exportBusPdf(voertuigId, themeKey);
+});
+pdfModalEl?.addEventListener("click", (event) => {
+  if (event.target === pdfModalEl) hidePdfModal();
+});
 offlineRetryBtn?.addEventListener("click", () => {
   verifyInternetConnection().catch(() => {});
 });
@@ -1446,6 +1523,10 @@ settingsToggleBtn.addEventListener("click", () => setSettingsPanel(!settingsOpen
 settingsCloseBtn.addEventListener("click", () => setSettingsPanel(false));
 settingsBackdropEl.addEventListener("click", () => setSettingsPanel(false));
 document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !pdfModalEl?.hidden) {
+    hidePdfModal();
+    return;
+  }
   if (event.key === "Escape" && !funnyModalEl?.hidden) {
     hideFunnyModal();
     return;
@@ -1938,21 +2019,9 @@ function toonVasteData(id){
   const favoriteStateSymbol = favorites.includes(id) ? "\u2605" : "\u2606";
   const safeFavoriteId = id.replace(/"/g, "&quot;");
   const favoriteClass = favorites.includes(id) ? "vehicle-favorite-btn is-favorite" : "vehicle-favorite-btn";
-  const pdfThemeOptions = getBusPdfThemeOptionsMarkup();
 
   let html=`<div class="vehicle-title-row"><p class="voertuignummer-display">${bus.Voertuignummer}</p><button id="favoriteInlineBtn" class="${favoriteClass}" type="button" title="${favoriteLabel}" aria-label="${favoriteLabel}" aria-pressed="${favorites.includes(id)}" data-id="${safeFavoriteId}">${favoriteStateSymbol}</button></div>`;
   if(bus.Type) html += `<p class="vehicle-type">${bus.Type}</p>`;
-  html += `
-    <div class="vehicle-actions-row">
-      <button id="vehiclePdfBtn" class="chip vehicle-inline-btn" type="button" data-id="${safeFavoriteId}">PDF maken</button>
-      <label class="vehicle-theme-picker" for="busPdfThemeSelect">
-        <span>PDF-thema</span>
-        <select id="busPdfThemeSelect">
-          ${pdfThemeOptions}
-        </select>
-      </label>
-    </div>
-  `;
   html+="<table>";
   const shouldHideVin = getVehicleField(bus, vehicleHideVinFieldKey) === "1" && normalize(getVehicleField(bus, "VIN")) !== "/";
   for(const [k,v] of Object.entries(bus)){
@@ -1998,7 +2067,8 @@ function toonVasteData(id){
   }
   const igUrl = 'https://www.instagram.com/explore/search/keyword/?q=' + encodeURIComponent(instagramPrefix + id);
   const links = [
-    `<a class="btn btn--instagram" href="${igUrl}" target="_blank" rel="noopener">${localWord("instagramSearch")}</a>`
+    `<a class="btn btn--instagram" href="${igUrl}" target="_blank" rel="noopener">${localWord("instagramSearch")}</a>`,
+    `<button id="vehiclePdfBtn" class="btn btn--pdf" type="button" data-id="${safeFavoriteId}">PDF downloaden</button>`
   ];
   const idNum = Number(id);
   if (Number.isInteger(idNum) && idNum >= 4404 && idNum <= 4459) {

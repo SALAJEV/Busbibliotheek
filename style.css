@@ -1381,6 +1381,97 @@ body.funny-open {
   overflow: hidden;
 }
 
+.pdf-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1450;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(2, 8, 23, 0.56);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.pdf-modal[hidden] {
+  display: none !important;
+}
+
+.pdf-modal-card {
+  width: min(560px, calc(100vw - 2rem));
+  border-radius: 24px;
+  border: 1px solid var(--stroke-strong);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--accent-soft) 50%, transparent), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent 38%),
+    var(--surface-strong);
+  box-shadow: var(--shadow-strong);
+  padding: 1rem 1rem 1.05rem;
+  animation: panelDropIn 0.16s ease both;
+}
+
+.pdf-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.8rem;
+}
+
+.pdf-modal-header h3 {
+  margin: 0 0 0.32rem;
+  color: var(--text);
+  font-family: "Source Sans 3", "Segoe UI", Arial, sans-serif;
+}
+
+.pdf-modal-summary {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.pdf-modal-body {
+  display: grid;
+  gap: 0.82rem;
+}
+
+.pdf-theme-field {
+  display: grid;
+  gap: 0.42rem;
+  padding: 0.8rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--stroke);
+  background: color-mix(in srgb, var(--surface-alt) 84%, transparent);
+}
+
+.pdf-theme-field span {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.pdf-theme-field select {
+  width: 100%;
+}
+
+.pdf-modal-note {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+  font-size: 0.92rem;
+}
+
+.pdf-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  margin-top: 0.95rem;
+}
+
+body.pdf-modal-open {
+  overflow: hidden;
+}
+
 /* ===============================
    RESULTS AREA
 ================================ */
@@ -1647,6 +1738,27 @@ tr + tr td {
   display: inline-block;
   flex: 0 0 auto;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.15' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2.7' y='2.7' width='18.6' height='18.6' rx='5.5' ry='5.5'/%3E%3Ccircle cx='12' cy='12' r='4.25'/%3E%3Ccircle cx='17.7' cy='6.7' r='0.55' fill='white' stroke='white'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.btn--pdf {
+  margin-top: 0;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--accent) 90%, white 10%), color-mix(in srgb, var(--accent-2) 84%, black 6%)),
+    radial-gradient(circle at 18% 16%, rgba(255, 255, 255, 0.22), transparent 55%);
+  color: #fff;
+}
+
+.btn--pdf::before {
+  content: "";
+  width: 1rem;
+  height: 1rem;
+  display: inline-block;
+  flex: 0 0 auto;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v12'/%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3Cpath d='M5 21h14'/%3E%3C/svg%3E");
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
@@ -2247,6 +2359,15 @@ footer h3 {
     min-height: 34px;
     padding: 0.36rem 0.72rem;
     font-size: 0.8rem;
+  }
+
+  .pdf-modal-card {
+    padding: 0.88rem 0.86rem 0.92rem;
+    border-radius: var(--radius-lg);
+  }
+
+  .pdf-modal-actions {
+    flex-direction: column-reverse;
   }
 
   .vehicle-actions-row {
