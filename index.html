@@ -211,6 +211,7 @@ window.addEventListener('appinstalled', () => {
 // Constants
 const BASE_URL = "https://pub-611b5bc156eb455ba86d9bcece9aea1c.r2.dev";
 const API_URL = "https://busbibliotheek95.pages.dev/api";
+const PYTHON_MAIN_DOWNLOAD_URL = `${BASE_URL}/python/main.py`;
 const FAVORITES_KEY = "bb_favorites_v1";
 const SETTINGS_KEY = "bb_settings_v1";
 let updateIntervalMs = 10000;
@@ -782,6 +783,18 @@ function hideFunnyModal() {
   if (!funnyModalEl) return;
   funnyModalEl.hidden = true;
   document.body.classList.remove("funny-open");
+}
+
+function startPythonDownload() {
+  const downloadLink = document.createElement("a");
+  downloadLink.href = PYTHON_MAIN_DOWNLOAD_URL;
+  downloadLink.download = "main.py";
+  downloadLink.rel = "noopener";
+  downloadLink.style.display = "none";
+  document.body.appendChild(downloadLink);
+  downloadLink.click();
+  downloadLink.remove();
+  window.alert("De download van main.py is gestart.");
 }
 
 function loadFavorites() {
@@ -1360,6 +1373,12 @@ async function zoekAlles() {
   if(!query) return;
   setPageLoading(true);
   setFavoritesPanel(false);
+  if (query.toLowerCase() === "python") {
+    suggestieLijst.innerHTML = "";
+    startPythonDownload();
+    setPageLoading(false);
+    return;
+  }
   if (query.toLowerCase() === "best") {
     suggestieLijst.innerHTML = "";
     showFunnyModal();
