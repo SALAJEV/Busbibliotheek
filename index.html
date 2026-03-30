@@ -347,6 +347,7 @@ let pdfModalVehicleId = "";
 let tripsLoadPromise = null;
 let routesLoadPromise = null;
 let stopsLoadPromise = null;
+let jsPdfLoadPromise = null;
 let lastVerifiedInternetAt = 0;
 let lastVerifiedInternetState = true;
 let settings = {
@@ -905,6 +906,174 @@ function exportBusPdf(vehicleId, themeKey = "geel") {
     }, 280);
   };
   frame.srcdoc = html;
+}
+
+function hexToRgb(hexValue) {
+  const normalized = (hexValue || "").replace("#", "").trim();
+  if (normalized.length !== 6) return [17, 24, 39];
+  return [
+    Number.parseInt(normalized.slice(0, 2), 16),
+    Number.parseInt(normalized.slice(2, 4), 16),
+    Number.parseInt(normalized.slice(4, 6), 16)
+  ];
+}
+
+function inferImageFormat(dataUrl) {
+  if (!dataUrl) return "PNG";
+  if (dataUrl.startsWith("data:image/jpeg") || dataUrl.startsWith("data:image/jpg")) return "JPEG";
+  if (dataUrl.startsWith("data:image/webp")) return "WEBP";
+  return "PNG";
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result?.toString() || "");
+    reader.onerror = () => reject(reader.error || new Error("Bestand kon niet gelezen worden"));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function loadImageAsDataUrl(src) {
+  try {
+    const response = await fetch(src, { cache: "force-cache" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const blob = await response.blob();
+    return await fileToDataUrl(blob);
+  } catch (_) {
+    return null;
+  }
+}
+
+async function loadJsPdfLibrary() {
+  if (window.jspdf?.jsPDF) return window.jspdf.jsPDF;
+  if (jsPdfLoadPromise) return jsPdfLoadPromise;
+
+  jsPdfLoadPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js";
+    script.async = true;
+    script.onload = () => {
+      if (window.jspdf?.jsPDF) resolve(window.jspdf.jsPDF);
+      else reject(new Error("jsPDF kon niet geladen worden"));
+    };
+    script.onerror = () => reject(new Error("jsPDF-script kon niet geladen worden"));
+    document.head.appendChild(script);
+  });
+
+  return jsPdfLoadPromise;
+}
+
+function drawPdfRoundedCard(doc, x, y, w, h, fillHex, strokeHex) {
+  const [fillR, fillG, fillB] = hexToRgb(fillHex);
+  const [strokeR, strokeG, strokeB] = hexToRgb(strokeHex);
+  doc.setFillColor(fillR, fillG, fillB);
+  doc.setDrawColor(strokeR, strokeG, strokeB);
+  doc.roundedRect(x, y, w, h, 5, 5, "FD");
+}
+
+async function exportBusPdf(vehicleId, themeKey = "geel") {
+  const bus = findBusById(vehicleId);
+  if (!bus) return;
+
+  const theme = PDF_EXPORT_THEMES[themeKey] || PDF_EXPORT_THEMES.geel;
+  const jsPDF = await loadJsPdfLibrary();
+  const doc = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: "a4",
+    compress: true
+  });
+
+  const rows = getBusPdfRows(bus);
+  const logoDataUrl = await loadImageAsDataUrl("media/logo.png");
+  const photoDataUrl = await loadImageAsDataUrl(`media/${encodeURIComponent(vehicleId)}.jpeg`);
+  const owner = getVehicleField(bus, "Eigenaar") || "-";
+  const vehicleType = bus.Type || "Onbekend type";
+  const exportDate = new Date().toLocaleDateString("nl-BE", { day: "numeric", month: "long", year: "numeric" });
+  const [pageR, pageG, pageB] = hexToRgb(theme.pageBg);
+  const [accentR, accentG, accentB] = hexToRgb(theme.accent);
+  const [badgeR, badgeG, badgeB] = hexToRgb(theme.badgeFg);
+
+  doc.setFillColor(pageR, pageG, pageB);
+  doc.rect(0, 0, 210, 297, "F");
+
+  drawPdfRoundedCard(doc, 10, 10, 190, 277, "FFFFFF", theme.cardLine);
+  drawPdfRoundedCard(doc, 16, 18, 112, 190, "FFFFFF", theme.cardLine);
+  drawPdfRoundedCard(doc, 132, 18, 58, 88, "FFFFFF", theme.cardLine);
+
+  if (logoDataUrl) {
+    doc.addImage(logoDataUrl, inferImageFormat(logoDataUrl), 18, 19, 15, 15);
+  }
+
+  doc.setTextColor(100, 116, 139);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("BUSBIBLIOTHEEK 95", 36, 24);
+
+  doc.setTextColor(17, 24, 39);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(24);
+  doc.text(String(bus.Voertuignummer || vehicleId), 18, 37);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(12);
+  doc.text(`${vehicleType} | Eigenaar: ${owner}`, 18, 45, { maxWidth: 105 });
+
+  doc.setFillColor(accentR, accentG, accentB);
+  doc.roundedRect(146, 20, 31, 10, 4, 4, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text(`Thema ${themeKey}`, 161.5, 26.5, { align: "center" });
+
+  if (photoDataUrl) {
+    doc.addImage(photoDataUrl, inferImageFormat(photoDataUrl), 136, 22, 50, 76, undefined, "FAST");
+  } else {
+    doc.setTextColor(107, 114, 128);
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(11);
+    doc.text("Geen foto beschikbaar", 161, 63, { align: "center" });
+  }
+
+  doc.setTextColor(badgeR, badgeG, badgeB);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.text("Voertuiggegevens", 18, 58);
+
+  let currentY = 68;
+  rows.forEach((row) => {
+    if (currentY > 270) return;
+    doc.setDrawColor(...hexToRgb(theme.cardLine));
+    doc.line(18, currentY - 2.5, 122, currentY - 2.5);
+
+    doc.setTextColor(100, 116, 139);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text(String(row.label), 18, currentY + 2);
+
+    if (row.isHansea) {
+      doc.setTextColor(185, 28, 28);
+    } else {
+      doc.setTextColor(15, 23, 42);
+    }
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    const valueLines = doc.splitTextToSize(String(row.value), 62);
+    doc.text(valueLines, 58, currentY + 2);
+    currentY += Math.max(9, valueLines.length * 5 + 3);
+  });
+
+  doc.setDrawColor(...hexToRgb(theme.cardLine));
+  doc.line(16, 266, 190, 266);
+  doc.setTextColor(100, 116, 139);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text("Busbibliotheek 95", 18, 273);
+  doc.text(`Exportdatum: ${exportDate}`, 188, 273, { align: "right" });
+
+  const fileName = sanitizeFileName(`Bus ${vehicleId}`) + ".pdf";
+  doc.save(fileName);
 }
 
 function updateVehiclePhotoTexts() {
@@ -1507,12 +1676,23 @@ funnyModalEl?.addEventListener("click", (event) => {
 });
 pdfModalCloseBtn?.addEventListener("click", hidePdfModal);
 pdfModalCancelBtn?.addEventListener("click", hidePdfModal);
-pdfModalConfirmBtn?.addEventListener("click", () => {
+pdfModalConfirmBtn?.addEventListener("click", async () => {
   if (!pdfModalVehicleId) return;
   const voertuigId = pdfModalVehicleId;
   const themeKey = pdfThemeSelectEl?.value || "geel";
-  hidePdfModal();
-  exportBusPdf(voertuigId, themeKey);
+  const oorspronkelijkeTekst = pdfModalConfirmBtn.textContent;
+  pdfModalConfirmBtn.disabled = true;
+  pdfModalConfirmBtn.textContent = "PDF wordt gemaakt...";
+  try {
+    await exportBusPdf(voertuigId, themeKey);
+    hidePdfModal();
+  } catch (error) {
+    console.error("PDF downloaden mislukt", error);
+    window.alert("De PDF kon niet worden gedownload. Probeer het opnieuw.");
+  } finally {
+    pdfModalConfirmBtn.disabled = false;
+    pdfModalConfirmBtn.textContent = oorspronkelijkeTekst;
+  }
 });
 pdfModalEl?.addEventListener("click", (event) => {
   if (event.target === pdfModalEl) hidePdfModal();
