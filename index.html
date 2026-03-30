@@ -1022,7 +1022,7 @@ function parseFlexibleDateParts(rawValue) {
   match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (match) return toValidParts(Number(match[1]), Number(match[2]), Number(match[3]));
 
-  match = value.match(/^(\d{2})[\/.-](\d{2})[\/.-](\d{4})$/);
+  match = value.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
   if (match) return toValidParts(Number(match[3]), Number(match[2]), Number(match[1]));
 
   return null;
