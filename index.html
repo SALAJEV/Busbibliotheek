@@ -19,7 +19,7 @@
 <!-- Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
-<link rel="stylesheet" href="style.css?v=20260330-2">
+<link rel="stylesheet" href="style.css?v=20260330-3">
 </head>
 <body>
 <div id="splash" role="img" aria-label="Busbibliotheek laden">
@@ -37,6 +37,7 @@
     </div>
     <div class="header-actions">
       <button id="installBtn" title="App installeren op thuisscherm">Installeer App</button>
+      <button id="dashboardToggleBtn" class="btn" type="button" title="9 live kaarten">9 Live</button>
       <div class="favorites-top">
         <button id="favoritesToggleBtn" class="icon-btn favorites-toggle-btn" type="button" title="Favorieten" aria-label="Favorieten" aria-controls="favoritesPanel" aria-expanded="false">&#9734;</button>
         <div id="favoritesPanel" class="favorites-panel" hidden>
@@ -56,6 +57,20 @@
     <button id="searchBtn" type="button" title="Zoeken" aria-label="Zoeken" onclick="zoekAlles()"><span class="search-btn-icon" aria-hidden="true">&#128269;</span></button>
   </div>
   <ul id="suggestielijst"></ul>
+
+  <section id="dashboardPanel" class="dashboard-panel" hidden aria-hidden="true">
+    <div class="dashboard-panel-header">
+      <div>
+        <h2>9 Live</h2>
+        <p id="dashboardSummary" class="dashboard-summary">Volg negen voertuigen tegelijk.</p>
+      </div>
+      <div class="dashboard-panel-actions">
+        <button id="dashboardEditBtn" class="btn" type="button">Aanpassen</button>
+        <button id="dashboardCloseBtn" class="settings-close-btn" type="button" aria-label="Dashboard sluiten">&times;</button>
+      </div>
+    </div>
+    <div id="dashboardGrid" class="dashboard-grid"></div>
+  </section>
 
   <div class="results-wrap">
     <button class="close-btn" id="closeBtn" onclick="terug()" title="Venster sluiten" aria-label="Sluiten">&times;</button>
@@ -220,6 +235,23 @@
   </div>
 </div>
 
+<div id="dashboardSetupModal" class="pdf-modal" hidden role="dialog" aria-modal="true" aria-labelledby="dashboardSetupTitle">
+  <div class="pdf-modal-card dashboard-setup-card">
+    <div class="pdf-modal-header">
+      <div>
+        <h3 id="dashboardSetupTitle">9 Live instellen</h3>
+        <p class="pdf-modal-summary">Vul tot negen voertuigen in. Alleen bussen met realtime verschijnen live.</p>
+      </div>
+      <button id="dashboardSetupCloseBtn" class="settings-close-btn" type="button" aria-label="Sluiten">&times;</button>
+    </div>
+    <div id="dashboardSetupGrid" class="dashboard-setup-grid"></div>
+    <div class="pdf-modal-actions">
+      <button id="dashboardSetupCancelBtn" type="button">Annuleren</button>
+      <button id="dashboardSetupConfirmBtn" class="btn" type="button">Dashboard openen</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="translations.js?v=20260218-1"></script>
 <script>
@@ -243,6 +275,7 @@ document.addEventListener('touchstart', () => hideSplash(150), { once: true });
 // Install Prompt (beter gecontroleerde PWA-installatie)
 let deferredPrompt = null;
 const installBtn = document.getElementById('installBtn');
+const dashboardToggleBtn = document.getElementById("dashboardToggleBtn");
 const iosInstallHintEl = document.getElementById("iosInstallHint");
 const settingsPanelEl = document.getElementById("settingsPanel");
 const settingsBackdropEl = document.getElementById("settingsBackdrop");
@@ -352,6 +385,16 @@ const compareVehicleInputEl = document.getElementById("compareVehicleInput");
 const compareModalCloseBtn = document.getElementById("compareModalCloseBtn");
 const compareModalCancelBtn = document.getElementById("compareModalCancelBtn");
 const compareModalConfirmBtn = document.getElementById("compareModalConfirmBtn");
+const dashboardPanelEl = document.getElementById("dashboardPanel");
+const dashboardGridEl = document.getElementById("dashboardGrid");
+const dashboardSummaryEl = document.getElementById("dashboardSummary");
+const dashboardEditBtn = document.getElementById("dashboardEditBtn");
+const dashboardCloseBtn = document.getElementById("dashboardCloseBtn");
+const dashboardSetupModalEl = document.getElementById("dashboardSetupModal");
+const dashboardSetupGridEl = document.getElementById("dashboardSetupGrid");
+const dashboardSetupCloseBtn = document.getElementById("dashboardSetupCloseBtn");
+const dashboardSetupCancelBtn = document.getElementById("dashboardSetupCancelBtn");
+const dashboardSetupConfirmBtn = document.getElementById("dashboardSetupConfirmBtn");
 
 let voertuigen = [];
 let trips = [];
@@ -369,6 +412,8 @@ let routeTrail = [];
 let delayMinutes = 0;
 let currentVehicleId = "";
 let compareVehicleId = "";
+let dashboardVehicleIds = [];
+let dashboardRefreshHandle = null;
 let currentPhotoVehicleId = "";
 let favorites = [];
 let settingsOpen = false;
@@ -876,6 +921,205 @@ async function applyDeepLinkIfNeeded() {
       renderComparison();
     }
   }
+}
+
+function renderDashboardSetupInputs() {
+  if (!dashboardSetupGridEl) return;
+  dashboardSetupGridEl.innerHTML = Array.from({ length: 9 }, (_, index) => {
+    const currentValue = escapeHtml(dashboardVehicleIds[index] || "");
+    return `
+      <label class="dashboard-setup-field">
+        <span>Kaart ${index + 1}</span>
+        <input class="dashboard-setup-input" type="text" inputmode="text" autocomplete="off" placeholder="Voertuignummer of plaat" value="${currentValue}">
+      </label>
+    `;
+  }).join("");
+}
+
+function showDashboardSetupModal() {
+  renderDashboardSetupInputs();
+  dashboardSetupModalEl.hidden = false;
+  document.body.classList.add("pdf-modal-open");
+  window.setTimeout(() => dashboardSetupGridEl?.querySelector("input")?.focus(), 20);
+}
+
+function hideDashboardSetupModal() {
+  if (!dashboardSetupModalEl) return;
+  dashboardSetupModalEl.hidden = true;
+  document.body.classList.remove("pdf-modal-open");
+}
+
+function stopDashboardRefresh() {
+  if (dashboardRefreshHandle) {
+    clearInterval(dashboardRefreshHandle);
+    dashboardRefreshHandle = null;
+  }
+}
+
+function closeDashboardPanel() {
+  stopDashboardRefresh();
+  if (!dashboardPanelEl) return;
+  dashboardPanelEl.hidden = true;
+  dashboardPanelEl.setAttribute("aria-hidden", "true");
+}
+
+function getRoutePresentationFromRealtime(id, entities, bus) {
+  const normalizedRequestedId = cleanText(id);
+  const gpsEntity = [...entities].reverse().find((entity) => {
+    const vehiclePayload = getEntityVehiclePayload(entity);
+    if (!vehiclePayload?.position) return false;
+    const descriptor =
+      vehiclePayload?.vehicle ||
+      vehiclePayload?.vehicleDescriptor ||
+      vehiclePayload?.vehicle_descriptor;
+    const descriptorId = getVehicleDescriptorId(descriptor);
+    return descriptorId === normalizedRequestedId;
+  });
+  const gps = gpsEntity ? { vehicle: getEntityVehiclePayload(gpsEntity) } : null;
+  if (!gps) {
+    return {
+      status: "offline",
+      vehicleId: id,
+      type: bus?.Type || "",
+      message: "Geen realtime beschikbaar"
+    };
+  }
+
+  const v = gps.vehicle;
+  const vehicleDescriptor = extractTripDescriptor(v);
+  let tripUpdate = getTripUpdateForVehicle(entities, id, vehicleDescriptor.tripId);
+  if (!tripUpdate) {
+    const gpsEntityId = cleanText(gpsEntity?.id || gpsEntity?.entityId || gpsEntity?.entity_id || "");
+    tripUpdate = getTripUpdateForEntityId(entities, gpsEntityId);
+  }
+  const tripUpdateDescriptor = extractTripDescriptor(tripUpdate);
+  const descriptor = {
+    tripId: vehicleDescriptor.tripId || tripUpdateDescriptor.tripId,
+    routeId: vehicleDescriptor.routeId || tripUpdateDescriptor.routeId,
+    routeShortName: vehicleDescriptor.routeShortName || tripUpdateDescriptor.routeShortName,
+    headsign: vehicleDescriptor.headsign || tripUpdateDescriptor.headsign
+  };
+
+  const tripId = cleanText(descriptor.tripId);
+  const provisionalRouteId = pickFirstText(cleanText(descriptor.routeId), getRouteKeyFromTripId(tripId));
+  const tripData = findTripData(provisionalRouteId, tripId, descriptor.headsign);
+  const routeId = pickFirstText(tripData?.route_id, provisionalRouteId, getRouteKeyFromTripId(tripId));
+  const routeData = findRouteDataByRouteId(routeId, tripId);
+  const routeShort = pickFirstText(routeData?.route_short_name, descriptor.routeShortName, routeId) || "?";
+  const destinationText = pickFirstText(tripData?.trip_headsign, descriptor.headsign, tripData?.trip_short_name) || "-";
+  const currentStopId = getCurrentStopIdFromTripUpdate(tripUpdate);
+  const currentStop = getStopByStopId(currentStopId);
+  const currentStopName = cleanText(currentStop?.stop_name || currentStopId || "") || "Onbekende halte";
+  const routeColorRaw = (routeData?.route_color || "").replace(/[^0-9a-fA-F]/g, "").slice(0, 6);
+  const routeTextColorRaw = (routeData?.route_text_color || "").replace(/[^0-9a-fA-F]/g, "").slice(0, 6);
+
+  let delaySeconds = getDelaySecondsFromTripUpdate(tripUpdate);
+  if (typeof delaySeconds !== "number" && typeof gps.vehicle.trip?.delay === "number") delaySeconds = gps.vehicle.trip.delay;
+  if (typeof delaySeconds !== "number" && typeof v.stopStatus?.delay === "number") delaySeconds = v.stopStatus.delay;
+  if (typeof delaySeconds !== "number") delaySeconds = 0;
+  const delayMins = delaySeconds < 0 ? -Math.round(Math.abs(delaySeconds) / 60) : Math.round(delaySeconds / 60);
+
+  return {
+    status: "live",
+    vehicleId: id,
+    type: bus?.Type || "",
+    routeShort,
+    destinationText,
+    currentStopName,
+    delayMessage: formatDelayMessage(delayMins),
+    routeColor: routeColorRaw.length === 6 ? `#${routeColorRaw}` : "#2563eb",
+    routeTextColor: routeTextColorRaw.length === 6 ? `#${routeTextColorRaw}` : "#ffffff"
+  };
+}
+
+async function refreshDashboardPanel() {
+  if (!dashboardPanelEl || !dashboardGridEl || !dashboardVehicleIds.length) return;
+  const hasInternet = await verifyInternetConnection();
+  if (!hasInternet) {
+    dashboardGridEl.innerHTML = '<div class="dashboard-empty">Geen internetverbinding voor live dashboard.</div>';
+    return;
+  }
+
+  if (voertuigen.length === 0) await laadVoertuigen();
+  if (trips.length === 0) await laadTrips();
+  if (routes.length === 0) await laadRoutes();
+  if (stopsById.size === 0) await laadStops();
+
+  const res = await fetchWithTimeout(API_URL);
+  const data = await res.json();
+  const entities = Array.isArray(data.entity) ? data.entity : [];
+
+  const cardsHtml = dashboardVehicleIds.map((id) => {
+    const bus = findBusById(id);
+    if (!bus) {
+      return `
+        <article class="dashboard-card is-offline">
+          <div class="dashboard-card-top">
+            <strong>${escapeHtml(id)}</strong>
+            <span class="dashboard-status">Niet gevonden</span>
+          </div>
+          <p class="dashboard-meta">Geen voertuigdata gevonden.</p>
+        </article>
+      `;
+    }
+
+    if (isOutOfService(bus)) {
+      return `
+        <article class="dashboard-card is-offline">
+          <div class="dashboard-card-top">
+            <strong>${escapeHtml(bus.Voertuignummer || id)}</strong>
+            <span class="dashboard-status">Uit dienst</span>
+          </div>
+          <p class="dashboard-type">${escapeHtml(bus.Type || "")}</p>
+          <p class="dashboard-meta">Geen realtime beschikbaar.</p>
+        </article>
+      `;
+    }
+
+    const snapshot = getRoutePresentationFromRealtime(id, entities, bus);
+    if (snapshot.status !== "live") {
+      return `
+        <article class="dashboard-card is-offline">
+          <div class="dashboard-card-top">
+            <strong>${escapeHtml(bus.Voertuignummer || id)}</strong>
+            <span class="dashboard-status">Offline</span>
+          </div>
+          <p class="dashboard-type">${escapeHtml(bus.Type || "")}</p>
+          <p class="dashboard-meta">${escapeHtml(snapshot.message || "Geen realtime beschikbaar")}</p>
+        </article>
+      `;
+    }
+
+    return `
+      <article class="dashboard-card is-live">
+        <div class="dashboard-card-top">
+          <strong>${escapeHtml(bus.Voertuignummer || id)}</strong>
+          <span class="line-badge" style="--line-badge-bg:${snapshot.routeColor};--line-badge-fg:${snapshot.routeTextColor};">${escapeHtml(snapshot.routeShort)}</span>
+        </div>
+        <p class="dashboard-type">${escapeHtml(bus.Type || "")}</p>
+        <p class="dashboard-destination">${escapeHtml(snapshot.destinationText)}</p>
+        <p class="dashboard-meta">Halte: ${escapeHtml(snapshot.currentStopName)}</p>
+        <p class="dashboard-meta">${escapeHtml(snapshot.delayMessage)}</p>
+      </article>
+    `;
+  }).join("");
+
+  dashboardGridEl.innerHTML = cardsHtml;
+  dashboardSummaryEl.textContent = `${dashboardVehicleIds.length} voertuigen live gevolgd`;
+}
+
+async function openDashboardPanel() {
+  if (!dashboardVehicleIds.length) {
+    showDashboardSetupModal();
+    return;
+  }
+  dashboardPanelEl.hidden = false;
+  dashboardPanelEl.setAttribute("aria-hidden", "false");
+  await refreshDashboardPanel();
+  stopDashboardRefresh();
+  dashboardRefreshHandle = window.setInterval(() => {
+    refreshDashboardPanel().catch((error) => console.warn("Dashboard refresh mislukt", error));
+  }, updateIntervalMs);
 }
 
 
@@ -1638,6 +1882,9 @@ function initAppPreferences() {
 }
 
 searchBtn.addEventListener("click", zoekAlles);
+dashboardToggleBtn?.addEventListener("click", showDashboardSetupModal);
+dashboardEditBtn?.addEventListener("click", showDashboardSetupModal);
+dashboardCloseBtn?.addEventListener("click", closeDashboardPanel);
 voertuigInput.addEventListener("input", updateFavoriteButtonState);
 favoritesToggleBtn.addEventListener("click", (event) => {
   event.stopPropagation();
@@ -1684,6 +1931,9 @@ intervalSelect.addEventListener("change", () => {
   updateIntervalMs = settings.intervalMs;
   saveSettings();
   restartRealtimeRefresh();
+  if (dashboardVehicleIds.length && !dashboardPanelEl.hidden) {
+    void openDashboardPanel();
+  }
 });
 themeSelect.addEventListener("change", () => {
   settings.theme = themeSelect.value;
@@ -1755,6 +2005,31 @@ compareVehicleInputEl?.addEventListener("keydown", (event) => {
     compareModalConfirmBtn?.click();
   }
 });
+dashboardSetupCloseBtn?.addEventListener("click", hideDashboardSetupModal);
+dashboardSetupCancelBtn?.addEventListener("click", hideDashboardSetupModal);
+dashboardSetupModalEl?.addEventListener("click", (event) => {
+  if (event.target === dashboardSetupModalEl) hideDashboardSetupModal();
+});
+dashboardSetupConfirmBtn?.addEventListener("click", async () => {
+  const inputs = Array.from(dashboardSetupGridEl?.querySelectorAll(".dashboard-setup-input") || []);
+  const nextIds = inputs
+    .map((input) => input.value.trim())
+    .filter(Boolean)
+    .map((query) => {
+      const resolved = resolveVehicleSearch(query);
+      return resolved.vehicleId || normalize(query);
+    })
+    .filter(Boolean)
+    .slice(0, 9);
+
+  dashboardVehicleIds = [...new Set(nextIds)];
+  hideDashboardSetupModal();
+  if (!dashboardVehicleIds.length) {
+    closeDashboardPanel();
+    return;
+  }
+  await openDashboardPanel();
+});
 pdfModalEl?.addEventListener("click", (event) => {
   if (event.target === pdfModalEl) hidePdfModal();
 });
@@ -1768,6 +2043,10 @@ settingsToggleBtn.addEventListener("click", () => setSettingsPanel(!settingsOpen
 settingsCloseBtn.addEventListener("click", () => setSettingsPanel(false));
 settingsBackdropEl.addEventListener("click", () => setSettingsPanel(false));
 document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !dashboardSetupModalEl?.hidden) {
+    hideDashboardSetupModal();
+    return;
+  }
   if (event.key === "Escape" && !compareModalEl?.hidden) {
     hideCompareModal();
     return;

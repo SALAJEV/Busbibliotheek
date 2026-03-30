@@ -1524,6 +1524,138 @@ body.pdf-modal-open {
   margin: 0;
 }
 
+.dashboard-panel {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 26px;
+  border: 1px solid var(--stroke);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--accent-soft) 46%, transparent), transparent 38%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 34%),
+    var(--surface-strong);
+  box-shadow: var(--shadow-card);
+}
+
+.dashboard-panel[hidden] {
+  display: none !important;
+}
+
+.dashboard-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.dashboard-panel-header h2 {
+  margin: 0 0 0.22rem;
+}
+
+.dashboard-summary {
+  margin: 0;
+  color: var(--muted);
+}
+
+.dashboard-panel-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.95rem;
+}
+
+.dashboard-card {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.92rem 0.96rem;
+  border-radius: 20px;
+  border: 1px solid var(--stroke);
+  background: color-mix(in srgb, var(--surface-alt) 88%, transparent);
+  box-shadow: var(--shadow-soft);
+}
+
+.dashboard-card.is-live {
+  border-color: color-mix(in srgb, var(--accent) 26%, var(--stroke));
+}
+
+.dashboard-card.is-offline {
+  opacity: 0.92;
+}
+
+.dashboard-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.7rem;
+  align-items: center;
+}
+
+.dashboard-card-top strong {
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.dashboard-status,
+.dashboard-type,
+.dashboard-meta {
+  color: var(--muted);
+}
+
+.dashboard-type,
+.dashboard-meta,
+.dashboard-destination {
+  margin: 0;
+}
+
+.dashboard-destination {
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.dashboard-empty {
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--stroke-strong);
+  color: var(--muted);
+  text-align: center;
+}
+
+.dashboard-setup-card {
+  width: min(920px, calc(100vw - 2rem));
+}
+
+.dashboard-setup-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.dashboard-setup-field {
+  display: grid;
+  gap: 0.42rem;
+  padding: 0.8rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--stroke);
+  background: color-mix(in srgb, var(--surface-alt) 84%, transparent);
+}
+
+.dashboard-setup-field span {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.dashboard-setup-field input {
+  width: 100%;
+  margin: 0;
+}
+
 /* ===============================
    RESULTS AREA
 ================================ */
@@ -2793,6 +2925,17 @@ footer h3 {
 
   .pdf-modal-actions {
     flex-direction: column-reverse;
+  }
+
+  .dashboard-grid,
+  .dashboard-setup-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-panel-header,
+  .dashboard-panel-actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .compare-vehicles-head {
