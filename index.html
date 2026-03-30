@@ -332,6 +332,64 @@ const FALLBACK_LANG = "en";
 const ALLOWED_COLOR_THEMES = ["classic", "blue", "green", "yellow", "red"];
 const ALLOWED_UPDATE_INTERVALS = [10000, 15000, 30000];
 const REQUEST_TIMEOUT_MS = 12000;
+const PDF_EXPORT_THEMES = {
+  wit: {
+    pageBg: "#f8fafc",
+    badgeBg: "linear-gradient(135deg, #e5e7eb, #f8fafc)",
+    badgeFg: "#374151",
+    accent: "#d1d5db",
+    accentSoft: "#e5e7eb",
+    cardLine: "#e5e7eb"
+  },
+  geel: {
+    pageBg: "#fff8db",
+    badgeBg: "linear-gradient(135deg, #fde68a, #fef3c7)",
+    badgeFg: "#92400e",
+    accent: "#f4d67a",
+    accentSoft: "#f3e2a5",
+    cardLine: "#f8edbf"
+  },
+  groen: {
+    pageBg: "#eefbf2",
+    badgeBg: "linear-gradient(135deg, #bbf7d0, #dcfce7)",
+    badgeFg: "#166534",
+    accent: "#86efac",
+    accentSoft: "#bbf7d0",
+    cardLine: "#d9fbe4"
+  },
+  blauw: {
+    pageBg: "#eff6ff",
+    badgeBg: "linear-gradient(135deg, #93c5fd, #dbeafe)",
+    badgeFg: "#1d4ed8",
+    accent: "#93c5fd",
+    accentSoft: "#bfdbfe",
+    cardLine: "#dbeafe"
+  },
+  oranje: {
+    pageBg: "#fff3e8",
+    badgeBg: "linear-gradient(135deg, #fdba74, #ffedd5)",
+    badgeFg: "#9a3412",
+    accent: "#fdba74",
+    accentSoft: "#fed7aa",
+    cardLine: "#ffe5c8"
+  },
+  rood: {
+    pageBg: "#fff1f2",
+    badgeBg: "linear-gradient(135deg, #fda4af, #ffe4e6)",
+    badgeFg: "#9f1239",
+    accent: "#fda4af",
+    accentSoft: "#fecdd3",
+    cardLine: "#ffe0e4"
+  },
+  paars: {
+    pageBg: "#f6f0ff",
+    badgeBg: "linear-gradient(135deg, #d8b4fe, #f3e8ff)",
+    badgeFg: "#6b21a8",
+    accent: "#d8b4fe",
+    accentSoft: "#e9d5ff",
+    cardLine: "#efe3ff"
+  }
+};
 const VEHICLE_DISPLAY_FIELD_MAP = {
   vehicle_id: "Voertuignummer",
   bus: "Type",
@@ -479,6 +537,303 @@ function translateTemplate(key, fallback) {
 
 function fillTemplate(template, id) {
   return template.includes("{id}") ? template.replace("{id}", id) : `${template} ${id}`;
+}
+
+function sanitizeFileName(value, fallback = "bus") {
+  const cleaned = (value || "")
+    .toString()
+    .replace(/[<>:"/\\|?*\x00-\x1f]/g, "_")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/[. ]+$/g, "");
+  return cleaned || fallback;
+}
+
+function getBusPdfThemeOptionsMarkup(selectedTheme = "geel") {
+  return Object.keys(PDF_EXPORT_THEMES).map((themeKey) => {
+    const selected = themeKey === selectedTheme ? " selected" : "";
+    const label = themeKey.charAt(0).toUpperCase() + themeKey.slice(1);
+    return `<option value="${themeKey}"${selected}>${label}</option>`;
+  }).join("");
+}
+
+function formatBusFieldValueForDisplay(bus, fieldKey, rawValue) {
+  const value = rawValue == null ? "" : rawValue.toString().trim();
+  const key = fieldKey.toLowerCase();
+
+  if (key.includes("datum in dienst")) {
+    if (!value || value === "/") return "Bus nog niet in dienst";
+    return formatDateForUi(value, { year: "numeric", month: "long", day: "numeric" });
+  }
+
+  if (key.includes("uit dienst")) {
+    if (!value || value === "/") return t("notOutOfService");
+    return formatDateForUi(value, { year: "numeric", month: "long", day: "numeric" });
+  }
+
+  if (key.includes("datum")) {
+    if (!value || value === "/") return "";
+    return formatDateForUi(value, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  }
+
+  if (!value || value === "/") return "";
+  return value;
+}
+
+function getBusPdfRows(bus) {
+  const rows = [];
+  const shouldHideVin = getVehicleField(bus, vehicleHideVinFieldKey) === "1" && normalize(getVehicleField(bus, "VIN")) !== "/";
+
+  for (const [fieldKey, rawValue] of Object.entries(bus)) {
+    if (fieldKey === "Vervoersmaatschappij" || fieldKey === "Voertuignummer" || fieldKey === "Type" || fieldKey === vehicleHideVinFieldKey) continue;
+    if (fieldKey === "VIN" && shouldHideVin) continue;
+    if (fieldKey === "Gespot?" || fieldKey === "Opmerkingen") continue;
+
+    const formattedValue = formatBusFieldValueForDisplay(bus, fieldKey, rawValue);
+    if (!formattedValue) continue;
+
+    rows.push({
+      label: translateVehicleFieldLabel(fieldKey),
+      value: formattedValue,
+      isHansea: normalizeFieldKey(fieldKey) === "hansea nummer"
+    });
+  }
+
+  return rows;
+}
+
+function buildBusPdfHtml(bus, vehicleId, themeKey = "geel") {
+  const theme = PDF_EXPORT_THEMES[themeKey] || PDF_EXPORT_THEMES.geel;
+  const vehicleNumber = escapeHtml(bus.Voertuignummer || vehicleId || "");
+  const busType = escapeHtml(bus.Type || "Onbekend type");
+  const owner = escapeHtml(getVehicleField(bus, "Eigenaar") || "-");
+  const photoSrc = `media/${encodeURIComponent(vehicleId)}.jpeg`;
+  const logoSrc = "media/logo.png";
+  const rowsHtml = getBusPdfRows(bus).map((row) => {
+    const valueMarkup = row.isHansea
+      ? `<span class="pdf-hansea">${escapeHtml(row.value)}</span>`
+      : escapeHtml(row.value);
+    return `
+      <div class="pdf-detail-row">
+        <div class="pdf-detail-label">${escapeHtml(row.label)}</div>
+        <div class="pdf-detail-value">${valueMarkup}</div>
+      </div>
+    `;
+  }).join("");
+
+  return `<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bus ${vehicleNumber}</title>
+  <style>
+    @page { size: A4; margin: 12mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Calibri, Arial, sans-serif;
+      color: #1f2937;
+      background: ${theme.pageBg};
+    }
+    .pdf-page {
+      min-height: calc(297mm - 24mm);
+      padding: 12mm;
+      border-radius: 26px;
+      background:
+        radial-gradient(circle at top right, rgba(255,255,255,0.7), transparent 36%),
+        linear-gradient(180deg, rgba(255,255,255,0.68), rgba(255,255,255,0.94));
+      border: 1px solid ${theme.cardLine};
+    }
+    .pdf-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .pdf-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .pdf-brand img {
+      width: 58px;
+      height: 58px;
+      object-fit: contain;
+    }
+    .pdf-eyebrow {
+      margin: 0 0 6px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+    .pdf-header h1 {
+      margin: 0;
+      font-size: 29px;
+      line-height: 1.04;
+    }
+    .pdf-subtitle {
+      margin: 8px 0 0;
+      color: #475569;
+      font-size: 15px;
+    }
+    .pdf-badge {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: ${theme.badgeBg};
+      color: ${theme.badgeFg};
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .pdf-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 18px;
+    }
+    .pdf-card {
+      border-radius: 22px;
+      border: 1px solid ${theme.cardLine};
+      background: rgba(255,255,255,0.84);
+      padding: 16px;
+    }
+    .pdf-card h2 {
+      margin: 0 0 12px;
+      font-size: 17px;
+    }
+    .pdf-photo-frame {
+      border-radius: 18px;
+      overflow: hidden;
+      background: ${theme.accentSoft};
+      border: 1px solid ${theme.cardLine};
+      min-height: 250px;
+      display: grid;
+      place-items: center;
+    }
+    .pdf-photo-frame img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .pdf-photo-fallback {
+      color: #64748b;
+      text-align: center;
+      font-size: 14px;
+      line-height: 1.5;
+      padding: 24px;
+    }
+    .pdf-meta {
+      display: grid;
+      gap: 10px;
+    }
+    .pdf-detail-row {
+      display: grid;
+      grid-template-columns: minmax(145px, 180px) 1fr;
+      gap: 12px;
+      padding: 10px 0;
+      border-top: 1px solid ${theme.cardLine};
+    }
+    .pdf-detail-row:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+    .pdf-detail-label {
+      color: #64748b;
+      font-weight: 700;
+    }
+    .pdf-detail-value {
+      color: #0f172a;
+      font-weight: 600;
+      word-break: break-word;
+    }
+    .pdf-hansea {
+      color: #b91c1c;
+    }
+    .pdf-footer {
+      margin-top: 18px;
+      color: #64748b;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    @media print {
+      body { background: ${theme.pageBg}; }
+      .pdf-page { box-shadow: none; }
+    }
+    @media (max-width: 720px) {
+      .pdf-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="pdf-page">
+    <header class="pdf-header">
+      <div class="pdf-brand">
+        <img src="${logoSrc}" alt="Busbibliotheek logo">
+        <div>
+          <p class="pdf-eyebrow">Busbibliotheek 95</p>
+          <h1>${vehicleNumber}</h1>
+          <p class="pdf-subtitle">${busType} · Eigenaar: ${owner}</p>
+        </div>
+      </div>
+      <div class="pdf-badge">Thema ${escapeHtml(themeKey)}</div>
+    </header>
+
+    <section class="pdf-grid">
+      <article class="pdf-card">
+        <h2>Voertuiggegevens</h2>
+        <div class="pdf-meta">
+          ${rowsHtml}
+        </div>
+      </article>
+
+      <article class="pdf-card">
+        <h2>Voertuigfoto</h2>
+        <div class="pdf-photo-frame">
+          <img src="${photoSrc}" alt="Foto van voertuig ${vehicleNumber}" onerror="this.replaceWith(Object.assign(document.createElement('div'), { className: 'pdf-photo-fallback', textContent: 'Geen foto beschikbaar voor dit voertuig.' }));">
+        </div>
+      </article>
+    </section>
+
+    <footer class="pdf-footer">
+      <span>Busbibliotheek 95</span>
+      <span>Exportdatum: ${escapeHtml(new Date().toLocaleDateString("nl-BE", { day: "numeric", month: "long", year: "numeric" }))}</span>
+    </footer>
+  </main>
+</body>
+</html>`;
+}
+
+function exportBusPdf(vehicleId) {
+  const bus = findBusById(vehicleId);
+  if (!bus) return;
+
+  const themeSelect = document.getElementById("busPdfThemeSelect");
+  const themeKey = themeSelect?.value || "geel";
+  const pdfWindow = window.open("", "_blank", "noopener,noreferrer,width=1024,height=1280");
+
+  if (!pdfWindow) {
+    window.alert("De PDF kon niet geopend worden. Controleer of pop-ups zijn toegestaan.");
+    return;
+  }
+
+  const html = buildBusPdfHtml(bus, vehicleId, themeKey);
+  pdfWindow.document.open();
+  pdfWindow.document.write(html);
+  pdfWindow.document.close();
+  pdfWindow.document.title = `${sanitizeFileName(`Bus ${vehicleId}`)}.pdf`;
+  pdfWindow.focus();
+  pdfWindow.addEventListener("load", () => {
+    window.setTimeout(() => {
+      pdfWindow.print();
+    }, 250);
+  }, { once: true });
 }
 
 function updateVehiclePhotoTexts() {
@@ -1044,9 +1399,17 @@ vasteDataEl.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
   const inlineFavoriteBtn = target.closest("#favoriteInlineBtn");
-  if (!inlineFavoriteBtn) return;
-  const id = inlineFavoriteBtn.getAttribute("data-id") || "";
-  toggleFavorite(id);
+  if (inlineFavoriteBtn) {
+    const id = inlineFavoriteBtn.getAttribute("data-id") || "";
+    toggleFavorite(id);
+    return;
+  }
+
+  const pdfButton = target.closest("#vehiclePdfBtn");
+  if (pdfButton) {
+    const id = pdfButton.getAttribute("data-id") || currentVehicleId || "";
+    exportBusPdf(id);
+  }
 });
 intervalSelect.addEventListener("change", () => {
   settings.intervalMs = normalizeUpdateIntervalMs(intervalSelect.value);
@@ -1327,7 +1690,10 @@ const busIcon = L.divIcon({
 async function laadVoertuigen() {
   const res = await fetchWithTimeout(`${BASE_URL}/vehicles.txt`, { cache: "no-store" });
   const text = await res.text();
-  const regels = text.trim().split(/\r?\n/);
+  const regels = text
+    .split(/\r?\n/)
+    .map((regel) => regel.trim())
+    .filter((regel) => regel && !regel.startsWith("#"));
   const headers = parseCSVLine(regels[0], ";").map((header) => header.trim());
   vehiclePlateFieldKey = "Nummerplaat";
   oldVehicleNumbersFieldKey = "Oude voertuignummers";
@@ -1572,9 +1938,21 @@ function toonVasteData(id){
   const favoriteStateSymbol = favorites.includes(id) ? "\u2605" : "\u2606";
   const safeFavoriteId = id.replace(/"/g, "&quot;");
   const favoriteClass = favorites.includes(id) ? "vehicle-favorite-btn is-favorite" : "vehicle-favorite-btn";
+  const pdfThemeOptions = getBusPdfThemeOptionsMarkup();
 
   let html=`<div class="vehicle-title-row"><p class="voertuignummer-display">${bus.Voertuignummer}</p><button id="favoriteInlineBtn" class="${favoriteClass}" type="button" title="${favoriteLabel}" aria-label="${favoriteLabel}" aria-pressed="${favorites.includes(id)}" data-id="${safeFavoriteId}">${favoriteStateSymbol}</button></div>`;
   if(bus.Type) html += `<p class="vehicle-type">${bus.Type}</p>`;
+  html += `
+    <div class="vehicle-actions-row">
+      <button id="vehiclePdfBtn" class="chip vehicle-inline-btn" type="button" data-id="${safeFavoriteId}">PDF maken</button>
+      <label class="vehicle-theme-picker" for="busPdfThemeSelect">
+        <span>PDF-thema</span>
+        <select id="busPdfThemeSelect">
+          ${pdfThemeOptions}
+        </select>
+      </label>
+    </div>
+  `;
   html+="<table>";
   const shouldHideVin = getVehicleField(bus, vehicleHideVinFieldKey) === "1" && normalize(getVehicleField(bus, "VIN")) !== "/";
   for(const [k,v] of Object.entries(bus)){
