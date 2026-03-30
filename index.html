@@ -248,6 +248,7 @@ const PYTHON_MAIN_DOWNLOAD_URL = "https://busbibliotheek95.pages.dev/python/scri
 const NETWORK_CHECK_URL = `${window.location.origin}/manifest.json?network-check=1`;
 const NETWORK_CHECK_TIMEOUT_MS = 5000;
 const NETWORK_CHECK_INTERVAL_MS = 15000;
+const NETWORK_CHECK_CACHE_MS = 10000;
 const FAVORITES_KEY = "bb_favorites_v1";
 const SETTINGS_KEY = "bb_settings_v1";
 let updateIntervalMs = 10000;
@@ -343,6 +344,11 @@ let realtimePausedByInactivity = false;
 let inactivityCheckHandle = null;
 let networkCheckHandle = null;
 let pdfModalVehicleId = "";
+let tripsLoadPromise = null;
+let routesLoadPromise = null;
+let stopsLoadPromise = null;
+let lastVerifiedInternetAt = 0;
+let lastVerifiedInternetState = true;
 let settings = {
   intervalMs: 10000,
   theme: "auto",
@@ -952,8 +958,15 @@ async function hasVerifiedInternetConnection() {
   }
 }
 
-async function verifyInternetConnection() {
+async function verifyInternetConnection(force = false) {
+  const now = Date.now();
+  if (!force && now - lastVerifiedInternetAt < NETWORK_CHECK_CACHE_MS) {
+    setOfflineOverlayVisible(!lastVerifiedInternetState);
+    return lastVerifiedInternetState;
+  }
   const online = await hasVerifiedInternetConnection();
+  lastVerifiedInternetAt = now;
+  lastVerifiedInternetState = online;
   setOfflineOverlayVisible(!online);
   return online;
 }
@@ -961,7 +974,9 @@ async function verifyInternetConnection() {
 function startInternetChecks() {
   if (networkCheckHandle) clearInterval(networkCheckHandle);
   networkCheckHandle = window.setInterval(() => {
-    verifyInternetConnection().catch(() => {});
+    if (!document.hidden) {
+      verifyInternetConnection(true).catch(() => {});
+    }
   }, NETWORK_CHECK_INTERVAL_MS);
 }
 
@@ -976,16 +991,7 @@ function hideVehiclePhotoCard() {
   vehiclePhotoCaptionEl.textContent = "";
 }
 
-function probeImageAvailability(src) {
-  return new Promise((resolve) => {
-    const probe = new Image();
-    probe.onload = () => resolve(true);
-    probe.onerror = () => resolve(false);
-    probe.src = src;
-  });
-}
-
-async function updateVehiclePhotoCard(vehicleId) {
+function updateVehiclePhotoCard(vehicleId) {
   if (!vehiclePhotoCardEl || !vehiclePhotoImgEl || !vehiclePhotoCaptionEl) return;
   const normalizedVehicleId = normalize(vehicleId);
   if (!normalizedVehicleId) {
@@ -1002,24 +1008,19 @@ async function updateVehiclePhotoCard(vehicleId) {
   vehiclePhotoCaptionEl.textContent = "";
 
   const photoSrc = `media/${encodeURIComponent(normalizedVehicleId)}.jpeg`;
-  const hasPhoto = await probeImageAvailability(photoSrc);
-
-  if (lookupToken !== vehiclePhotoLookupToken) return;
-  if (!hasPhoto) {
+  vehiclePhotoImgEl.onload = () => {
+    if (lookupToken !== vehiclePhotoLookupToken) return;
+    currentPhotoVehicleId = normalizedVehicleId;
+    updateVehiclePhotoTexts();
+    vehiclePhotoCardEl.hidden = false;
+    vehiclePhotoCardEl.setAttribute("aria-hidden", "false");
+  };
+  vehiclePhotoImgEl.onerror = () => {
+    if (lookupToken !== vehiclePhotoLookupToken) return;
     hideVehiclePhotoCard();
-    return;
-  }
-
-  currentPhotoVehicleId = normalizedVehicleId;
+  };
   vehiclePhotoImgEl.src = photoSrc;
-  updateVehiclePhotoTexts();
-  vehiclePhotoCardEl.hidden = false;
-  vehiclePhotoCardEl.setAttribute("aria-hidden", "false");
 }
-
-vehiclePhotoImgEl?.addEventListener("error", () => {
-  hideVehiclePhotoCard();
-});
 
 function parseFlexibleDateParts(rawValue) {
   const value = (rawValue || "").toString().trim().replace(/^"|"$/g, "");
@@ -1517,7 +1518,7 @@ pdfModalEl?.addEventListener("click", (event) => {
   if (event.target === pdfModalEl) hidePdfModal();
 });
 offlineRetryBtn?.addEventListener("click", () => {
-  verifyInternetConnection().catch(() => {});
+  verifyInternetConnection(true).catch(() => {});
 });
 settingsToggleBtn.addEventListener("click", () => setSettingsPanel(!settingsOpen));
 settingsCloseBtn.addEventListener("click", () => setSettingsPanel(false));
@@ -1540,14 +1541,16 @@ document.addEventListener("keydown", (event) => {
   }
 });
 window.addEventListener("online", () => {
-  verifyInternetConnection().catch(() => {});
+  verifyInternetConnection(true).catch(() => {});
 });
 window.addEventListener("offline", () => {
+  lastVerifiedInternetAt = Date.now();
+  lastVerifiedInternetState = false;
   setOfflineOverlayVisible(true);
 });
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) {
-    verifyInternetConnection().catch(() => {});
+    verifyInternetConnection(true).catch(() => {});
   }
 });
 
@@ -1788,6 +1791,9 @@ async function laadVoertuigen() {
 }
 
 async function laadTrips() {
+  if (trips.length) return;
+  if (tripsLoadPromise) return tripsLoadPromise;
+  tripsLoadPromise = (async () => {
   const res = await fetchWithTimeout(`${BASE_URL}/trips.txt`, { cache: "no-store" });
   const text = await res.text();
   const regels = text.trim().split(/\r?\n/);
@@ -1811,9 +1817,18 @@ async function laadTrips() {
     const routeKey = getRouteKey(routeId);
     addTripToLookup(tripsByRouteKey, routeKey, trip);
   });
+  })();
+  try {
+    await tripsLoadPromise;
+  } finally {
+    tripsLoadPromise = null;
+  }
 }
 
 async function laadRoutes() {
+  if (routes.length) return;
+  if (routesLoadPromise) return routesLoadPromise;
+  routesLoadPromise = (async () => {
   const res = await fetchWithTimeout(`${BASE_URL}/routes.txt`, { cache: "no-store" });
   const text = await res.text();
   const regels = text.trim().split(/\r?\n/);
@@ -1834,9 +1849,18 @@ async function laadRoutes() {
     const routeKey = getRouteKey(routeId);
     if (routeKey && !routesByKey.has(routeKey)) routesByKey.set(routeKey, route);
   });
+  })();
+  try {
+    await routesLoadPromise;
+  } finally {
+    routesLoadPromise = null;
+  }
 }
 
 async function laadStops() {
+  if (stopsById.size) return;
+  if (stopsLoadPromise) return stopsLoadPromise;
+  stopsLoadPromise = (async () => {
   const res = await fetchWithTimeout(`${BASE_URL}/stops.txt`, { cache: "no-store" });
   const text = await res.text();
   const regels = text.trim().split(/\r?\n/);
@@ -1856,13 +1880,16 @@ async function laadStops() {
     if (stopId) stopsById.set(stopId, stop);
     if (stopCode) stopsById.set(stopCode, stop);
   });
+  })();
+  try {
+    await stopsLoadPromise;
+  } finally {
+    stopsLoadPromise = null;
+  }
 }
 
 initAppPreferences();
 void laadVoertuigen().catch((e) => console.warn("Warm-up voertuigen mislukt", e));
-void laadTrips().catch((e) => console.warn("Warm-up trips mislukt", e));
-void laadRoutes().catch((e) => console.warn("Warm-up routes mislukt", e));
-void laadStops().catch((e) => console.warn("Warm-up haltes mislukt", e));
 
 function toonSuggesties() {
   const query = voertuigInput.value.trim();
@@ -2013,7 +2040,7 @@ function toonVasteData(id){
     return;
   }
 
-  void updateVehiclePhotoCard(id);
+  updateVehiclePhotoCard(id);
 
   const favoriteLabel = favorites.includes(id) ? t("favoriteRemove") : t("favoriteAdd");
   const favoriteStateSymbol = favorites.includes(id) ? "\u2605" : "\u2606";
@@ -2088,11 +2115,6 @@ function initMap(lat,lon){
       attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors &amp; <a href="https://carto.com/">CARTO</a>'
     }).addTo(map);
 
-    // Optional transport overlay (rail/lines) - may enhance transit visualization
-    const transportOverlay = L.tileLayer('https://a.tile.openrailwaymap.org/standard/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenRailwayMap'
-    });
-    transportOverlay.addTo(map);
   }
 }
 
@@ -2429,7 +2451,7 @@ if ('serviceWorker' in navigator) {
     .catch(err => console.error('Service Worker registratie mislukt:', err));
 }
 
-verifyInternetConnection().catch(() => {});
+verifyInternetConnection(true).catch(() => {});
 startInternetChecks();
 
 // Dark scheme preference listener
