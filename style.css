@@ -1566,6 +1566,22 @@ body.pdf-modal-open {
   align-items: center;
 }
 
+.dashboard-map-wrap {
+  margin-bottom: 1rem;
+}
+
+.dashboard-map-wrap.hidden {
+  display: none;
+}
+
+.dashboard-map {
+  height: 390px;
+  border-radius: 22px;
+  overflow: hidden;
+  border: 1px solid var(--stroke-strong);
+  box-shadow: var(--shadow-soft);
+}
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2440,6 +2456,36 @@ body.offline-active {
   display: none !important;
 }
 
+#dashboardMap .leaflet-tooltip.dashboard-map-tooltip {
+  display: block !important;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
+#dashboardMap .leaflet-tooltip.dashboard-map-tooltip::before {
+  display: none;
+}
+
+.dashboard-map-tooltip-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0.38rem 0.56rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--stroke-strong) 82%, white);
+  background: color-mix(in srgb, var(--surface-strong) 92%, white 8%);
+  color: var(--text);
+  box-shadow: var(--shadow-soft);
+  white-space: nowrap;
+  font-size: 0.82rem;
+}
+
+.dashboard-map-tooltip-card strong {
+  font-size: 0.84rem;
+}
+
 .bus-div-icon {
   background: transparent;
   border: 0;
@@ -2983,6 +3029,10 @@ footer h3 {
   .dashboard-grid,
   .dashboard-setup-grid {
     grid-template-columns: 1fr;
+  }
+
+  .dashboard-map {
+    height: 320px;
   }
 
   .dashboard-panel-header,

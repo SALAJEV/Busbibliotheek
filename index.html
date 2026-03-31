@@ -69,6 +69,9 @@
         <button id="dashboardCloseBtn" class="settings-close-btn" type="button" aria-label="Dashboard sluiten">&times;</button>
       </div>
     </div>
+    <div id="dashboardMapWrap" class="dashboard-map-wrap hidden">
+      <div id="dashboardMap" class="dashboard-map" aria-label="Kaart met live voertuigen"></div>
+    </div>
     <div id="dashboardGrid" class="dashboard-grid"></div>
   </section>
 
@@ -410,6 +413,8 @@ const compareModalConfirmBtn = document.getElementById("compareModalConfirmBtn")
 const dashboardPanelEl = document.getElementById("dashboardPanel");
 const dashboardGridEl = document.getElementById("dashboardGrid");
 const dashboardSummaryEl = document.getElementById("dashboardSummary");
+const dashboardMapWrapEl = document.getElementById("dashboardMapWrap");
+const dashboardMapEl = document.getElementById("dashboardMap");
 const dashboardEditBtn = document.getElementById("dashboardEditBtn");
 const dashboardCloseBtn = document.getElementById("dashboardCloseBtn");
 const dashboardSetupModalEl = document.getElementById("dashboardSetupModal");
@@ -436,6 +441,8 @@ let currentVehicleId = "";
 let compareVehicleId = "";
 let dashboardVehicleIds = [];
 let dashboardRefreshHandle = null;
+let dashboardMap = null;
+let dashboardMapMarkers = null;
 let currentPhotoVehicleId = "";
 let favorites = [];
 let settingsOpen = false;
@@ -1031,6 +1038,70 @@ function stopDashboardRefresh() {
   }
 }
 
+function initDashboardMap() {
+  if (!dashboardMapEl || dashboardMap) return;
+  dashboardMap = L.map("dashboardMap", { zoomControl: true, preferCanvas: true }).setView([51.0, 4.4], 9);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors &amp; <a href="https://carto.com/">CARTO</a>'
+  }).addTo(dashboardMap);
+  dashboardMapMarkers = L.layerGroup().addTo(dashboardMap);
+}
+
+function buildDashboardMapTooltip(snapshot) {
+  return `
+    <div class="dashboard-map-tooltip-card">
+      <span class="line-badge" style="--line-badge-bg:${snapshot.routeColor};--line-badge-fg:${snapshot.routeTextColor};">${escapeHtml(snapshot.routeShort)}</span>
+      <strong>${escapeHtml(snapshot.vehicleId)}</strong>
+      <span>${escapeHtml(snapshot.destinationText || "-")}</span>
+    </div>
+  `;
+}
+
+function renderDashboardMap(snapshots) {
+  if (!dashboardMapWrapEl) return;
+  const liveSnapshots = snapshots.filter((snapshot) =>
+    snapshot.status === "live" &&
+    Number.isFinite(snapshot.latitude) &&
+    Number.isFinite(snapshot.longitude)
+  );
+
+  if (!liveSnapshots.length) {
+    dashboardMapWrapEl.classList.add("hidden");
+    if (dashboardMapMarkers) dashboardMapMarkers.clearLayers();
+    return;
+  }
+
+  dashboardMapWrapEl.classList.remove("hidden");
+  initDashboardMap();
+  dashboardMapMarkers.clearLayers();
+
+  const bounds = [];
+  liveSnapshots.forEach((snapshot) => {
+    const markerInstance = L.marker([snapshot.latitude, snapshot.longitude], { icon: busIcon }).addTo(dashboardMapMarkers);
+    const markerEl = markerInstance.getElement && markerInstance.getElement();
+    if (markerEl) {
+      const img = markerEl.querySelector("img");
+      if (img) img.style.transform = `rotate(${snapshot.bearing || 0}deg)`;
+    }
+    markerInstance.bindTooltip(buildDashboardMapTooltip(snapshot), {
+      permanent: true,
+      direction: "top",
+      offset: [0, -26],
+      className: "dashboard-map-tooltip"
+    });
+    bounds.push([snapshot.latitude, snapshot.longitude]);
+  });
+
+  window.setTimeout(() => {
+    dashboardMap.invalidateSize();
+    if (bounds.length === 1) {
+      dashboardMap.setView(bounds[0], 15);
+      return;
+    }
+    dashboardMap.fitBounds(bounds, { padding: [28, 28], maxZoom: 15 });
+  }, 0);
+}
+
 function closeDashboardPanel() {
   stopDashboardRefresh();
   if (!dashboardPanelEl) return;
@@ -1103,7 +1174,10 @@ function getRoutePresentationFromRealtime(id, entities, bus) {
     currentStopName,
     delayMessage: formatDelayMessage(delayMins),
     routeColor: routeColorRaw.length === 6 ? `#${routeColorRaw}` : "#2563eb",
-    routeTextColor: routeTextColorRaw.length === 6 ? `#${routeTextColorRaw}` : "#ffffff"
+    routeTextColor: routeTextColorRaw.length === 6 ? `#${routeTextColorRaw}` : "#ffffff",
+    latitude: Number(v.position?.latitude),
+    longitude: Number(v.position?.longitude),
+    bearing: Number(v.position?.bearing || 0)
   };
 }
 
@@ -1111,6 +1185,7 @@ async function refreshDashboardPanel() {
   if (!dashboardPanelEl || !dashboardGridEl || !dashboardVehicleIds.length) return;
   const hasInternet = await verifyInternetConnection();
   if (!hasInternet) {
+    renderDashboardMap([]);
     dashboardGridEl.innerHTML = '<div class="dashboard-empty">Geen internetverbinding voor live dashboard.</div>';
     return;
   }
@@ -1124,6 +1199,7 @@ async function refreshDashboardPanel() {
   const data = await res.json();
   const entities = Array.isArray(data.entity) ? data.entity : [];
 
+  const snapshots = [];
   const cardsHtml = dashboardVehicleIds.map((id) => {
     const bus = findBusById(id);
     if (!bus) {
@@ -1152,6 +1228,7 @@ async function refreshDashboardPanel() {
     }
 
     const snapshot = getRoutePresentationFromRealtime(id, entities, bus);
+    snapshots.push(snapshot);
     if (snapshot.status !== "live") {
       return `
         <article class="dashboard-card is-offline">
@@ -1179,8 +1256,10 @@ async function refreshDashboardPanel() {
     `;
   }).join("");
 
+  renderDashboardMap(snapshots);
   dashboardGridEl.innerHTML = cardsHtml;
-  dashboardSummaryEl.textContent = `${dashboardVehicleIds.length} voertuigen live gevolgd`;
+  const liveCount = snapshots.filter((snapshot) => snapshot.status === "live").length;
+  dashboardSummaryEl.textContent = `${liveCount} van ${dashboardVehicleIds.length} voertuigen live op kaart`;
 }
 
 async function openDashboardPanel() {
@@ -1190,6 +1269,7 @@ async function openDashboardPanel() {
   }
   dashboardPanelEl.hidden = false;
   dashboardPanelEl.setAttribute("aria-hidden", "false");
+  initDashboardMap();
   await refreshDashboardPanel();
   stopDashboardRefresh();
   dashboardRefreshHandle = window.setInterval(() => {
