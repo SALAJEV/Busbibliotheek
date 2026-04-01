@@ -1,4 +1,4 @@
-const CACHE_NAME = 'busbibliotheek-v22';
+const CACHE_NAME = 'busbibliotheek-v23';
 const CORE_ASSETS = [
   '/',
   '/index.html',
@@ -91,8 +91,21 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // API/external calls: network first, fallback to cache
-  if (url.hostname !== self.location.hostname || url.pathname.includes('/api')) {
+  if (url.pathname.includes('/api')) {
+    event.respondWith(
+      fetch(request, { cache: 'no-store' }).catch(() =>
+        new Response(JSON.stringify({ error: 'Realtime tijdelijk niet beschikbaar' }), {
+          status: 503,
+          statusText: 'Service Unavailable',
+          headers: { 'Content-Type': 'application/json; charset=UTF-8' }
+        })
+      )
+    );
+    return;
+  }
+
+  // External calls: network first, fallback to cache
+  if (url.hostname !== self.location.hostname) {
     event.respondWith(
       fetch(request)
         .then(response => {

@@ -37,15 +37,47 @@
     </div>
     <div class="header-actions">
       <button id="installBtn" title="App installeren op thuisscherm">Installeer App</button>
-      <button id="dashboardToggleBtn" class="btn" type="button" title="9 live kaarten">9 Live</button>
       <div class="favorites-top">
-        <button id="favoritesToggleBtn" class="icon-btn favorites-toggle-btn" type="button" title="Favorieten" aria-label="Favorieten" aria-controls="favoritesPanel" aria-expanded="false">&#9734;</button>
-        <div id="favoritesPanel" class="favorites-panel" hidden>
-          <h3 id="favoritesTitle">Favorieten</h3>
-          <div id="favoritesList" class="chip-row"></div>
+        <button id="favoritesToggleBtn" class="icon-btn more-toggle-btn" type="button" title="Meer" aria-label="Meer" aria-controls="favoritesPanel" aria-expanded="false">&#8942;</button>
+        <div id="favoritesPanel" class="favorites-panel more-panel" hidden>
+          <div class="more-panel-header">
+            <div>
+              <h3 id="morePanelTitle">Meer</h3>
+              <p class="more-panel-subtitle">Snelle functies en extra tools.</p>
+            </div>
+          </div>
+          <section class="more-panel-section">
+            <div class="more-panel-section-head">
+              <h4 id="favoritesTitle">Favorieten</h4>
+            </div>
+            <div id="favoritesList" class="chip-row"></div>
+          </section>
+          <section class="more-panel-section">
+            <div class="more-panel-section-head">
+              <h4>Functies</h4>
+            </div>
+            <div class="more-action-grid">
+              <button id="dashboardToggleBtn" class="btn" type="button" title="9 live kaarten">9 Live</button>
+              <button id="settingsToggleBtn" class="btn more-secondary-btn" type="button" title="Instellingen" aria-label="Instellingen" aria-controls="settingsPanel" aria-expanded="false">Instellingen</button>
+            </div>
+          </section>
+          <section class="more-panel-section halte-module">
+            <div class="more-panel-section-head">
+              <h4 id="haltModuleTitle">Haltecode zoeken</h4>
+            </div>
+            <p id="haltModuleDescription" class="halte-module-description">Voer een geldige haltecode in om de realtime haltepagina van De Lijn te openen.</p>
+            <div class="halte-module-form">
+              <input type="text" id="haltecodeInput" inputmode="numeric" autocomplete="off" placeholder="Haltecode">
+              <button id="haltecodeSearchBtn" class="btn" type="button">Halte openen</button>
+            </div>
+            <p id="haltecodeError" class="halte-module-error" hidden>Ongeldige haltecode.</p>
+            <div id="lastCodesContainer" class="halte-history" hidden>
+              <h5>Laatste haltecodes</h5>
+              <div id="lastCodesList" class="chip-row"></div>
+            </div>
+          </section>
         </div>
       </div>
-      <button id="settingsToggleBtn" class="icon-btn" type="button" title="Instellingen" aria-label="Instellingen" aria-controls="settingsPanel" aria-expanded="false">&#9881;</button>
     </div>
   </div>
   <div id="iosInstallHint" class="hint" hidden></div>
@@ -54,7 +86,7 @@
     <input id="voertuignummer" placeholder="Voertuignummer of nummerplaat" 
            oninput="toonSuggesties()" 
            onkeydown="if(event.key==='Enter'){zoekAlles();}" autocomplete="off">
-    <button id="searchBtn" type="button" title="Zoeken" aria-label="Zoeken" onclick="zoekAlles()"><span class="search-btn-icon" aria-hidden="true">&#128269;</span></button>
+    <button id="searchBtn" type="button" title="Zoeken" aria-label="Zoeken"><span class="search-btn-icon" aria-hidden="true">&#128269;</span></button>
   </div>
   <ul id="suggestielijst"></ul>
 
@@ -422,6 +454,14 @@ const dashboardSetupGridEl = document.getElementById("dashboardSetupGrid");
 const dashboardSetupCloseBtn = document.getElementById("dashboardSetupCloseBtn");
 const dashboardSetupCancelBtn = document.getElementById("dashboardSetupCancelBtn");
 const dashboardSetupConfirmBtn = document.getElementById("dashboardSetupConfirmBtn");
+const morePanelTitleEl = document.getElementById("morePanelTitle");
+const haltModuleTitleEl = document.getElementById("haltModuleTitle");
+const haltModuleDescriptionEl = document.getElementById("haltModuleDescription");
+const haltecodeInputEl = document.getElementById("haltecodeInput");
+const haltecodeSearchBtn = document.getElementById("haltecodeSearchBtn");
+const haltecodeErrorEl = document.getElementById("haltecodeError");
+const lastCodesContainerEl = document.getElementById("lastCodesContainer");
+const lastCodesListEl = document.getElementById("lastCodesList");
 
 let voertuigen = [];
 let trips = [];
@@ -478,12 +518,16 @@ let jsPdfLoadPromise = null;
 let html2CanvasLoadPromise = null;
 let lastVerifiedInternetAt = 0;
 let lastVerifiedInternetState = true;
+let realtimeRequestToken = 0;
+let dashboardRequestToken = 0;
+let latestSearchToken = 0;
 let settings = {
   intervalMs: 10000,
   theme: "auto",
   colorTheme: "classic",
   language: "nl"
 };
+const LAST_HALTES_KEY = "lastHaltes";
 
 const translationsConfig = window.BB_TRANSLATIONS || {};
 const i18n = translationsConfig.i18n || { nl: {} };
@@ -702,6 +746,11 @@ function translateTemplate(key, fallback) {
 
 function fillTemplate(template, id) {
   return template.includes("{id}") ? template.replace("{id}", id) : `${template} ${id}`;
+}
+
+function getLabel(key, fallback) {
+  const translated = t(key);
+  return translated === key ? fallback : translated;
 }
 
 function sanitizeFileName(value, fallback = "bus") {
@@ -1036,6 +1085,7 @@ function stopDashboardRefresh() {
     clearInterval(dashboardRefreshHandle);
     dashboardRefreshHandle = null;
   }
+  dashboardRequestToken += 1;
 }
 
 function initDashboardMap() {
@@ -1107,6 +1157,7 @@ function closeDashboardPanel() {
   if (!dashboardPanelEl) return;
   dashboardPanelEl.hidden = true;
   dashboardPanelEl.setAttribute("aria-hidden", "true");
+  renderDashboardMap([]);
 }
 
 function getRoutePresentationFromRealtime(id, entities, bus) {
@@ -1182,8 +1233,10 @@ function getRoutePresentationFromRealtime(id, entities, bus) {
 }
 
 async function refreshDashboardPanel() {
+  const requestToken = ++dashboardRequestToken;
   if (!dashboardPanelEl || !dashboardGridEl || !dashboardVehicleIds.length) return;
   const hasInternet = await verifyInternetConnection();
+  if (requestToken !== dashboardRequestToken) return;
   if (!hasInternet) {
     renderDashboardMap([]);
     dashboardGridEl.innerHTML = '<div class="dashboard-empty">Geen internetverbinding voor live dashboard.</div>';
@@ -1197,6 +1250,7 @@ async function refreshDashboardPanel() {
 
   const res = await fetchWithTimeout(API_URL);
   const data = await res.json();
+  if (requestToken !== dashboardRequestToken || dashboardPanelEl.hidden) return;
   const entities = Array.isArray(data.entity) ? data.entity : [];
 
   const snapshots = [];
@@ -1734,10 +1788,13 @@ function applyTranslations() {
   appSubtitleEl.textContent = t("subtitle");
   appContextLineEl.textContent = t("appContextLine");
   installBtn.textContent = t("install");
-  favoritesToggleBtn.title = t("favorites");
-  favoritesToggleBtn.setAttribute("aria-label", t("favorites"));
+  const moreLabel = getLabel("more", "Meer");
+  favoritesToggleBtn.title = moreLabel;
+  favoritesToggleBtn.setAttribute("aria-label", moreLabel);
+  if (morePanelTitleEl) morePanelTitleEl.textContent = moreLabel;
   settingsToggleBtn.title = t("settings");
   settingsToggleBtn.setAttribute("aria-label", t("settings"));
+  settingsToggleBtn.textContent = t("settings");
   iosInstallHintEl.textContent = t("iosHint");
   searchBtn.title = t("search");
   searchBtn.setAttribute("aria-label", t("search"));
@@ -1761,6 +1818,12 @@ function applyTranslations() {
   colorRedOptEl.textContent = t("colorRed");
   staticCardTitleEl.textContent = t("staticCard");
   realtimeCardTitleEl.textContent = t("realtimeCard");
+  dashboardToggleBtn.textContent = getLabel("dashboard", "9 Live");
+  if (haltModuleTitleEl) haltModuleTitleEl.textContent = getLabel("haltSearch", "Haltecode zoeken");
+  if (haltModuleDescriptionEl) haltModuleDescriptionEl.textContent = getLabel("haltSearchDescription", "Voer een geldige haltecode in om de realtime haltepagina van De Lijn te openen.");
+  if (haltecodeInputEl) haltecodeInputEl.placeholder = getLabel("haltCodePlaceholder", "Haltecode");
+  if (haltecodeSearchBtn) haltecodeSearchBtn.textContent = getLabel("haltSearchOpen", "Halte openen");
+  if (haltecodeErrorEl) haltecodeErrorEl.textContent = getLabel("haltSearchInvalid", "Ongeldige haltecode.");
   updateVehiclePhotoTexts();
   disclaimerTitleEl.textContent = t("disclaimerTitle");
   disclaimerTextEl.textContent = t("disclaimerText");
@@ -1782,6 +1845,65 @@ function applyTranslations() {
       void updateRealtime(currentVehicleId);
     }
   }
+}
+
+function loadLastHaltes() {
+  try {
+    const raw = localStorage.getItem(LAST_HALTES_KEY);
+    const parsed = JSON.parse(raw || "[]");
+    return Array.isArray(parsed) ? parsed.filter((code) => /^\d+$/.test(String(code))) : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function saveLastHaltes(codes) {
+  try {
+    localStorage.setItem(LAST_HALTES_KEY, JSON.stringify(codes));
+  } catch (_) {
+    // Local storage is optional here.
+  }
+}
+
+function renderLastHaltes() {
+  if (!lastCodesContainerEl || !lastCodesListEl) return;
+  const lastHaltes = loadLastHaltes();
+  lastCodesListEl.innerHTML = "";
+  lastCodesContainerEl.hidden = lastHaltes.length === 0;
+  if (!lastHaltes.length) return;
+
+  lastHaltes.forEach((code) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip";
+    chip.textContent = code;
+    chip.addEventListener("click", () => {
+      if (haltecodeInputEl) haltecodeInputEl.value = code;
+      openHalteRealtime(code);
+    });
+    lastCodesListEl.appendChild(chip);
+  });
+}
+
+function setHalteError(visible) {
+  if (!haltecodeErrorEl) return;
+  haltecodeErrorEl.hidden = !visible;
+}
+
+function openHalteRealtime(codeOverride = "") {
+  const haltecode = (codeOverride || haltecodeInputEl?.value || "").trim();
+  if (!/^[1-5]\d{5}$/.test(haltecode)) {
+    setHalteError(true);
+    if (navigator.vibrate) navigator.vibrate(160);
+    return;
+  }
+
+  setHalteError(false);
+  const lastHaltes = loadLastHaltes().filter((code) => code !== haltecode);
+  lastHaltes.unshift(haltecode);
+  saveLastHaltes(lastHaltes.slice(0, 5));
+  renderLastHaltes();
+  window.open(`https://www.delijn.be/realtime/${haltecode}/20`, "_blank", "noopener,noreferrer");
 }
 
 function updateFeedStatusText() {
@@ -2022,6 +2144,7 @@ function initAppPreferences() {
   setFavoritesPanel(false);
   hideVehiclePhotoCard();
   renderFavorites();
+  renderLastHaltes();
   loadFeedStatus();
   updateFavoriteButtonState();
   resultsWrapEl.classList.remove("show");
@@ -2038,7 +2161,10 @@ function initAppPreferences() {
 }
 
 searchBtn.addEventListener("click", zoekAlles);
-dashboardToggleBtn?.addEventListener("click", showDashboardSetupModal);
+dashboardToggleBtn?.addEventListener("click", () => {
+  setFavoritesPanel(false);
+  showDashboardSetupModal();
+});
 dashboardEditBtn?.addEventListener("click", showDashboardSetupModal);
 dashboardCloseBtn?.addEventListener("click", closeDashboardPanel);
 voertuigInput.addEventListener("input", updateFavoriteButtonState);
@@ -2048,6 +2174,13 @@ favoritesToggleBtn.addEventListener("click", (event) => {
 });
 favoritesPanelEl.addEventListener("click", (event) => {
   event.stopPropagation();
+});
+haltecodeSearchBtn?.addEventListener("click", () => openHalteRealtime());
+haltecodeInputEl?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    openHalteRealtime();
+  }
 });
 document.addEventListener("click", (event) => {
   if (!favoritesPanelOpen) return;
@@ -2200,7 +2333,10 @@ infoModalEl?.addEventListener("click", (event) => {
 offlineRetryBtn?.addEventListener("click", () => {
   verifyInternetConnection(true).catch(() => {});
 });
-settingsToggleBtn.addEventListener("click", () => setSettingsPanel(!settingsOpen));
+settingsToggleBtn.addEventListener("click", () => {
+  setFavoritesPanel(false);
+  setSettingsPanel(!settingsOpen);
+});
 settingsCloseBtn.addEventListener("click", () => setSettingsPanel(false));
 settingsBackdropEl.addEventListener("click", () => setSettingsPanel(false));
 document.addEventListener("keydown", (event) => {
@@ -2612,10 +2748,12 @@ function toonSuggesties() {
 }
 
 async function zoekAlles() {
+  const searchToken = ++latestSearchToken;
   markUserInteraction();
   const query = voertuigInput.value.trim();
   if(!query) return;
   const hasInternet = await verifyInternetConnection();
+  if (searchToken !== latestSearchToken) return;
   if (!hasInternet) {
     suggestieLijst.innerHTML = "";
     return;
@@ -2647,6 +2785,7 @@ async function zoekAlles() {
     return;
   }
   if (voertuigen.length === 0) await laadVoertuigen();
+  if (searchToken !== latestSearchToken) return;
   const resolved = resolveVehicleSearch(query);
   const activeVehicleId = resolved.vehicleId || normalize(query);
   const bus = resolved.bus;
@@ -2951,9 +3090,11 @@ function getStopByStopId(stopId) {
 }
 
 async function updateRealtime(id){
+  const requestToken = ++realtimeRequestToken;
   try{
     const res = await fetchWithTimeout(API_URL);
     const data = await res.json();
+    if (requestToken !== realtimeRequestToken || id !== currentVehicleId) return;
     dataLoadTimestamps.realtime = Date.now();
     const entities = Array.isArray(data.entity) ? data.entity : [];
     const normalizedRequestedId = cleanText(id);
@@ -2997,6 +3138,7 @@ async function updateRealtime(id){
     if(trips.length===0) await laadTrips();
     if(routes.length===0) await laadRoutes();
     if(stopsById.size===0) await laadStops();
+    if (requestToken !== realtimeRequestToken || id !== currentVehicleId) return;
     const tripUpdateVehicleId = getVehicleIdFromTripUpdate(tripUpdate);
     const sameVehicleTripUpdate = !!tripUpdate && tripUpdateVehicleId === normalizedRequestedId;
     const sameTripTripUpdate = !!tripUpdate && !!vehicleDescriptor.tripId && !!tripUpdateDescriptor.tripId && vehicleDescriptor.tripId === tripUpdateDescriptor.tripId;
@@ -3129,13 +3271,16 @@ async function updateRealtime(id){
     }
 
   }catch(e){
+    if (requestToken !== realtimeRequestToken || id !== currentVehicleId) return;
     console.error(e);
     realtimeEl.innerHTML = t("realtimeError");
     mapEl.classList.add("hidden");
     lastUpdateEl.textContent = `${t("lastUpdate")}: -`;
     lastUpdateEl.hidden = true;
   } finally {
-    setPageLoading(false);
+    if (requestToken === realtimeRequestToken && id === currentVehicleId) {
+      setPageLoading(false);
+    }
   }
 }
 </script>
@@ -3168,4 +3313,3 @@ if (prefersColorScheme?.addEventListener) {
 </script>
 </body>
 </html>
-
