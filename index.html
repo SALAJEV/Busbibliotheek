@@ -129,7 +129,7 @@
       <div id="vehiclePhotoCard" class="card photo-card" hidden aria-hidden="true">
         <h2 id="photoCardTitle">Voertuigfoto</h2>
         <div class="vehicle-photo-frame">
-          <img id="vehiclePhotoImg" class="vehicle-photo-image" alt="" loading="lazy" decoding="async">
+          <img id="vehiclePhotoImg" class="vehicle-photo-image" alt="" loading="eager" decoding="async">
         </div>
         <p id="vehiclePhotoCaption" class="vehicle-photo-caption"></p>
       </div>
@@ -980,6 +980,7 @@ function clearComparison() {
     compareCardEl.setAttribute("aria-hidden", "true");
   }
   if (compareContentEl) compareContentEl.innerHTML = "";
+  if (compareCardSummaryEl) compareCardSummaryEl.textContent = "Vergelijk twee voertuigen naast elkaar.";
   updateUrlState();
 }
 
@@ -1655,6 +1656,8 @@ function hideVehiclePhotoCard() {
   if (!vehiclePhotoCardEl || !vehiclePhotoImgEl || !vehiclePhotoCaptionEl) return;
   vehiclePhotoCardEl.hidden = true;
   vehiclePhotoCardEl.setAttribute("aria-hidden", "true");
+  vehiclePhotoImgEl.onload = null;
+  vehiclePhotoImgEl.onerror = null;
   vehiclePhotoImgEl.removeAttribute("src");
   vehiclePhotoImgEl.alt = "";
   vehiclePhotoCaptionEl.textContent = "";
@@ -1675,20 +1678,36 @@ function updateVehiclePhotoCard(vehicleId) {
   vehiclePhotoImgEl.removeAttribute("src");
   vehiclePhotoImgEl.alt = "";
   vehiclePhotoCaptionEl.textContent = "";
+  vehiclePhotoImgEl.onload = null;
+  vehiclePhotoImgEl.onerror = null;
 
-  const photoSrc = `media/${encodeURIComponent(normalizedVehicleId)}.jpeg`;
-  vehiclePhotoImgEl.onload = () => {
-    if (lookupToken !== vehiclePhotoLookupToken) return;
-    currentPhotoVehicleId = normalizedVehicleId;
-    updateVehiclePhotoTexts();
-    vehiclePhotoCardEl.hidden = false;
-    vehiclePhotoCardEl.setAttribute("aria-hidden", "false");
+  const photoCandidates = ["jpeg", "jpg", "png", "webp"].map((extension) => `media/${encodeURIComponent(normalizedVehicleId)}.${extension}`);
+  const preloadNextPhoto = (candidateIndex = 0) => {
+    if (candidateIndex >= photoCandidates.length) {
+      if (lookupToken === vehiclePhotoLookupToken) hideVehiclePhotoCard();
+      return;
+    }
+
+    const photoSrc = photoCandidates[candidateIndex];
+    const probe = new Image();
+    probe.decoding = "async";
+    probe.loading = "eager";
+    probe.onload = () => {
+      if (lookupToken !== vehiclePhotoLookupToken) return;
+      currentPhotoVehicleId = normalizedVehicleId;
+      vehiclePhotoImgEl.src = photoSrc;
+      updateVehiclePhotoTexts();
+      vehiclePhotoCardEl.hidden = false;
+      vehiclePhotoCardEl.setAttribute("aria-hidden", "false");
+    };
+    probe.onerror = () => {
+      if (lookupToken !== vehiclePhotoLookupToken) return;
+      preloadNextPhoto(candidateIndex + 1);
+    };
+    probe.src = photoSrc;
   };
-  vehiclePhotoImgEl.onerror = () => {
-    if (lookupToken !== vehiclePhotoLookupToken) return;
-    hideVehiclePhotoCard();
-  };
-  vehiclePhotoImgEl.src = photoSrc;
+
+  preloadNextPhoto();
 }
 
 function parseFlexibleDateParts(rawValue) {
