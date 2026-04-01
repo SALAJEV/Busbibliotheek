@@ -764,6 +764,16 @@ function getLabel(key, fallback) {
   return translated === key ? fallback : translated;
 }
 
+function normalizeSearchText(value) {
+  return (value || "")
+    .toString()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/"/g, "")
+    .trim();
+}
+
 function sanitizeFileName(value, fallback = "bus") {
   const cleaned = (value || "")
     .toString()
@@ -1945,6 +1955,62 @@ function renderHalteSearchResults(haltes = []) {
   haltSearchResultsContainerEl.hidden = haltSearchResultsListEl.childElementCount === 0;
 }
 
+function scoreLocalHalteMatch(stop, normalizedQuery) {
+  const stopCode = cleanText(stop?.stop_code || stop?.stop_id);
+  const stopName = cleanText(stop?.stop_name);
+  const stopDesc = cleanText(stop?.stop_desc);
+  const normalizedCode = normalizeSearchText(stopCode);
+  const normalizedName = normalizeSearchText(stopName);
+  const normalizedDesc = normalizeSearchText(stopDesc);
+  const combined = `${normalizedName} ${normalizedDesc}`.trim();
+
+  if (!normalizedCode && !normalizedName && !normalizedDesc) return Number.POSITIVE_INFINITY;
+  if (normalizedCode === normalizedQuery) return 0;
+  if (normalizedName === normalizedQuery) return 1;
+  if (combined === normalizedQuery) return 2;
+  if (normalizedCode.startsWith(normalizedQuery)) return 3;
+  if (normalizedName.startsWith(normalizedQuery)) return 4;
+  if (combined.startsWith(normalizedQuery)) return 5;
+  if (normalizedCode.includes(normalizedQuery)) return 6;
+  if (normalizedName.includes(normalizedQuery)) return 7;
+  if (combined.includes(normalizedQuery)) return 8;
+  return Number.POSITIVE_INFINITY;
+}
+
+async function searchHaltesLocal(zoekTerm) {
+  await laadStops();
+  const normalizedQuery = normalizeSearchText(zoekTerm);
+  if (!normalizedQuery) return [];
+
+  const seenCodes = new Set();
+  return stops
+    .map((stop) => {
+      const stopCode = cleanText(stop?.stop_code || stop?.stop_id);
+      return {
+        stop,
+        stopCode,
+        score: scoreLocalHalteMatch(stop, normalizedQuery)
+      };
+    })
+    .filter(({ stopCode, score }) => HALTE_CODE_REGEX.test(stopCode) && Number.isFinite(score))
+    .sort((a, b) => {
+      if (a.score !== b.score) return a.score - b.score;
+      return cleanText(a.stop?.stop_name).localeCompare(cleanText(b.stop?.stop_name), "nl");
+    })
+    .filter(({ stopCode }) => {
+      if (seenCodes.has(stopCode)) return false;
+      seenCodes.add(stopCode);
+      return true;
+    })
+    .slice(0, HALTE_SEARCH_LIMIT)
+    .map(({ stop, stopCode }) => ({
+      haltenummer: stopCode,
+      omschrijving: cleanText(stop?.stop_name) || stopCode,
+      omschrijvingLang: cleanText(stop?.stop_name) || stopCode,
+      omschrijvingGemeente: cleanText(stop?.stop_desc)
+    }));
+}
+
 function openHalteRealtime(codeOverride = "") {
   const haltecode = (codeOverride || haltecodeInputEl?.value || "").trim();
   if (!HALTE_CODE_REGEX.test(haltecode)) {
@@ -1984,20 +2050,8 @@ async function searchHaltes() {
   clearHalteSearchResults();
 
   try {
-    const url = new URL(API_URL);
-    url.searchParams.set("resource", "haltes");
-    url.searchParams.set("zoekArgument", zoekTerm);
-    url.searchParams.set("maxAantalHits", String(HALTE_SEARCH_LIMIT));
-    const response = await fetchWithTimeout(url.toString(), {
-      headers: {
-        "Accept": "application/json",
-        "Cache-Control": "no-store"
-      }
-    });
-    const data = await response.json();
+    const haltes = await searchHaltesLocal(zoekTerm);
     if (requestToken !== halteSearchRequestToken) return;
-
-    const haltes = Array.isArray(data?.haltes) ? data.haltes : [];
     renderHalteSearchResults(haltes);
     if (!haltes.length) {
       setHalteStatus(getLabel("haltSearchNoResults", "Geen haltes gevonden."));
