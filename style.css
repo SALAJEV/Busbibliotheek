@@ -632,105 +632,6 @@
 }
 
 /* ===============================
-   UI STYLE PRESETS
-================================ */
-
-:root[data-ui-style="compact"] {
-  --radius-lg: 18px;
-  --radius-md: 12px;
-  --radius-sm: 10px;
-  --button-radius-style-adjust: -2px;
-  --icon-radius-style-adjust: -1px;
-  --blur: 12px;
-}
-
-:root[data-ui-style="compact"] .container {
-  padding: 1.6rem 0 2.2rem;
-}
-
-:root[data-ui-style="compact"] .search-row {
-  gap: 0.46rem;
-  margin: 0.08rem 0 0.5rem;
-}
-
-:root[data-ui-style="compact"] .stack-card {
-  padding: 0.82rem 0.9rem;
-}
-
-:root[data-ui-style="compact"] .card {
-  min-height: 270px;
-  padding: 1rem;
-}
-
-:root[data-ui-style="compact"] input {
-  padding: 0.74rem 0.88rem;
-}
-
-:root[data-ui-style="compact"] button,
-:root[data-ui-style="compact"] .btn {
-  min-height: 40px;
-  padding: 0.62rem 1.02rem;
-  font-size: 0.88rem;
-}
-
-:root[data-ui-style="compact"] #map {
-  height: 270px;
-}
-
-:root[data-ui-style="modern"] {
-  --radius-lg: 30px;
-  --radius-md: 20px;
-  --radius-sm: 14px;
-  --button-radius-style-adjust: 4px;
-  --icon-radius-style-adjust: 2px;
-  --blur: 20px;
-  --shadow-soft: 0 16px 40px rgba(37, 99, 235, 0.16);
-  --shadow-card: 0 28px 72px rgba(37, 99, 235, 0.2);
-  --shadow-strong: 0 38px 94px rgba(37, 99, 235, 0.25);
-}
-
-:root[data-ui-style="modern"] .stack-card,
-:root[data-ui-style="modern"] .card,
-:root[data-ui-style="modern"] .settings-panel {
-  border-color: color-mix(in srgb, var(--accent) 38%, var(--stroke-strong));
-}
-
-:root[data-ui-style="modern"] .card {
-  background:
-    radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.2), transparent 38%),
-    linear-gradient(185deg, rgba(255, 255, 255, 0.12), transparent 52%),
-    var(--surface);
-  backdrop-filter: blur(calc(var(--blur) + 3px)) saturate(160%);
-  -webkit-backdrop-filter: blur(calc(var(--blur) + 3px)) saturate(160%);
-}
-
-:root[data-ui-style="modern"] .stack-card {
-  backdrop-filter: blur(calc(var(--blur) + 1px)) saturate(155%);
-}
-
-:root[data-ui-style="calm"] {
-  --button-radius-style-adjust: -1px;
-  --icon-radius-style-adjust: 0px;
-  --blur: 13px;
-  --bg-noise-opacity: 0.05;
-  --shadow-soft: 0 8px 22px rgba(15, 23, 42, 0.1);
-  --shadow-card: 0 14px 36px rgba(15, 23, 42, 0.14);
-  --shadow-strong: 0 22px 50px rgba(15, 23, 42, 0.18);
-}
-
-:root[data-ui-style="calm"] .card,
-:root[data-ui-style="calm"] .stack-card,
-:root[data-ui-style="calm"] .settings-panel {
-  backdrop-filter: blur(var(--blur)) saturate(118%);
-  -webkit-backdrop-filter: blur(var(--blur)) saturate(118%);
-}
-
-:root[data-ui-style="calm"] button,
-:root[data-ui-style="calm"] .btn {
-  transition-duration: 0.12s;
-}
-
-/* ===============================
    BASE
 ================================ */
 
@@ -2937,6 +2838,8 @@ body.offline-active {
   --radius-sm: 10px;
   --button-radius-theme: 14px;
   --icon-radius-theme: 14px;
+  --button-radius-style-adjust: 0px;
+  --icon-radius-style-adjust: 0px;
   --bg: #f3f6fb;
   --bg-gradient-top: #f8fafc;
   --bg-gradient-bottom: #eef3f9;
@@ -2993,6 +2896,74 @@ body.offline-active {
     --button-secondary-bg: rgba(15, 23, 42, 0.96);
     --button-secondary-bg-hover: color-mix(in srgb, rgba(15, 23, 42, 0.96) 82%, var(--accent-soft));
     --button-secondary-bg-active: color-mix(in srgb, rgba(15, 23, 42, 0.96) 68%, var(--accent-soft));
+  }
+}
+
+:root[data-color-theme="classic"],
+:root[data-color-theme="blue"],
+:root[data-color-theme="green"],
+:root[data-color-theme="yellow"],
+:root[data-color-theme="red"] {
+  --accent: #334155;
+  --accent-2: #475569;
+  --accent-soft: rgba(71, 85, 105, 0.12);
+  --bg: #f3f6fb;
+  --bg-gradient-top: #f8fafc;
+  --bg-gradient-bottom: #eef3f9;
+  --surface: rgba(255, 255, 255, 0.82);
+  --surface-strong: rgba(255, 255, 255, 0.94);
+  --surface-alt: rgba(246, 249, 252, 0.98);
+  --stroke: rgba(148, 163, 184, 0.22);
+  --stroke-strong: rgba(148, 163, 184, 0.32);
+  --stroke-soft: rgba(148, 163, 184, 0.16);
+  --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-card: 0 10px 28px rgba(15, 23, 42, 0.07);
+  --shadow-strong: 0 22px 52px rgba(15, 23, 42, 0.12);
+}
+
+:root[data-theme="dark"][data-color-theme="classic"],
+:root[data-theme="dark"][data-color-theme="blue"],
+:root[data-theme="dark"][data-color-theme="green"],
+:root[data-theme="dark"][data-color-theme="yellow"],
+:root[data-theme="dark"][data-color-theme="red"] {
+  --accent: #cbd5e1;
+  --accent-2: #94a3b8;
+  --accent-soft: rgba(148, 163, 184, 0.12);
+  --bg: #0b1220;
+  --bg-gradient-top: #111b30;
+  --bg-gradient-bottom: #0a1220;
+  --surface: rgba(15, 23, 42, 0.72);
+  --surface-strong: rgba(15, 23, 42, 0.92);
+  --surface-alt: rgba(20, 31, 52, 0.96);
+  --stroke: rgba(148, 163, 184, 0.2);
+  --stroke-strong: rgba(148, 163, 184, 0.3);
+  --stroke-soft: rgba(148, 163, 184, 0.14);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.22);
+  --shadow-card: 0 12px 30px rgba(2, 8, 23, 0.32);
+  --shadow-strong: 0 24px 56px rgba(2, 8, 23, 0.46);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-color-theme="classic"],
+  :root:not([data-theme="light"])[data-color-theme="blue"],
+  :root:not([data-theme="light"])[data-color-theme="green"],
+  :root:not([data-theme="light"])[data-color-theme="yellow"],
+  :root:not([data-theme="light"])[data-color-theme="red"] {
+    --accent: #cbd5e1;
+    --accent-2: #94a3b8;
+    --accent-soft: rgba(148, 163, 184, 0.12);
+    --bg: #0b1220;
+    --bg-gradient-top: #111b30;
+    --bg-gradient-bottom: #0a1220;
+    --surface: rgba(15, 23, 42, 0.72);
+    --surface-strong: rgba(15, 23, 42, 0.92);
+    --surface-alt: rgba(20, 31, 52, 0.96);
+    --stroke: rgba(148, 163, 184, 0.2);
+    --stroke-strong: rgba(148, 163, 184, 0.3);
+    --stroke-soft: rgba(148, 163, 184, 0.14);
+    --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.22);
+    --shadow-card: 0 12px 30px rgba(2, 8, 23, 0.32);
+    --shadow-strong: 0 24px 56px rgba(2, 8, 23, 0.46);
   }
 }
 
@@ -3160,6 +3131,14 @@ button:active,
 .funny-modal-card,
 .dashboard-panel {
   background: var(--surface-strong);
+}
+
+:root[data-color-theme="green"] #installBtn,
+:root[data-color-theme="yellow"] #installBtn,
+:root[data-color-theme="red"] #installBtn,
+:root[data-color-theme="blue"] #installBtn,
+:root[data-color-theme="classic"] #installBtn {
+  background: color-mix(in srgb, var(--accent) 92%, white 8%);
 }
 
 .dashboard-card {
