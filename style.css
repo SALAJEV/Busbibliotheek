@@ -2928,6 +2928,274 @@ body.offline-active {
 }
 
 /* ===============================
+   UNIFIED CLEANUP
+================================ */
+
+:root {
+  --radius-lg: 18px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+  --button-radius-theme: 14px;
+  --icon-radius-theme: 14px;
+  --bg: #f3f6fb;
+  --bg-gradient-top: #f8fafc;
+  --bg-gradient-bottom: #eef3f9;
+  --bg-glow-a: rgba(37, 99, 235, 0.07);
+  --bg-glow-b: rgba(14, 165, 233, 0.05);
+  --bg-glow-c: rgba(148, 163, 184, 0.05);
+  --bg-noise-color: rgba(15, 23, 42, 0.04);
+  --bg-noise-opacity: 0.04;
+  --bg-pattern: linear-gradient(180deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0));
+  --bg-pattern-size: 100% 100%;
+  --surface: rgba(255, 255, 255, 0.82);
+  --surface-strong: rgba(255, 255, 255, 0.94);
+  --surface-alt: rgba(246, 249, 252, 0.98);
+  --stroke: rgba(148, 163, 184, 0.22);
+  --stroke-strong: rgba(148, 163, 184, 0.32);
+  --stroke-soft: rgba(148, 163, 184, 0.16);
+  --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-card: 0 10px 28px rgba(15, 23, 42, 0.07);
+  --shadow-strong: 0 22px 52px rgba(15, 23, 42, 0.12);
+  --button-height: 44px;
+  --button-border: color-mix(in srgb, var(--accent) 20%, var(--stroke-strong));
+  --button-bg: color-mix(in srgb, var(--accent) 94%, white 6%);
+  --button-bg-hover: color-mix(in srgb, var(--accent) 88%, white 12%);
+  --button-bg-active: color-mix(in srgb, var(--accent) 82%, white 8%);
+  --button-shadow: none;
+  --button-shadow-hover: none;
+  --button-secondary-border: var(--stroke-strong);
+  --button-secondary-bg: var(--surface-strong);
+  --button-secondary-bg-hover: color-mix(in srgb, var(--surface-alt) 86%, var(--accent-soft));
+  --button-secondary-bg-active: color-mix(in srgb, var(--surface-alt) 72%, var(--accent-soft));
+  --button-secondary-shadow: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b1220;
+    --bg-gradient-top: #111b30;
+    --bg-gradient-bottom: #0a1220;
+    --bg-glow-a: rgba(56, 189, 248, 0.08);
+    --bg-glow-b: rgba(59, 130, 246, 0.08);
+    --bg-glow-c: rgba(148, 163, 184, 0.03);
+    --surface: rgba(15, 23, 42, 0.72);
+    --surface-strong: rgba(15, 23, 42, 0.92);
+    --surface-alt: rgba(20, 31, 52, 0.96);
+    --stroke: rgba(148, 163, 184, 0.2);
+    --stroke-strong: rgba(148, 163, 184, 0.3);
+    --stroke-soft: rgba(148, 163, 184, 0.14);
+    --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.22);
+    --shadow-card: 0 12px 30px rgba(2, 8, 23, 0.32);
+    --shadow-strong: 0 24px 56px rgba(2, 8, 23, 0.46);
+    --button-bg: color-mix(in srgb, var(--accent) 76%, black 10%);
+    --button-bg-hover: color-mix(in srgb, var(--accent) 82%, white 4%);
+    --button-bg-active: color-mix(in srgb, var(--accent) 70%, black 6%);
+    --button-secondary-bg: rgba(15, 23, 42, 0.96);
+    --button-secondary-bg-hover: color-mix(in srgb, rgba(15, 23, 42, 0.96) 82%, var(--accent-soft));
+    --button-secondary-bg-active: color-mix(in srgb, rgba(15, 23, 42, 0.96) 68%, var(--accent-soft));
+  }
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, var(--bg-glow-a), transparent 34%),
+    radial-gradient(circle at top right, var(--bg-glow-b), transparent 30%),
+    linear-gradient(180deg, var(--bg-gradient-top), var(--bg-gradient-bottom));
+}
+
+.container {
+  max-width: 1160px;
+  padding:
+    max(0.95rem, env(safe-area-inset-top))
+    clamp(0.9rem, 1.8vw, 1.35rem)
+    max(1rem, env(safe-area-inset-bottom))
+    clamp(0.9rem, 1.8vw, 1.35rem);
+}
+
+.header-bar {
+  align-items: center;
+  gap: 1rem 1.2rem;
+  margin-bottom: 1rem;
+  padding: 0.35rem 0 0.9rem;
+  border-bottom: 1px solid var(--stroke-soft);
+}
+
+.icon-btn,
+.settings-close-btn,
+.close-btn,
+.chip,
+.more-secondary-btn,
+#searchBtn,
+button,
+.btn {
+  box-shadow: none;
+}
+
+.icon-btn,
+.settings-close-btn,
+.close-btn {
+  border-color: var(--button-secondary-border);
+  background: var(--button-secondary-bg);
+}
+
+.icon-btn:hover,
+.settings-close-btn:hover,
+.close-btn:hover,
+.chip:hover,
+button:hover,
+.btn:hover {
+  box-shadow: none;
+}
+
+button,
+.btn {
+  background: var(--button-bg);
+  border-color: var(--button-border);
+}
+
+button:active,
+.btn:active {
+  box-shadow: none;
+}
+
+.more-secondary-btn,
+.chip,
+.icon-btn,
+.settings-close-btn,
+.close-btn {
+  background: var(--button-secondary-bg);
+  color: var(--text);
+  border-color: var(--button-secondary-border);
+}
+
+#installBtn {
+  background: color-mix(in srgb, var(--success) 88%, white 12%);
+}
+
+.search-row,
+#suggestielijst,
+.stack-card,
+.hint,
+.settings-panel,
+.favorites-panel,
+.funny-modal-card,
+.pdf-modal-card,
+.dashboard-panel,
+.card,
+.dashboard-card,
+.dashboard-setup-field,
+.pdf-theme-field,
+.settings-grid > div,
+.settings-feed-status,
+.photo-frame,
+.vehicle-theme-picker,
+.compare-table-wrap {
+  background: var(--surface-strong);
+}
+
+.search-row,
+#suggestielijst,
+.stack-card,
+.hint,
+.settings-panel,
+.favorites-panel,
+.funny-modal-card,
+.pdf-modal-card,
+.dashboard-panel,
+.card,
+.dashboard-card,
+.dashboard-setup-field,
+.pdf-theme-field,
+.settings-grid > div,
+.settings-feed-status {
+  border-color: var(--stroke);
+}
+
+.favorites-panel,
+.settings-panel,
+.funny-modal-card,
+.pdf-modal-card,
+.dashboard-panel,
+.card,
+.stack-card {
+  box-shadow: var(--shadow-card);
+}
+
+.more-panel-section,
+.dashboard-card,
+.dashboard-setup-field,
+.pdf-theme-field,
+.settings-grid > div,
+.settings-feed-status,
+.hint {
+  background: var(--surface-alt);
+  border-radius: var(--radius-md);
+}
+
+.favorites-panel,
+.settings-panel,
+.funny-modal-card,
+.pdf-modal-card,
+.dashboard-panel,
+.card,
+.stack-card {
+  border-radius: 20px;
+}
+
+.dashboard-map,
+#map {
+  border-radius: 16px;
+  box-shadow: none;
+}
+
+.header-actions {
+  gap: 0.7rem;
+}
+
+.more-panel-section {
+  border: 1px solid var(--stroke);
+}
+
+.pdf-modal-card,
+.funny-modal-card,
+.dashboard-panel {
+  background: var(--surface-strong);
+}
+
+.dashboard-card {
+  box-shadow: none;
+}
+
+.dashboard-card.is-live {
+  border-color: color-mix(in srgb, var(--accent) 20%, var(--stroke));
+}
+
+.card:hover,
+.dashboard-card:hover,
+.stack-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--stroke));
+}
+
+#searchBtn {
+  background: var(--button-bg) !important;
+  border-color: var(--button-border) !important;
+}
+
+.dashboard-map-tooltip-card {
+  box-shadow: none;
+}
+
+.bus-div-icon img,
+.bus-div-icon__img {
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.18));
+}
+
+footer {
+  margin-top: 3rem;
+  padding-top: 1rem;
+}
+
+/* ===============================
    FOOTER
 ================================ */
 
