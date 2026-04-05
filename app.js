@@ -98,6 +98,7 @@ const appTitleEl = document.getElementById("appTitle");
 const appSubtitleEl = document.getElementById("appSubtitle");
 const appContextLineEl = document.getElementById("appContextLine");
 const splashCreditEl = document.getElementById("splashCredit");
+const menuToggleTextEl = document.getElementById("menuToggleText");
 const morePanelSubtitleEl = document.getElementById("morePanelSubtitle");
 const moreFunctionsTitleEl = document.getElementById("moreFunctionsTitle");
 const favoritesTitleEl = document.getElementById("favoritesTitle");
@@ -1522,6 +1523,7 @@ function loadSettings() {
     if (!raw) return;
     const parsed = JSON.parse(raw);
     settings = { ...settings, ...parsed };
+    settings.theme = settings.theme === "light" || settings.theme === "dark" || settings.theme === "auto" ? settings.theme : "auto";
     settings.colorTheme = normalizeColorTheme(settings.colorTheme);
     window.settings = settings;
   } catch (e) {
@@ -1570,6 +1572,9 @@ function updateSystemUiThemeColor() {
 }
 
 window.updateSystemUiThemeColor = updateSystemUiThemeColor;
+prefersDarkScheme.addEventListener?.("change", () => {
+  if (settings.theme === "auto") updateSystemUiThemeColor();
+});
 
 function applyTranslations() {
   document.documentElement.lang = settings.language || DEFAULT_LANG;
@@ -1582,8 +1587,10 @@ function applyTranslations() {
   if (splashCreditEl) splashCreditEl.textContent = getLabel("madeBy", "Made by Busspotter 95");
   installBtn.textContent = t("install");
   const moreLabel = getLabel("more", "Meer");
-  favoritesToggleBtn.title = moreLabel;
-  favoritesToggleBtn.setAttribute("aria-label", moreLabel);
+  const menuLabel = getLabel("menu", "Menu");
+  favoritesToggleBtn.title = menuLabel;
+  favoritesToggleBtn.setAttribute("aria-label", menuLabel);
+  if (menuToggleTextEl) menuToggleTextEl.textContent = menuLabel;
   if (morePanelTitleEl) morePanelTitleEl.textContent = moreLabel;
   if (morePanelSubtitleEl) morePanelSubtitleEl.textContent = getLabel("moreSubtitle", "Snelle functies en extra tools.");
   if (moreFunctionsTitleEl) moreFunctionsTitleEl.textContent = getLabel("functions", "Functies");
@@ -1613,11 +1620,11 @@ function applyTranslations() {
   colorOrangeOptEl.textContent = getLabel("colorOrange", "Oranje");
   colorRedOptEl.textContent = t("colorRed");
   colorPurpleOptEl.textContent = t("colorPurple");
-  if (dashboardTitleEl) dashboardTitleEl.textContent = getLabel("dashboard", "9 Live");
-  dashboardToggleBtn.textContent = getLabel("dashboard", "9 Live");
+  if (dashboardTitleEl) dashboardTitleEl.textContent = getLabel("dashboard", "Stalk modus");
+  dashboardToggleBtn.textContent = getLabel("dashboard", "Stalk modus");
   dashboardToggleBtn.title = getLabel("dashboardButtonTitle", "Stalk modus");
   if (dashboardEditBtn) dashboardEditBtn.textContent = getLabel("dashboardEdit", "Aanpassen");
-  if (dashboardCloseBtn) dashboardCloseBtn.setAttribute("aria-label", getLabel("dashboardClose", "Dashboard sluiten"));
+  if (dashboardCloseBtn) dashboardCloseBtn.setAttribute("aria-label", getLabel("dashboardClose", "Stalk modus sluiten"));
   if (dashboardMapEl) dashboardMapEl.setAttribute("aria-label", getLabel("dashboardMapAria", "Kaart met live voertuigen"));
   staticCardTitleEl.textContent = t("staticCard");
   realtimeCardTitleEl.textContent = t("realtimeCard");
@@ -1662,11 +1669,11 @@ function applyTranslations() {
   compareModalCloseBtn.setAttribute("aria-label", getLabel("close", "Sluiten"));
   compareModalCancelBtn.textContent = getLabel("cancel", "Annuleren");
   compareModalConfirmBtn.textContent = getLabel("compareConfirm", "Vergelijken");
-  if (dashboardSetupTitleEl) dashboardSetupTitleEl.textContent = getLabel("dashboardSetupTitle", "9 Live instellen");
+  if (dashboardSetupTitleEl) dashboardSetupTitleEl.textContent = getLabel("dashboardSetupTitle", "Stalk modus instellen");
   if (dashboardSetupSummaryEl) dashboardSetupSummaryEl.textContent = getLabel("dashboardSetupSummary", "Vul tot negen voertuigen in. Alleen bussen met realtime verschijnen live.");
   dashboardSetupCloseBtn.setAttribute("aria-label", getLabel("close", "Sluiten"));
   dashboardSetupCancelBtn.textContent = getLabel("cancel", "Annuleren");
-  dashboardSetupConfirmBtn.textContent = getLabel("dashboardSetupConfirm", "Dashboard openen");
+  dashboardSetupConfirmBtn.textContent = getLabel("dashboardSetupConfirm", "Stalk modus openen");
   if (infoModalTitleEl) infoModalTitleEl.textContent = getLabel("infoTitle", "Site-info");
   if (infoModalSummaryEl) infoModalSummaryEl.textContent = getLabel("infoSummary", "Versie en laatste updates van de databronnen.");
   infoModalCloseBtn.setAttribute("aria-label", getLabel("close", "Sluiten"));
@@ -2934,7 +2941,7 @@ function toonVasteData(id){
   const links = [
     `<a class="btn btn--instagram" href="${igUrl}" target="_blank" rel="noopener">${localWord("instagramSearch")}</a>`,
     `<button id="vehiclePdfBtn" class="btn btn--pdf" type="button" data-id="${safeFavoriteId}">${getLabel("pdfConfirm", "PDF downloaden")}</button>`,
-    `<button id="vehicleCompareBtn" class="btn" type="button" data-id="${safeFavoriteId}">${getLabel("compareConfirm", "Vergelijken")}</button>`
+    `<button id="vehicleCompareBtn" class="btn btn--compare" type="button" data-id="${safeFavoriteId}">${getLabel("compareConfirm", "Vergelijken")}</button>`
   ];
   const idNum = Number(id);
   if (Number.isInteger(idNum) && idNum >= 4404 && idNum <= 4459) {

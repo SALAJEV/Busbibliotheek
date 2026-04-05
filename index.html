@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Busbibliotheek voor bussen van De Lijn: zoek een voertuig en volg het live.">
+<meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#f4f7fb">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -38,7 +39,7 @@
     <div class="header-actions">
       <button id="installBtn" title="App installeren op thuisscherm">Installeer App</button>
       <div class="favorites-top">
-        <button id="favoritesToggleBtn" class="icon-btn more-toggle-btn" type="button" title="Meer" aria-label="Meer" aria-controls="favoritesPanel" aria-expanded="false">&#8942;</button>
+        <button id="favoritesToggleBtn" class="icon-btn more-toggle-btn" type="button" title="Menu" aria-label="Menu" aria-controls="favoritesPanel" aria-expanded="false"><span class="more-toggle-icon" aria-hidden="true">&#8942;</span><span id="menuToggleText">Menu</span></button>
         <div id="favoritesPanel" class="favorites-panel more-panel" hidden aria-hidden="true" inert>
           <div class="more-panel-header">
             <div>
@@ -100,7 +101,7 @@
       </div>
       <div class="dashboard-panel-actions">
         <button id="dashboardEditBtn" class="btn" type="button">Aanpassen</button>
-        <button id="dashboardCloseBtn" class="settings-close-btn" type="button" aria-label="Dashboard sluiten">&times;</button>
+        <button id="dashboardCloseBtn" class="settings-close-btn" type="button" aria-label="Stalk modus sluiten">&times;</button>
       </div>
     </div>
     <div id="dashboardMapWrap" class="dashboard-map-wrap hidden">
