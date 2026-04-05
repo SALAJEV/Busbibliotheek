@@ -94,6 +94,7 @@ const themeColorMetaEls = Array.from(document.querySelectorAll('meta[name="theme
 const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
 const stalkModeMediaQuery = window.matchMedia("(min-width: 981px)");
 const lastUpdateEl = document.getElementById("lastUpdate");
+const appTitleBtnEl = document.getElementById("appTitleBtn");
 const appTitleEl = document.getElementById("appTitle");
 const appSubtitleEl = document.getElementById("appSubtitle");
 const appContextLineEl = document.getElementById("appContextLine");
@@ -101,6 +102,7 @@ const splashCreditEl = document.getElementById("splashCredit");
 const menuToggleTextEl = document.getElementById("menuToggleText");
 const morePanelSubtitleEl = document.getElementById("morePanelSubtitle");
 const moreFunctionsTitleEl = document.getElementById("moreFunctionsTitle");
+const closeBtnTextEl = document.getElementById("closeBtnText");
 const favoritesTitleEl = document.getElementById("favoritesTitle");
 const settingsTitleEl = document.getElementById("settingsTitle");
 const intervalLabelEl = document.getElementById("intervalLabel");
@@ -1643,8 +1645,9 @@ function applyTranslations() {
   updateVehiclePhotoTexts();
   disclaimerTitleEl.textContent = t("disclaimerTitle");
   disclaimerTextEl.textContent = t("disclaimerText");
-  closeBtnEl.title = getLabel("closeWindow", "Venster sluiten");
-  closeBtnEl.setAttribute("aria-label", getLabel("close", "Sluiten"));
+  closeBtnEl.title = getLabel("back", "Terug");
+  closeBtnEl.setAttribute("aria-label", getLabel("back", "Terug"));
+  if (closeBtnTextEl) closeBtnTextEl.textContent = getLabel("back", "Terug");
   settingsCloseBtn.setAttribute("title", getLabel("settingsClose", "Sluit instellingen"));
   settingsCloseBtn.setAttribute("aria-label", getLabel("settingsClose", "Sluit instellingen"));
   if (offlinePillEl) offlinePillEl.textContent = getLabel("offlinePill", "Offline");
@@ -2161,6 +2164,17 @@ function initAppPreferences() {
 
 searchBtn.addEventListener("click", zoekAlles);
 closeBtnEl?.addEventListener("click", terug);
+appTitleBtnEl?.addEventListener("click", () => {
+  setFavoritesPanel(false);
+  setSettingsPanel(false);
+  hideDashboardSetupModal();
+  closeDashboardPanel();
+  hidePdfModal();
+  hideCompareModal();
+  hideInfoModal();
+  hideFunnyModal();
+  terug();
+});
 voertuigInput.addEventListener("input", toonSuggesties);
 voertuigInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
@@ -2883,6 +2897,8 @@ function terug() {
   if(marker){ map.removeLayer(marker); marker=null; }
   clearComparison();
   updateFavoriteButtonState();
+  updateUrlState();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function findBusById(id) {

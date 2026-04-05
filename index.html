@@ -32,7 +32,9 @@
 <div class="container">
   <div class="header-bar">
     <div class="header-intro">
-      <h1 id="appTitle">Busbibliotheek (beta)</h1>
+      <button id="appTitleBtn" class="title-home-btn" type="button">
+        <h1 id="appTitle">Busbibliotheek (beta)</h1>
+      </button>
       <p id="appSubtitle">Zoek een voertuig en volg het in realtime.</p>
       <p id="appContextLine" class="app-context-line">Over bussen van de Vlaamse vervoermaatschappij De Lijn.</p>
     </div>
@@ -89,7 +91,12 @@
 
   <div class="search-row">
     <input id="voertuignummer" placeholder="Voertuignummer of nummerplaat" autocomplete="off">
-    <button id="searchBtn" type="button" title="Zoeken" aria-label="Zoeken"><span class="search-btn-icon" aria-hidden="true">&#128269;</span></button>
+    <button id="searchBtn" type="button" title="Zoeken" aria-label="Zoeken">
+      <svg class="search-btn-icon" aria-hidden="true" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="6.5"></circle>
+        <path d="M16 16l5 5"></path>
+      </svg>
+    </button>
   </div>
   <ul id="suggestielijst"></ul>
 
@@ -111,7 +118,12 @@
   </section>
 
   <div class="results-wrap">
-    <button class="close-btn" id="closeBtn" title="Venster sluiten" aria-label="Sluiten">&times;</button>
+    <button class="close-btn" id="closeBtn" title="Terug" aria-label="Terug">
+      <svg class="close-btn-icon" aria-hidden="true" viewBox="0 0 24 24">
+        <path d="M15 5 8 12l7 7"></path>
+      </svg>
+      <span id="closeBtnText">Terug</span>
+    </button>
     <div class="grid" id="resultsGrid">
       <div class="card">
         <h2 id="staticCardTitle">Voertuiginformatie</h2>
