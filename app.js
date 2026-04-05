@@ -71,6 +71,7 @@ const closeBtnEl = document.getElementById("closeBtn");
 const mapEl = document.getElementById("map");
 const searchBtn = document.getElementById("searchBtn");
 const favoritesListEl = document.getElementById("favoritesList");
+const metaDescriptionEl = document.querySelector('meta[name="description"]');
 const intervalSelect = document.getElementById("intervalSelect");
 const themeSelect = document.getElementById("themeSelect");
 const colorThemeSelect = document.getElementById("colorThemeSelect");
@@ -83,21 +84,28 @@ const themeLightOptEl = document.getElementById("themeLightOpt");
 const themeDarkOptEl = document.getElementById("themeDarkOpt");
 const colorThemeLabelEl = document.getElementById("colorThemeLabel");
 const colorClassicOptEl = document.getElementById("colorClassicOpt");
-const colorBlueOptEl = document.getElementById("colorBlueOpt");
-const colorGreenOptEl = document.getElementById("colorGreenOpt");
 const colorYellowOptEl = document.getElementById("colorYellowOpt");
+const colorGreenOptEl = document.getElementById("colorGreenOpt");
+const colorBlueOptEl = document.getElementById("colorBlueOpt");
+const colorOrangeOptEl = document.getElementById("colorOrangeOpt");
 const colorRedOptEl = document.getElementById("colorRedOpt");
+const colorPurpleOptEl = document.getElementById("colorPurpleOpt");
 const themeColorMetaEls = Array.from(document.querySelectorAll('meta[name="theme-color"]'));
 const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
+const stalkModeMediaQuery = window.matchMedia("(min-width: 981px)");
 const lastUpdateEl = document.getElementById("lastUpdate");
 const appTitleEl = document.getElementById("appTitle");
 const appSubtitleEl = document.getElementById("appSubtitle");
 const appContextLineEl = document.getElementById("appContextLine");
+const splashCreditEl = document.getElementById("splashCredit");
+const morePanelSubtitleEl = document.getElementById("morePanelSubtitle");
+const moreFunctionsTitleEl = document.getElementById("moreFunctionsTitle");
 const favoritesTitleEl = document.getElementById("favoritesTitle");
 const settingsTitleEl = document.getElementById("settingsTitle");
 const intervalLabelEl = document.getElementById("intervalLabel");
 const themeLabelEl = document.getElementById("themeLabel");
 const languageLabelEl = document.getElementById("languageLabel");
+const dashboardTitleEl = document.getElementById("dashboardTitle");
 const staticCardTitleEl = document.getElementById("staticCardTitle");
 const realtimeCardTitleEl = document.getElementById("realtimeCardTitle");
 const photoCardTitleEl = document.getElementById("photoCardTitle");
@@ -108,27 +116,42 @@ const disclaimerTitleEl = document.getElementById("disclaimerTitle");
 const disclaimerTextEl = document.getElementById("disclaimerText");
 const currentYearEl = document.getElementById("currentYear");
 const infoModalEl = document.getElementById("infoModal");
+const infoModalTitleEl = document.getElementById("infoModalTitle");
 const infoModalBodyEl = document.getElementById("infoModalBody");
+const infoModalSummaryEl = document.getElementById("infoModalSummary");
 const infoModalCloseBtn = document.getElementById("infoModalCloseBtn");
 const infoModalOkBtn = document.getElementById("infoModalOkBtn");
 const feedStatusEl = document.getElementById("feedStatus");
 const funnyModalEl = document.getElementById("funnyModal");
+const funnyModalTitleEl = document.getElementById("funnyModalTitle");
+const funnyModalBodyEl = document.getElementById("funnyModalBody");
 const funnyModalCloseBtn = document.getElementById("funnyModalCloseBtn");
 const pageLoadingOverlayEl = document.getElementById("pageLoadingOverlay");
 const pageLoadingTextEl = document.getElementById("pageLoadingText");
 const offlineOverlayEl = document.getElementById("offlineOverlay");
+const offlinePillEl = document.getElementById("offlinePill");
+const offlineTitleEl = document.getElementById("offlineTitle");
+const offlineTextPrimaryEl = document.getElementById("offlineTextPrimary");
+const offlineTextSecondaryEl = document.getElementById("offlineTextSecondary");
 const offlineRetryBtn = document.getElementById("offlineRetryBtn");
 const pdfModalEl = document.getElementById("pdfModal");
+const pdfModalTitleEl = document.getElementById("pdfModalTitle");
 const pdfModalSummaryEl = document.getElementById("pdfModalSummary");
+const pdfThemeFieldLabelEl = document.getElementById("pdfThemeFieldLabel");
+const pdfModalNoteEl = document.getElementById("pdfModalNote");
 const pdfThemeSelectEl = document.getElementById("pdfThemeSelect");
 const pdfModalCloseBtn = document.getElementById("pdfModalCloseBtn");
 const pdfModalCancelBtn = document.getElementById("pdfModalCancelBtn");
 const pdfModalConfirmBtn = document.getElementById("pdfModalConfirmBtn");
 const compareCardEl = document.getElementById("compareCard");
 const compareContentEl = document.getElementById("compareContent");
+const compareCardTitleEl = document.getElementById("compareCardTitle");
 const compareCardSummaryEl = document.getElementById("compareCardSummary");
 const compareClearBtn = document.getElementById("compareClearBtn");
 const compareModalEl = document.getElementById("compareModal");
+const compareModalTitleEl = document.getElementById("compareModalTitle");
+const compareModalSummaryEl = document.getElementById("compareModalSummary");
+const compareFieldLabelEl = document.getElementById("compareFieldLabel");
 const compareVehicleInputEl = document.getElementById("compareVehicleInput");
 const compareModalCloseBtn = document.getElementById("compareModalCloseBtn");
 const compareModalCancelBtn = document.getElementById("compareModalCancelBtn");
@@ -141,7 +164,9 @@ const dashboardMapEl = document.getElementById("dashboardMap");
 const dashboardEditBtn = document.getElementById("dashboardEditBtn");
 const dashboardCloseBtn = document.getElementById("dashboardCloseBtn");
 const dashboardSetupModalEl = document.getElementById("dashboardSetupModal");
+const dashboardSetupTitleEl = document.getElementById("dashboardSetupTitle");
 const dashboardSetupGridEl = document.getElementById("dashboardSetupGrid");
+const dashboardSetupSummaryEl = document.getElementById("dashboardSetupSummary");
 const dashboardSetupCloseBtn = document.getElementById("dashboardSetupCloseBtn");
 const dashboardSetupCancelBtn = document.getElementById("dashboardSetupCancelBtn");
 const dashboardSetupConfirmBtn = document.getElementById("dashboardSetupConfirmBtn");
@@ -236,7 +261,7 @@ const delayLexicon = translationsConfig.delayLexicon || {};
 
 const DEFAULT_LANG = "nl";
 const FALLBACK_LANG = "en";
-const ALLOWED_COLOR_THEMES = ["classic", "blue", "green", "yellow", "red"];
+const ALLOWED_COLOR_THEMES = ["classic", "yellow", "green", "blue", "orange", "red", "purple"];
 const ALLOWED_UPDATE_INTERVALS = [10000, 15000, 30000];
 const REQUEST_TIMEOUT_MS = 12000;
 const PDF_EXPORT_THEMES = {
@@ -472,7 +497,7 @@ function sanitizeFileName(value, fallback = "bus") {
 }
 
 function formatInfoTimestamp(timestamp) {
-  if (!timestamp) return "Nog niet geladen";
+  if (!timestamp) return getLabel("notLoadedYet", "Nog niet geladen");
   return new Date(timestamp).toLocaleString(localeForLanguage(settings.language), {
     year: "numeric",
     month: "long",
@@ -486,13 +511,13 @@ function formatInfoTimestamp(timestamp) {
 function showInfoModal() {
   if (!infoModalEl || !infoModalBodyEl) return;
   const rows = [
-    ["Websiteversie", APP_VERSION],
-    ["Voertuigen (vehicles.txt)", formatInfoTimestamp(dataLoadTimestamps.vehicles)],
-    ["Ritten (trips.txt)", formatInfoTimestamp(dataLoadTimestamps.trips)],
-    ["Lijnen (routes.txt)", formatInfoTimestamp(dataLoadTimestamps.routes)],
-    ["Haltes (stops.txt)", formatInfoTimestamp(dataLoadTimestamps.stops)],
-    ["Feed-info", formatInfoTimestamp(dataLoadTimestamps.feedInfo)],
-    ["Realtime API", formatInfoTimestamp(dataLoadTimestamps.realtime)]
+    [getLabel("infoWebsiteVersion", "Websiteversie"), APP_VERSION],
+    [getLabel("infoVehicles", "Voertuigen (vehicles.txt)"), formatInfoTimestamp(dataLoadTimestamps.vehicles)],
+    [getLabel("infoTrips", "Ritten (trips.txt)"), formatInfoTimestamp(dataLoadTimestamps.trips)],
+    [getLabel("infoRoutes", "Lijnen (routes.txt)"), formatInfoTimestamp(dataLoadTimestamps.routes)],
+    [getLabel("infoStops", "Haltes (stops.txt)"), formatInfoTimestamp(dataLoadTimestamps.stops)],
+    [getLabel("infoFeed", "Feed-info"), formatInfoTimestamp(dataLoadTimestamps.feedInfo)],
+    [getLabel("infoRealtimeApi", "Realtime API"), formatInfoTimestamp(dataLoadTimestamps.realtime)]
   ];
   infoModalBodyEl.innerHTML = `
     <div class="info-list">
@@ -572,9 +597,22 @@ function collectVehicleDisplayRows(bus) {
 function getBusPdfThemeOptionsMarkup(selectedTheme = "geel") {
   return Object.keys(PDF_EXPORT_THEMES).map((themeKey) => {
     const selected = themeKey === selectedTheme ? " selected" : "";
-    const label = themeKey.charAt(0).toUpperCase() + themeKey.slice(1);
+    const label = getLabel(`pdfTheme${themeKey.charAt(0).toUpperCase()}${themeKey.slice(1)}`, themeKey.charAt(0).toUpperCase() + themeKey.slice(1));
     return `<option value="${themeKey}"${selected}>${label}</option>`;
   }).join("");
+}
+
+function getPreferredPdfThemeKey(colorTheme) {
+  const themeMap = {
+    classic: "wit",
+    yellow: "geel",
+    green: "groen",
+    blue: "blauw",
+    orange: "oranje",
+    red: "rood",
+    purple: "paars"
+  };
+  return themeMap[normalizeColorTheme(colorTheme)] || "geel";
 }
 
 function formatBusFieldValueForDisplay(bus, fieldKey, rawValue) {
@@ -627,12 +665,13 @@ function showPdfModal(vehicleId) {
   if (!bus) return;
 
   pdfModalVehicleId = vehicleId;
+  const preferredPdfTheme = getPreferredPdfThemeKey(settings.colorTheme);
   if (pdfThemeSelectEl) {
-    pdfThemeSelectEl.innerHTML = getBusPdfThemeOptionsMarkup("geel");
+    pdfThemeSelectEl.innerHTML = getBusPdfThemeOptionsMarkup(preferredPdfTheme);
   }
   if (pdfModalSummaryEl) {
     const owner = getVehicleField(bus, "Eigenaar") || "-";
-    pdfModalSummaryEl.textContent = `${bus.Voertuignummer} Â· ${bus.Type || "Onbekend type"} Â· ${owner}`;
+    pdfModalSummaryEl.textContent = `${bus.Voertuignummer} · ${bus.Type || getLabel("unknownType", "Onbekend type")} · ${owner}`;
   }
   if (!pdfModalEl) return;
   pdfModalEl.hidden = false;
@@ -667,7 +706,7 @@ function clearComparison() {
     compareCardEl.setAttribute("aria-hidden", "true");
   }
   if (compareContentEl) compareContentEl.innerHTML = "";
-  if (compareCardSummaryEl) compareCardSummaryEl.textContent = "Vergelijk twee voertuigen naast elkaar.";
+  if (compareCardSummaryEl) compareCardSummaryEl.textContent = getLabel("compareSummary", "Vergelijk twee voertuigen naast elkaar.");
   updateUrlState();
 }
 
@@ -713,12 +752,12 @@ function renderComparison() {
     <div class="compare-vehicles-head">
       <div class="compare-vehicle-pill">
         <strong>${escapeHtml(baseBus.Voertuignummer || currentVehicleId)}</strong>
-        <span>${escapeHtml(baseBus.Type || "Onbekend type")}</span>
+        <span>${escapeHtml(baseBus.Type || getLabel("unknownType", "Onbekend type"))}</span>
       </div>
       <div class="compare-vs">vs</div>
       <div class="compare-vehicle-pill">
         <strong>${escapeHtml(compareBus.Voertuignummer || compareVehicleId)}</strong>
-        <span>${escapeHtml(compareBus.Type || "Onbekend type")}</span>
+        <span>${escapeHtml(compareBus.Type || getLabel("unknownType", "Onbekend type"))}</span>
       </div>
     </div>
     <div class="compare-table-wrap">
@@ -735,7 +774,9 @@ function renderComparison() {
     </div>
   `;
 
-  compareCardSummaryEl.textContent = `${baseBus.Voertuignummer} naast ${compareBus.Voertuignummer}`;
+  compareCardSummaryEl.textContent = getLabel("compareActiveSummary", "{left} naast {right}")
+    .replace("{left}", baseBus.Voertuignummer || currentVehicleId)
+    .replace("{right}", compareBus.Voertuignummer || compareVehicleId);
   compareCardEl.hidden = false;
   compareCardEl.setAttribute("aria-hidden", "false");
   updateUrlState();
@@ -769,14 +810,15 @@ function renderDashboardSetupInputs() {
     const currentValue = escapeHtml(dashboardVehicleIds[index] || "");
     return `
       <label class="dashboard-setup-field">
-        <span>Kaart ${index + 1}</span>
-        <input class="dashboard-setup-input" type="text" inputmode="text" autocomplete="off" placeholder="Voertuignummer of plaat" value="${currentValue}">
+        <span>${getLabel("dashboardCardLabel", "Kaart")} ${index + 1}</span>
+        <input class="dashboard-setup-input" type="text" inputmode="text" autocomplete="off" placeholder="${escapeHtml(getLabel("dashboardSetupPlaceholder", "Voertuignummer of plaat"))}" value="${currentValue}">
       </label>
     `;
   }).join("");
 }
 
 function showDashboardSetupModal() {
+  if (!stalkModeMediaQuery.matches) return;
   renderDashboardSetupInputs();
   dashboardSetupModalEl.hidden = false;
   document.body.classList.add("pdf-modal-open");
@@ -787,6 +829,15 @@ function hideDashboardSetupModal() {
   if (!dashboardSetupModalEl) return;
   dashboardSetupModalEl.hidden = true;
   document.body.classList.remove("pdf-modal-open");
+}
+
+function syncStalkModeAvailability() {
+  const isAvailable = stalkModeMediaQuery.matches;
+  if (dashboardToggleBtn) dashboardToggleBtn.hidden = !isAvailable;
+  if (!isAvailable) {
+    hideDashboardSetupModal();
+    closeDashboardPanel();
+  }
 }
 
 function stopDashboardRefresh() {
@@ -866,6 +917,7 @@ function closeDashboardPanel() {
   if (!dashboardPanelEl) return;
   dashboardPanelEl.hidden = true;
   dashboardPanelEl.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("dashboard-open");
   renderDashboardMap([]);
 }
 
@@ -887,7 +939,7 @@ function getRoutePresentationFromRealtime(id, entities, bus) {
       status: "offline",
       vehicleId: id,
       type: bus?.Type || "",
-      message: "Geen realtime beschikbaar"
+      message: getLabel("dashboardNoRealtime", "Geen realtime beschikbaar")
     };
   }
 
@@ -915,7 +967,7 @@ function getRoutePresentationFromRealtime(id, entities, bus) {
   const destinationText = pickFirstText(tripData?.trip_headsign, descriptor.headsign, tripData?.trip_short_name) || "-";
   const currentStopId = getCurrentStopIdFromTripUpdate(tripUpdate);
   const currentStop = getStopByStopId(currentStopId);
-  const currentStopName = cleanText(currentStop?.stop_name || currentStopId || "") || "Onbekende halte";
+  const currentStopName = cleanText(currentStop?.stop_name || currentStopId || "") || getLabel("unknownStop", "Onbekende halte");
   const routeColorRaw = (routeData?.route_color || "").replace(/[^0-9a-fA-F]/g, "").slice(0, 6);
   const routeTextColorRaw = (routeData?.route_text_color || "").replace(/[^0-9a-fA-F]/g, "").slice(0, 6);
 
@@ -948,7 +1000,7 @@ async function refreshDashboardPanel() {
   if (requestToken !== dashboardRequestToken) return;
   if (!hasInternet) {
     renderDashboardMap([]);
-    dashboardGridEl.innerHTML = '<div class="dashboard-empty">Geen internetverbinding voor live dashboard.</div>';
+    dashboardGridEl.innerHTML = `<div class="dashboard-empty">${escapeHtml(getLabel("dashboardNoInternet", "Geen internetverbinding voor live dashboard."))}</div>`;
     return;
   }
 
@@ -970,9 +1022,9 @@ async function refreshDashboardPanel() {
         <article class="dashboard-card is-offline">
           <div class="dashboard-card-top">
             <strong>${escapeHtml(id)}</strong>
-            <span class="dashboard-status">Niet gevonden</span>
+            <span class="dashboard-status">${escapeHtml(getLabel("dashboardNotFound", "Niet gevonden"))}</span>
           </div>
-          <p class="dashboard-meta">Geen voertuigdata gevonden.</p>
+          <p class="dashboard-meta">${escapeHtml(getLabel("dashboardNoVehicleData", "Geen voertuigdata gevonden."))}</p>
         </article>
       `;
     }
@@ -982,10 +1034,10 @@ async function refreshDashboardPanel() {
         <article class="dashboard-card is-offline">
           <div class="dashboard-card-top">
             <strong>${escapeHtml(bus.Voertuignummer || id)}</strong>
-            <span class="dashboard-status">Uit dienst</span>
+            <span class="dashboard-status">${escapeHtml(getLabel("dashboardOutOfService", "Uit dienst"))}</span>
           </div>
           <p class="dashboard-type">${escapeHtml(bus.Type || "")}</p>
-          <p class="dashboard-meta">Geen realtime beschikbaar.</p>
+          <p class="dashboard-meta">${escapeHtml(getLabel("dashboardNoRealtimeWithPeriod", "Geen realtime beschikbaar."))}</p>
         </article>
       `;
     }
@@ -997,10 +1049,10 @@ async function refreshDashboardPanel() {
         <article class="dashboard-card is-offline">
           <div class="dashboard-card-top">
             <strong>${escapeHtml(bus.Voertuignummer || id)}</strong>
-            <span class="dashboard-status">Offline</span>
+            <span class="dashboard-status">${escapeHtml(getLabel("dashboardOffline", "Offline"))}</span>
           </div>
           <p class="dashboard-type">${escapeHtml(bus.Type || "")}</p>
-          <p class="dashboard-meta">${escapeHtml(snapshot.message || "Geen realtime beschikbaar")}</p>
+          <p class="dashboard-meta">${escapeHtml(snapshot.message || getLabel("dashboardNoRealtime", "Geen realtime beschikbaar"))}</p>
         </article>
       `;
     }
@@ -1013,7 +1065,7 @@ async function refreshDashboardPanel() {
         </div>
         <p class="dashboard-type">${escapeHtml(bus.Type || "")}</p>
         <p class="dashboard-destination">${escapeHtml(snapshot.destinationText)}</p>
-        <p class="dashboard-meta">Halte: ${escapeHtml(snapshot.currentStopName)}</p>
+        <p class="dashboard-meta">${escapeHtml(getLabel("dashboardStopPrefix", "Halte:"))} ${escapeHtml(snapshot.currentStopName)}</p>
         <p class="dashboard-meta">${escapeHtml(snapshot.delayMessage)}</p>
       </article>
     `;
@@ -1022,16 +1074,20 @@ async function refreshDashboardPanel() {
   renderDashboardMap(snapshots);
   dashboardGridEl.innerHTML = cardsHtml;
   const liveCount = snapshots.filter((snapshot) => snapshot.status === "live").length;
-  dashboardSummaryEl.textContent = `${liveCount} van ${dashboardVehicleIds.length} voertuigen live op kaart`;
+  dashboardSummaryEl.textContent = getLabel("dashboardLiveSummary", "{live} van {total} voertuigen live op kaart")
+    .replace("{live}", String(liveCount))
+    .replace("{total}", String(dashboardVehicleIds.length));
 }
 
 async function openDashboardPanel() {
+  if (!stalkModeMediaQuery.matches) return;
   if (!dashboardVehicleIds.length) {
     showDashboardSetupModal();
     return;
   }
   dashboardPanelEl.hidden = false;
   dashboardPanelEl.setAttribute("aria-hidden", "false");
+  document.body.classList.add("dashboard-open");
   initDashboardMap();
   await refreshDashboardPanel();
   stopDashboardRefresh();
@@ -1147,22 +1203,22 @@ function drawPdfRoundedCard(doc, x, y, w, h, fillHex, strokeHex) {
 
 function buildBusPdfHtml(bus, vehicleId, themeKey = "geel") {
   const vehicleNumber = escapeHtml(bus.Voertuignummer || vehicleId || "");
-  const busType = escapeHtml(bus.Type || "Onbekend type");
+  const busType = escapeHtml(bus.Type || getLabel("unknownType", "Onbekend type"));
   const plate = escapeHtml(getVehicleField(bus, "Nummerplaat") || "-");
   const owner = escapeHtml(getVehicleField(bus, "Eigenaar") || "-");
   const hansea = getVehicleField(bus, "Hansea nummer");
   const intern = getVehicleField(bus, "Intern nummer");
-  const inDienst = escapeHtml(formatBusFieldValueForDisplay(bus, "Datum in dienst", getVehicleField(bus, "Datum in dienst")) || "Bus nog niet in dienst");
-  const uitDienst = escapeHtml(formatBusFieldValueForDisplay(bus, "Uit dienst", getVehicleField(bus, "Uit dienst")) || "Bus nog in dienst");
-  const exportDate = escapeHtml(new Date().toLocaleDateString("nl-BE", { day: "numeric", month: "long", year: "numeric" }));
+  const inDienst = escapeHtml(formatBusFieldValueForDisplay(bus, "Datum in dienst", getVehicleField(bus, "Datum in dienst")) || getLabel("notInServiceYet", "Bus nog niet in dienst"));
+  const uitDienst = escapeHtml(formatBusFieldValueForDisplay(bus, "Uit dienst", getVehicleField(bus, "Uit dienst")) || t("notOutOfService"));
+  const exportDate = escapeHtml(new Date().toLocaleDateString(localeForLanguage(settings.language), { day: "numeric", month: "long", year: "numeric" }));
   const logoHtml = `<img class="logo" src="media/logo.png" alt="Busbibliotheek 95 logo">`;
 
   const extraParts = [];
   if (hansea && hansea !== "/") {
-    extraParts.push(`<span><span class="label">Hansea</span> <span class="hansea">${escapeHtml(hansea)}</span></span>`);
+    extraParts.push(`<span><span class="label">${escapeHtml(getLabel("pdfHansea", "Hansea"))}</span> <span class="hansea">${escapeHtml(hansea)}</span></span>`);
   }
   if (intern && intern !== "/") {
-    extraParts.push(`<span><span class="label">Intern</span> ${escapeHtml(intern)}</span>`);
+    extraParts.push(`<span><span class="label">${escapeHtml(getLabel("pdfInternal", "Intern"))}</span> ${escapeHtml(intern)}</span>`);
   }
   const extraHtml = extraParts.length ? `<div class="meta-right">${extraParts.join('<span class="sep">|</span>')}</div>` : "";
 
@@ -1180,7 +1236,7 @@ function buildBusPdfHtml(bus, vehicleId, themeKey = "geel") {
               ${logoHtml}
             </div>
             <div class="meta-strip">
-              <span class="meta-label">Exportdatum</span>
+              <span class="meta-label">${escapeHtml(getLabel("pdfExportDate", "Exportdatum"))}</span>
               <span class="meta-value">${exportDate}</span>
             </div>
           </div>
@@ -1194,11 +1250,11 @@ function buildBusPdfHtml(bus, vehicleId, themeKey = "geel") {
                 </div>
                 ${extraHtml}
               </div>
-              <div class="eigenaar-lijn"><span class="label">Eigenaar</span> ${owner}</div>
+              <div class="eigenaar-lijn"><span class="label">${escapeHtml(getLabel("pdfOwner", "Eigenaar"))}</span> ${owner}</div>
               <div class="regel-onder">
-                <span><span class="label">In dienst</span> ${inDienst}</span>
+                <span><span class="label">${escapeHtml(getLabel("pdfInService", "In dienst"))}</span> ${inDienst}</span>
                 <span class="sep">|</span>
-                <span><span class="label">Uit dienst</span> ${uitDienst}</span>
+                <span><span class="label">${escapeHtml(getLabel("pdfOutOfService", "Uit dienst"))}</span> ${uitDienst}</span>
               </div>
             </div>
             ${getBusPdfRows(bus).map((row) => `
@@ -1214,7 +1270,7 @@ function buildBusPdfHtml(bus, vehicleId, themeKey = "geel") {
           </div>
           <div class="page-footer">
             <span>Busbibliotheek 95</span>
-            <span>Pagina 1 / 1</span>
+            <span>${escapeHtml(getLabel("pdfPageCount", "Pagina 1 / 1"))}</span>
           </div>
         </div>
       </section>
@@ -1516,13 +1572,21 @@ function updateSystemUiThemeColor() {
 window.updateSystemUiThemeColor = updateSystemUiThemeColor;
 
 function applyTranslations() {
+  document.documentElement.lang = settings.language || DEFAULT_LANG;
+  document.title = getLabel("appTitle", "Busbibliotheek (beta)");
+  if (metaDescriptionEl) metaDescriptionEl.setAttribute("content", getLabel("metaDescription", "Busbibliotheek voor bussen van De Lijn: zoek een voertuig en volg het live."));
+  splash?.setAttribute("aria-label", getLabel("splashAria", "Busbibliotheek laden"));
+  appTitleEl.textContent = getLabel("appTitle", "Busbibliotheek (beta)");
   appSubtitleEl.textContent = t("subtitle");
   appContextLineEl.textContent = t("appContextLine");
+  if (splashCreditEl) splashCreditEl.textContent = getLabel("madeBy", "Made by Busspotter 95");
   installBtn.textContent = t("install");
   const moreLabel = getLabel("more", "Meer");
   favoritesToggleBtn.title = moreLabel;
   favoritesToggleBtn.setAttribute("aria-label", moreLabel);
   if (morePanelTitleEl) morePanelTitleEl.textContent = moreLabel;
+  if (morePanelSubtitleEl) morePanelSubtitleEl.textContent = getLabel("moreSubtitle", "Snelle functies en extra tools.");
+  if (moreFunctionsTitleEl) moreFunctionsTitleEl.textContent = getLabel("functions", "Functies");
   settingsToggleBtn.title = t("settings");
   settingsToggleBtn.setAttribute("aria-label", t("settings"));
   settingsToggleBtn.textContent = t("settings");
@@ -1543,13 +1607,23 @@ function applyTranslations() {
   themeLightOptEl.textContent = t("themeLight");
   themeDarkOptEl.textContent = t("themeDark");
   colorClassicOptEl.textContent = t("colorClassic");
-  colorBlueOptEl.textContent = t("colorBlue");
-  colorGreenOptEl.textContent = t("colorGreen");
   colorYellowOptEl.textContent = t("colorYellow");
+  colorGreenOptEl.textContent = t("colorGreen");
+  colorBlueOptEl.textContent = t("colorBlue");
+  colorOrangeOptEl.textContent = getLabel("colorOrange", "Oranje");
   colorRedOptEl.textContent = t("colorRed");
+  colorPurpleOptEl.textContent = t("colorPurple");
+  if (dashboardTitleEl) dashboardTitleEl.textContent = getLabel("dashboard", "9 Live");
+  dashboardToggleBtn.textContent = getLabel("dashboard", "9 Live");
+  dashboardToggleBtn.title = getLabel("dashboardButtonTitle", "Stalk modus");
+  if (dashboardEditBtn) dashboardEditBtn.textContent = getLabel("dashboardEdit", "Aanpassen");
+  if (dashboardCloseBtn) dashboardCloseBtn.setAttribute("aria-label", getLabel("dashboardClose", "Dashboard sluiten"));
+  if (dashboardMapEl) dashboardMapEl.setAttribute("aria-label", getLabel("dashboardMapAria", "Kaart met live voertuigen"));
   staticCardTitleEl.textContent = t("staticCard");
   realtimeCardTitleEl.textContent = t("realtimeCard");
-  dashboardToggleBtn.textContent = getLabel("dashboard", "9 Live");
+  if (compareCardTitleEl) compareCardTitleEl.textContent = getLabel("compareTitle", "Vergelijking");
+  if (compareCardSummaryEl && compareCardEl?.hidden) compareCardSummaryEl.textContent = getLabel("compareSummary", "Vergelijk twee voertuigen naast elkaar.");
+  if (compareClearBtn) compareClearBtn.setAttribute("aria-label", getLabel("compareClose", "Vergelijking sluiten"));
   if (haltModuleTitleEl) haltModuleTitleEl.textContent = getLabel("haltSearch", "Halte zoeken");
   if (haltModuleDescriptionEl) haltModuleDescriptionEl.textContent = getLabel("haltSearchDescription", "Voer een haltecode of haltenaam in om een halte van De Lijn te zoeken.");
   if (haltecodeInputEl) haltecodeInputEl.placeholder = getLabel("haltCodePlaceholder", "Haltecode of naam");
@@ -1562,15 +1636,59 @@ function applyTranslations() {
   updateVehiclePhotoTexts();
   disclaimerTitleEl.textContent = t("disclaimerTitle");
   disclaimerTextEl.textContent = t("disclaimerText");
+  closeBtnEl.title = getLabel("closeWindow", "Venster sluiten");
+  closeBtnEl.setAttribute("aria-label", getLabel("close", "Sluiten"));
+  settingsCloseBtn.setAttribute("title", getLabel("settingsClose", "Sluit instellingen"));
+  settingsCloseBtn.setAttribute("aria-label", getLabel("settingsClose", "Sluit instellingen"));
+  if (offlinePillEl) offlinePillEl.textContent = getLabel("offlinePill", "Offline");
+  if (offlineTitleEl) offlineTitleEl.textContent = getLabel("offlineTitle", "Geen internetverbinding");
+  if (offlineTextPrimaryEl) offlineTextPrimaryEl.textContent = getLabel("offlineTextPrimary", "Busbibliotheek kon geen werkende internetverbinding bevestigen.");
+  if (offlineTextSecondaryEl) offlineTextSecondaryEl.textContent = getLabel("offlineTextSecondary", "Realtimegegevens en live-opzoekingen zijn tijdelijk niet beschikbaar.");
+  if (offlineRetryBtn) offlineRetryBtn.textContent = getLabel("offlineRetry", "Opnieuw proberen");
+  if (funnyModalTitleEl) funnyModalTitleEl.textContent = getLabel("funnyTitle", "Buswijsheid");
+  if (funnyModalBodyEl) funnyModalBodyEl.textContent = getLabel("funnyBody", "De beste bussen komen van Mercedes-Benz.");
+  if (funnyModalCloseBtn) funnyModalCloseBtn.textContent = getLabel("funnyClose", "Haha, oke");
+  if (pdfModalTitleEl) pdfModalTitleEl.textContent = getLabel("pdfTitle", "PDF downloaden");
+  if (pdfThemeFieldLabelEl) pdfThemeFieldLabelEl.textContent = t("colorTheme");
+  if (pdfModalNoteEl) pdfModalNoteEl.textContent = getLabel("pdfNote", "Na bevestigen wordt de PDF rechtstreeks als bestand gedownload.");
+  pdfModalCloseBtn.setAttribute("aria-label", getLabel("close", "Sluiten"));
+  pdfModalCancelBtn.textContent = getLabel("cancel", "Annuleren");
+  pdfModalConfirmBtn.textContent = getLabel("pdfConfirm", "PDF downloaden");
+  if (compareModalTitleEl) compareModalTitleEl.textContent = getLabel("compareModalTitle", "Voertuig vergelijken");
+  if (compareModalSummaryEl) compareModalSummaryEl.textContent = getLabel("compareModalSummary", "Kies een tweede voertuig om naast de huidige bus te zetten.");
+  if (compareFieldLabelEl) compareFieldLabelEl.textContent = getLabel("compareFieldLabel", "Voertuignummer of nummerplaat");
+  if (compareVehicleInputEl) compareVehicleInputEl.placeholder = getLabel("compareFieldPlaceholder", "Bijvoorbeeld 5292");
+  if (compareModalNoteEl) compareModalNoteEl.textContent = getLabel("compareModalNote", "De vergelijking toont vaste voertuiggegevens van beide bussen.");
+  compareModalCloseBtn.setAttribute("aria-label", getLabel("close", "Sluiten"));
+  compareModalCancelBtn.textContent = getLabel("cancel", "Annuleren");
+  compareModalConfirmBtn.textContent = getLabel("compareConfirm", "Vergelijken");
+  if (dashboardSetupTitleEl) dashboardSetupTitleEl.textContent = getLabel("dashboardSetupTitle", "9 Live instellen");
+  if (dashboardSetupSummaryEl) dashboardSetupSummaryEl.textContent = getLabel("dashboardSetupSummary", "Vul tot negen voertuigen in. Alleen bussen met realtime verschijnen live.");
+  dashboardSetupCloseBtn.setAttribute("aria-label", getLabel("close", "Sluiten"));
+  dashboardSetupCancelBtn.textContent = getLabel("cancel", "Annuleren");
+  dashboardSetupConfirmBtn.textContent = getLabel("dashboardSetupConfirm", "Dashboard openen");
+  if (infoModalTitleEl) infoModalTitleEl.textContent = getLabel("infoTitle", "Site-info");
+  if (infoModalSummaryEl) infoModalSummaryEl.textContent = getLabel("infoSummary", "Versie en laatste updates van de databronnen.");
+  infoModalCloseBtn.setAttribute("aria-label", getLabel("close", "Sluiten"));
+  infoModalOkBtn.textContent = getLabel("close", "Sluiten");
   if (pageLoadingTextEl) pageLoadingTextEl.textContent = t("loading");
   lastUpdateEl.textContent = `${t("lastUpdate")}: -`;
   lastUpdateEl.hidden = true;
+  if (dashboardSummaryEl && dashboardPanelEl?.hidden) {
+    dashboardSummaryEl.textContent = getLabel("dashboardSummary", "Volg negen voertuigen tegelijk.");
+  }
   if (!currentVehicleId) {
     realtimeEl.innerHTML = t("noData");
     vasteDataEl.innerHTML = t("noneSelected");
   }
   updateFeedStatusText();
   updateFavoriteButtonState();
+  if (compareVehicleId) renderComparison();
+  if (!dashboardSetupModalEl?.hidden) renderDashboardSetupInputs();
+  if (!dashboardPanelEl?.hidden && dashboardVehicleIds.length) {
+    void refreshDashboardPanel();
+  }
+  if (!infoModalEl?.hidden) showInfoModal();
   if (realtimePausedByInactivity && currentVehicleId) {
     realtimeEl.textContent = t("idlePaused");
   }
@@ -1862,7 +1980,7 @@ function startPythonDownload() {
   document.body.appendChild(downloadLink);
   downloadLink.click();
   downloadLink.remove();
-  window.alert("De download van script.py is gestart.");
+  window.alert(getLabel("pythonDownloadStarted", "De download van script.py is gestart."));
 }
 
 function loadFavorites() {
@@ -2013,6 +2131,7 @@ function initAppPreferences() {
   applyTheme(settings.theme);
   applyColorTheme(settings.colorTheme);
   applyTranslations();
+  syncStalkModeAvailability();
   setSettingsPanel(false);
   setFavoritesPanel(false);
   hideVehiclePhotoCard();
@@ -2043,6 +2162,7 @@ voertuigInput.addEventListener("keydown", (event) => {
   }
 });
 dashboardToggleBtn?.addEventListener("click", () => {
+  if (!stalkModeMediaQuery.matches) return;
   setFavoritesPanel(false);
   showDashboardSetupModal();
 });
@@ -2142,13 +2262,13 @@ pdfModalConfirmBtn?.addEventListener("click", async () => {
   const themeKey = pdfThemeSelectEl?.value || "geel";
   const oorspronkelijkeTekst = pdfModalConfirmBtn.textContent;
   pdfModalConfirmBtn.disabled = true;
-  pdfModalConfirmBtn.textContent = "PDF wordt gemaakt...";
+  pdfModalConfirmBtn.textContent = getLabel("pdfGenerating", "PDF wordt gemaakt...");
   try {
     await exportBusPdf(voertuigId, themeKey);
     hidePdfModal();
   } catch (error) {
     console.error("PDF downloaden mislukt", error);
-    window.alert("De PDF kon niet worden gedownload. Probeer het opnieuw.");
+    window.alert(getLabel("pdfDownloadFailed", "De PDF kon niet worden gedownload. Probeer het opnieuw."));
   } finally {
     pdfModalConfirmBtn.disabled = false;
     pdfModalConfirmBtn.textContent = oorspronkelijkeTekst;
@@ -2161,11 +2281,11 @@ compareModalConfirmBtn?.addEventListener("click", async () => {
   const resolved = resolveVehicleSearch(query);
   const resolvedId = resolved.vehicleId || normalize(query);
   if (!resolved.bus) {
-    window.alert("Geen tweede voertuig gevonden.");
+    window.alert(getLabel("compareNoSecondFound", "Geen tweede voertuig gevonden."));
     return;
   }
   if (resolvedId === currentVehicleId) {
-    window.alert("Kies een ander voertuig om te vergelijken.");
+    window.alert(getLabel("compareChooseDifferent", "Kies een ander voertuig om te vergelijken."));
     return;
   }
   compareVehicleId = resolvedId;
@@ -2184,6 +2304,10 @@ dashboardSetupModalEl?.addEventListener("click", (event) => {
   if (event.target === dashboardSetupModalEl) hideDashboardSetupModal();
 });
 dashboardSetupConfirmBtn?.addEventListener("click", async () => {
+  if (!stalkModeMediaQuery.matches) {
+    hideDashboardSetupModal();
+    return;
+  }
   const inputs = Array.from(dashboardSetupGridEl?.querySelectorAll(".dashboard-setup-input") || []);
   const nextIds = inputs
     .map((input) => input.value.trim())
@@ -2203,6 +2327,7 @@ dashboardSetupConfirmBtn?.addEventListener("click", async () => {
   }
   await openDashboardPanel();
 });
+stalkModeMediaQuery.addEventListener?.("change", syncStalkModeAvailability);
 pdfModalEl?.addEventListener("click", (event) => {
   if (event.target === pdfModalEl) hidePdfModal();
 });
@@ -2808,8 +2933,8 @@ function toonVasteData(id){
   const igUrl = 'https://www.instagram.com/explore/search/keyword/?q=' + encodeURIComponent(instagramPrefix + id);
   const links = [
     `<a class="btn btn--instagram" href="${igUrl}" target="_blank" rel="noopener">${localWord("instagramSearch")}</a>`,
-    `<button id="vehiclePdfBtn" class="btn btn--pdf" type="button" data-id="${safeFavoriteId}">PDF downloaden</button>`,
-    `<button id="vehicleCompareBtn" class="btn" type="button" data-id="${safeFavoriteId}">Vergelijken</button>`
+    `<button id="vehiclePdfBtn" class="btn btn--pdf" type="button" data-id="${safeFavoriteId}">${getLabel("pdfConfirm", "PDF downloaden")}</button>`,
+    `<button id="vehicleCompareBtn" class="btn" type="button" data-id="${safeFavoriteId}">${getLabel("compareConfirm", "Vergelijken")}</button>`
   ];
   const idNum = Number(id);
   if (Number.isInteger(idNum) && idNum >= 4404 && idNum <= 4459) {

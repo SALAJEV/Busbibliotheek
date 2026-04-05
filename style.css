@@ -174,6 +174,18 @@
   --accent-soft: rgba(217, 119, 6, 0.18);
 }
 
+:root[data-color-theme="orange"] {
+  --accent: #c2410c;
+  --accent-2: #ea580c;
+  --accent-soft: rgba(234, 88, 12, 0.18);
+}
+
+:root[data-color-theme="purple"] {
+  --accent: #7c3aed;
+  --accent-2: #8b5cf6;
+  --accent-soft: rgba(139, 92, 246, 0.18);
+}
+
 :root[data-color-theme="red"] {
   --accent: #b91c1c;
   --accent-2: #dc2626;
@@ -202,6 +214,18 @@
   --accent: #fde68a;
   --accent-2: #fbbf24;
   --accent-soft: rgba(251, 191, 36, 0.22);
+}
+
+:root[data-theme="dark"][data-color-theme="orange"] {
+  --accent: #fdba74;
+  --accent-2: #fb923c;
+  --accent-soft: rgba(251, 146, 60, 0.22);
+}
+
+:root[data-theme="dark"][data-color-theme="purple"] {
+  --accent: #d8b4fe;
+  --accent-2: #c084fc;
+  --accent-soft: rgba(192, 132, 252, 0.22);
 }
 
 :root[data-theme="dark"][data-color-theme="red"] {
@@ -233,6 +257,18 @@
     --accent: #fde68a;
     --accent-2: #fbbf24;
     --accent-soft: rgba(251, 191, 36, 0.22);
+  }
+
+  :root:not([data-theme="light"])[data-color-theme="orange"] {
+    --accent: #fdba74;
+    --accent-2: #fb923c;
+    --accent-soft: rgba(251, 146, 60, 0.22);
+  }
+
+  :root:not([data-theme="light"])[data-color-theme="purple"] {
+    --accent: #d8b4fe;
+    --accent-2: #c084fc;
+    --accent-soft: rgba(192, 132, 252, 0.22);
   }
 
   :root:not([data-theme="light"])[data-color-theme="red"] {
@@ -399,9 +435,20 @@ p {
   border-color: color-mix(in srgb, var(--accent) 52%, var(--stroke-strong));
 }
 
+#dashboardToggleBtn[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 980px) {
+  #dashboardToggleBtn {
+    display: none !important;
+  }
+}
+
 .favorites-top {
   position: relative;
   isolation: isolate;
+  display: flex;
 }
 
 .more-toggle-btn {
@@ -415,12 +462,12 @@ p {
 
 .favorites-panel {
   display: grid;
-  position: absolute;
-  top: calc(100% + 0.35rem);
-  right: 0;
+  position: fixed;
+  top: clamp(4.7rem, 8vw, 6.2rem);
+  right: clamp(0.8rem, 2vw, 1.35rem);
   z-index: 1150;
   width: min(430px, calc(100vw - 1.6rem));
-  max-height: min(76vh, 640px);
+  max-height: min(76vh, calc(100dvh - 6.5rem));
   overflow: auto;
   padding: 0.74rem;
   border-radius: var(--panel-radius);
@@ -1126,12 +1173,20 @@ body.pdf-modal-open {
 }
 
 .dashboard-panel {
-  margin-top: 1rem;
-  padding: 0.9rem;
-  border-radius: var(--panel-radius);
-  border: 1px solid var(--stroke);
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  margin: 0;
+  padding: max(1rem, env(safe-area-inset-top)) clamp(1rem, 2vw, 1.5rem) max(1rem, env(safe-area-inset-bottom));
+  border-radius: 0;
+  border: 0;
   background: var(--surface-strong);
   box-shadow: var(--shadow-card);
+  overflow: auto;
+}
+
+body.dashboard-open {
+  overflow: hidden;
 }
 
 .dashboard-panel[hidden] {
@@ -1144,6 +1199,8 @@ body.pdf-modal-open {
   justify-content: space-between;
   gap: 0.75rem;
   margin-bottom: 0.82rem;
+  max-width: 1400px;
+  margin-inline: auto;
 }
 
 .dashboard-panel-header h2 {
@@ -1163,6 +1220,8 @@ body.pdf-modal-open {
 
 .dashboard-map-wrap {
   margin-bottom: 0.85rem;
+  max-width: 1400px;
+  margin-inline: auto;
 }
 
 .dashboard-map-wrap.hidden {
@@ -1170,7 +1229,7 @@ body.pdf-modal-open {
 }
 
 .dashboard-map {
-  height: 360px;
+  height: min(48vh, 520px);
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid var(--stroke-strong);
@@ -1181,6 +1240,8 @@ body.pdf-modal-open {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.78rem;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .dashboard-card {
@@ -2635,11 +2696,11 @@ footer h3 {
 
   .favorites-panel {
     position: fixed;
-    top: 4.6rem;
+    top: max(4.8rem, env(safe-area-inset-top) + 4rem);
     right: 0.4rem;
-    left: auto;
+    left: 0.4rem;
     width: min(320px, calc(100vw - 0.8rem));
-    max-height: min(52vh, 390px);
+    max-height: min(64vh, calc(100dvh - 5.4rem));
     transform-origin: top right;
     border-radius: var(--radius-md);
   }
@@ -2695,12 +2756,6 @@ footer h3 {
 
   .dashboard-map {
     height: 320px;
-  }
-
-  .dashboard-panel-header,
-  .dashboard-panel-actions {
-    flex-direction: column;
-    align-items: stretch;
   }
 
   .compare-vehicles-head {

@@ -26,7 +26,7 @@
   <picture class="logo">
     <img src="media/logo.png" alt="Busbibliotheek">
   </picture>
-  <p class="splash-credit">Made by Busspotter 95</p>
+  <p id="splashCredit" class="splash-credit">Made by Busspotter 95</p>
 </div>
 <div class="container">
   <div class="header-bar">
@@ -43,7 +43,7 @@
           <div class="more-panel-header">
             <div>
               <h3 id="morePanelTitle">Meer</h3>
-              <p class="more-panel-subtitle">Snelle functies en extra tools.</p>
+              <p id="morePanelSubtitle" class="more-panel-subtitle">Snelle functies en extra tools.</p>
             </div>
           </div>
           <section class="more-panel-section">
@@ -54,10 +54,10 @@
           </section>
           <section class="more-panel-section">
             <div class="more-panel-section-head">
-              <h4>Functies</h4>
+              <h4 id="moreFunctionsTitle">Functies</h4>
             </div>
             <div class="more-action-grid">
-              <button id="dashboardToggleBtn" class="btn" type="button" title="9 live kaarten">9 Live</button>
+              <button id="dashboardToggleBtn" class="btn" type="button" title="Stalk modus">Stalk modus</button>
               <button id="settingsToggleBtn" class="btn more-secondary-btn" type="button" title="Instellingen" aria-label="Instellingen" aria-controls="settingsPanel" aria-expanded="false">Instellingen</button>
             </div>
           </section>
@@ -95,7 +95,7 @@
   <section id="dashboardPanel" class="dashboard-panel" hidden aria-hidden="true">
     <div class="dashboard-panel-header">
       <div>
-        <h2>9 Live</h2>
+        <h2 id="dashboardTitle">Stalk modus</h2>
         <p id="dashboardSummary" class="dashboard-summary">Volg negen voertuigen tegelijk.</p>
       </div>
       <div class="dashboard-panel-actions">
@@ -135,7 +135,7 @@
       <div id="compareCard" class="card compare-card" hidden aria-hidden="true">
         <div class="compare-card-header">
           <div>
-            <h2>Vergelijking</h2>
+            <h2 id="compareCardTitle">Vergelijking</h2>
             <p id="compareCardSummary" class="compare-card-summary">Vergelijk twee voertuigen naast elkaar.</p>
           </div>
           <button id="compareClearBtn" class="settings-close-btn" type="button" aria-label="Vergelijking sluiten">&times;</button>
@@ -162,10 +162,10 @@
 
 <div id="offlineOverlay" class="offline-overlay" hidden aria-hidden="true">
   <div class="offline-shell" role="alert" aria-live="assertive">
-    <span class="offline-pill">Offline</span>
-    <h2>Geen internetverbinding</h2>
-    <p>Busbibliotheek kon geen werkende internetverbinding bevestigen.</p>
-    <p>Realtimegegevens en live-opzoekingen zijn tijdelijk niet beschikbaar.</p>
+    <span id="offlinePill" class="offline-pill">Offline</span>
+    <h2 id="offlineTitle">Geen internetverbinding</h2>
+    <p id="offlineTextPrimary">Busbibliotheek kon geen werkende internetverbinding bevestigen.</p>
+    <p id="offlineTextSecondary">Realtimegegevens en live-opzoekingen zijn tijdelijk niet beschikbaar.</p>
     <button id="offlineRetryBtn" type="button">Opnieuw proberen</button>
   </div>
 </div>
@@ -197,10 +197,12 @@
       <label for="colorThemeSelect" id="colorThemeLabel">Kleurthema</label>
       <select id="colorThemeSelect">
         <option value="classic" id="colorClassicOpt" selected>Klassiek (zwart-wit)</option>
-        <option value="blue" id="colorBlueOpt">Blauw</option>
-        <option value="green" id="colorGreenOpt">Groen</option>
         <option value="yellow" id="colorYellowOpt">Geel</option>
+        <option value="green" id="colorGreenOpt">Groen</option>
+        <option value="blue" id="colorBlueOpt">Blauw</option>
+        <option value="orange" id="colorOrangeOpt">Oranje</option>
         <option value="red" id="colorRedOpt">Rood</option>
+        <option value="purple" id="colorPurpleOpt">Paars</option>
       </select>
     </div>
     <div>
@@ -222,7 +224,7 @@
 <div id="funnyModal" class="funny-modal" hidden role="dialog" aria-modal="true" aria-labelledby="funnyModalTitle">
   <div class="funny-modal-card">
     <h3 id="funnyModalTitle">Buswijsheid</h3>
-    <p>De beste bussen komen van Mercedes-Benz.</p>
+    <p id="funnyModalBody">De beste bussen komen van Mercedes-Benz.</p>
     <button id="funnyModalCloseBtn" type="button">Haha, oke</button>
   </div>
 </div>
@@ -238,10 +240,10 @@
     </div>
     <div class="pdf-modal-body">
       <label class="pdf-theme-field" for="pdfThemeSelect">
-        <span>Kleurthema</span>
+        <span id="pdfThemeFieldLabel">Kleurthema</span>
         <select id="pdfThemeSelect"></select>
       </label>
-      <p class="pdf-modal-note">Na bevestigen wordt de PDF rechtstreeks als bestand gedownload.</p>
+      <p id="pdfModalNote" class="pdf-modal-note">Na bevestigen wordt de PDF rechtstreeks als bestand gedownload.</p>
     </div>
     <div class="pdf-modal-actions">
       <button id="pdfModalCancelBtn" type="button">Annuleren</button>
@@ -255,13 +257,13 @@
     <div class="pdf-modal-header">
       <div>
         <h3 id="compareModalTitle">Voertuig vergelijken</h3>
-        <p class="pdf-modal-summary">Kies een tweede voertuig om naast de huidige bus te zetten.</p>
+        <p id="compareModalSummary" class="pdf-modal-summary">Kies een tweede voertuig om naast de huidige bus te zetten.</p>
       </div>
       <button id="compareModalCloseBtn" class="settings-close-btn" type="button" aria-label="Sluiten">&times;</button>
     </div>
     <div class="pdf-modal-body">
       <label class="pdf-theme-field compare-field" for="compareVehicleInput">
-        <span>Voertuignummer of nummerplaat</span>
+        <span id="compareFieldLabel">Voertuignummer of nummerplaat</span>
         <input id="compareVehicleInput" type="text" placeholder="Bijvoorbeeld 5292">
       </label>
       <p id="compareModalNote" class="pdf-modal-note">De vergelijking toont vaste voertuiggegevens van beide bussen.</p>
@@ -277,15 +279,15 @@
   <div class="pdf-modal-card dashboard-setup-card">
     <div class="pdf-modal-header">
       <div>
-        <h3 id="dashboardSetupTitle">9 Live instellen</h3>
-        <p class="pdf-modal-summary">Vul tot negen voertuigen in. Alleen bussen met realtime verschijnen live.</p>
+        <h3 id="dashboardSetupTitle">Stalk modus instellen</h3>
+        <p id="dashboardSetupSummary" class="pdf-modal-summary">Vul tot negen voertuigen in. Alleen bussen met realtime verschijnen live.</p>
       </div>
       <button id="dashboardSetupCloseBtn" class="settings-close-btn" type="button" aria-label="Sluiten">&times;</button>
     </div>
     <div id="dashboardSetupGrid" class="dashboard-setup-grid"></div>
     <div class="pdf-modal-actions">
       <button id="dashboardSetupCancelBtn" type="button">Annuleren</button>
-      <button id="dashboardSetupConfirmBtn" class="btn" type="button">Dashboard openen</button>
+      <button id="dashboardSetupConfirmBtn" class="btn" type="button">Stalk modus openen</button>
     </div>
   </div>
 </div>
@@ -295,7 +297,7 @@
     <div class="pdf-modal-header">
       <div>
         <h3 id="infoModalTitle">Site-info</h3>
-        <p class="pdf-modal-summary">Versie en laatste updates van de databronnen.</p>
+        <p id="infoModalSummary" class="pdf-modal-summary">Versie en laatste updates van de databronnen.</p>
       </div>
       <button id="infoModalCloseBtn" class="settings-close-btn" type="button" aria-label="Sluiten">&times;</button>
     </div>
