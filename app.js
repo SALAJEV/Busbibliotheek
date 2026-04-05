@@ -24,6 +24,7 @@ const settingsPanelEl = document.getElementById("settingsPanel");
 const settingsBackdropEl = document.getElementById("settingsBackdrop");
 const settingsToggleBtn = document.getElementById("settingsToggleBtn");
 const settingsCloseBtn = document.getElementById("settingsCloseBtn");
+const favoritesBackdropEl = document.getElementById("favoritesBackdrop");
 const favoritesToggleBtn = document.getElementById("favoritesToggleBtn");
 const favoritesPanelEl = document.getElementById("favoritesPanel");
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -2207,16 +2208,7 @@ haltecodeInputEl?.addEventListener("keydown", (event) => {
 haltecodeInputEl?.addEventListener("input", () => {
   setHalteStatus("");
 });
-document.addEventListener("click", (event) => {
-  if (!favoritesPanelOpen) return;
-  const target = event.target;
-  if (!(target instanceof Element)) {
-    setFavoritesPanel(false);
-    return;
-  }
-  if (favoritesPanelEl.contains(target) || favoritesToggleBtn.contains(target)) return;
-  setFavoritesPanel(false);
-});
+favoritesBackdropEl?.addEventListener("click", () => setFavoritesPanel(false));
 vasteDataEl.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
