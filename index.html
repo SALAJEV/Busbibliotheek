@@ -6,6 +6,7 @@
 <meta name="description" content="Busbibliotheek voor bussen van De Lijn: zoek een voertuig en volg het live.">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#f4f7fb">
+<meta name="application-name" content="Busbibliotheek">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -16,7 +17,7 @@
 <link rel="manifest" href="manifest.json">
 <title>Busbibliotheek</title>
 
-<link rel="stylesheet" href="style.css?v=20260406-3">
+<link rel="stylesheet" href="style.css?v=20260406-6">
 </head>
 <body>
 <div id="splash" role="img" aria-label="Busbibliotheek laden">
@@ -145,10 +146,12 @@
       <span class="page-loading-spinner" aria-hidden="true"></span>
       <p id="dashboardLoadingText">Stalk modus wordt geladen...</p>
     </div>
-    <div id="dashboardMapWrap" class="dashboard-map-wrap hidden">
-      <div id="dashboardMap" class="dashboard-map" aria-label="Kaart met live voertuigen"></div>
+    <div class="dashboard-panel-content">
+      <div id="dashboardMapWrap" class="dashboard-map-wrap hidden">
+        <div id="dashboardMap" class="dashboard-map" aria-label="Kaart met live voertuigen"></div>
+      </div>
+      <div id="dashboardGrid" class="dashboard-grid"></div>
     </div>
-    <div id="dashboardGrid" class="dashboard-grid"></div>
   </section>
 
   <div class="results-wrap">
@@ -278,7 +281,9 @@
     <div class="pdf-modal-body">
       <label class="pdf-theme-field compare-field" for="compareVehicleInput">
         <span id="compareFieldLabel">Voertuignummer of nummerplaat</span>
-        <input id="compareVehicleInput" type="text" placeholder="Bijvoorbeeld 5292">
+        <div class="suggestion-input-shell">
+          <input id="compareVehicleInput" type="text" placeholder="Bijvoorbeeld 5292">
+        </div>
       </label>
       <p id="compareModalNote" class="pdf-modal-note">De vergelijking toont vaste voertuiggegevens van beide bussen.</p>
     </div>
@@ -402,6 +407,6 @@
 </div>
 
 <script src="translations.js?v=20260218-1"></script>
-<script src="app.js?v=20260406-4" defer></script>
+<script src="app.js?v=20260406-7" defer></script>
 </body>
 </html>

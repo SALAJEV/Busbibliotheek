@@ -35,7 +35,7 @@ const favoritesPanelEl = document.getElementById("favoritesPanel");
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
-  installBtn.classList.add('show');
+  syncInstallButtonVisibility();
 });
 installBtn.addEventListener('click', async () => {
   if (deferredPrompt) {
@@ -43,16 +43,19 @@ installBtn.addEventListener('click', async () => {
     const { outcome } = await deferredPrompt.userChoice;
     console.log(`Gebruiker antwoord: ${outcome}`);
     deferredPrompt = null;
-    installBtn.classList.remove('show');
   } else if (isIosInstallable()) {
     iosInstallHintEl.hidden = false;
+  } else if (isAndroidPlatform && !isStandaloneDisplayMode()) {
+    window.alert(getLabel("androidInstallHint", "Open het browsermenu op Android en kies 'Installeren' of 'Toevoegen aan startscherm'."));
   }
+  syncInstallButtonVisibility();
 });
 window.addEventListener('appinstalled', () => {
   console.log('App succesvol geinstalleerd');
-  installBtn.classList.remove('show');
   iosInstallHintEl.hidden = true;
   deferredPrompt = null;
+  syncPlatformBodyClasses();
+  syncInstallButtonVisibility();
 });
 
 // Constants
@@ -105,6 +108,84 @@ const themeColorMetaEls = Array.from(document.querySelectorAll('meta[name="theme
 const colorSchemeMetaEl = document.querySelector('meta[name="color-scheme"]');
 const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
 const stalkModeMediaQuery = window.matchMedia("(min-width: 981px)");
+
+function isStandaloneDisplayMode() {
+  if (window.matchMedia?.("(display-mode: standalone)")?.matches) return true;
+  if (window.matchMedia?.("(display-mode: fullscreen)")?.matches) return true;
+  return Boolean(window.navigator.standalone);
+}
+
+function isTouchPlatform() {
+  return Boolean(touchPointerMediaQuery?.matches || window.navigator.maxTouchPoints > 0);
+}
+
+function syncPlatformBodyClasses() {
+  if (!document.body) return;
+  const isStandalone = isStandaloneDisplayMode();
+  document.body.classList.toggle("platform-touch", isTouchPlatform());
+  document.body.classList.toggle("platform-android", isAndroidPlatform);
+  document.body.classList.toggle("platform-android-webview", isAndroidWebView);
+  document.body.classList.toggle("platform-android-tv", isAndroidTvPlatform);
+  document.body.classList.toggle("platform-standalone", isStandalone);
+  document.body.classList.toggle("platform-android-standalone", isAndroidPlatform && isStandalone);
+}
+
+function syncInstallButtonVisibility() {
+  if (!installBtn) return;
+  const shouldShow =
+    !isStandaloneDisplayMode() &&
+    !isAndroidWebView &&
+    !isAndroidTvPlatform &&
+    (Boolean(deferredPrompt) || isIosInstallable());
+  installBtn.classList.toggle("show", shouldShow);
+  installBtn.hidden = !shouldShow;
+}
+
+function updateAndroidViewportMetrics() {
+  const visualViewport = window.visualViewport;
+  const viewportHeight = visualViewport?.height || window.innerHeight || document.documentElement.clientHeight || 0;
+  const viewportOffsetTop = visualViewport?.offsetTop || 0;
+  const keyboardOffset = Math.max(0, (window.innerHeight || viewportHeight) - viewportHeight - viewportOffsetTop);
+  document.documentElement.style.setProperty("--app-height", `${Math.round(viewportHeight)}px`);
+  document.documentElement.style.setProperty("--visual-viewport-height", `${Math.round(viewportHeight)}px`);
+  document.documentElement.style.setProperty("--visual-viewport-offset-top", `${Math.round(viewportOffsetTop)}px`);
+  document.documentElement.style.setProperty("--keyboard-offset", `${Math.round(keyboardOffset)}px`);
+  document.body?.classList.toggle("keyboard-open", isAndroidPlatform && keyboardOffset > 120);
+}
+
+function scheduleAndroidFocusedFieldIntoView() {
+  if (!isAndroidPlatform) return;
+  window.clearTimeout(androidKeyboardFocusHandle);
+  androidKeyboardFocusHandle = window.setTimeout(() => {
+    const activeElement = document.activeElement;
+    if (!(activeElement instanceof HTMLElement)) return;
+    if (!activeElement.matches("input, textarea, select")) return;
+    activeElement.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+  }, 180);
+}
+
+function initAndroidViewportSupport() {
+  if (androidViewportSyncInitialized) return;
+  androidViewportSyncInitialized = true;
+  const handleViewportUpdate = () => updateAndroidViewportMetrics();
+  updateAndroidViewportMetrics();
+  window.addEventListener("resize", handleViewportUpdate, { passive: true });
+  window.addEventListener("orientationchange", handleViewportUpdate, { passive: true });
+  window.visualViewport?.addEventListener("resize", handleViewportUpdate, { passive: true });
+  window.visualViewport?.addEventListener("scroll", handleViewportUpdate, { passive: true });
+  document.addEventListener("focusin", scheduleAndroidFocusedFieldIntoView);
+  document.addEventListener("focusout", () => window.setTimeout(updateAndroidViewportMetrics, 60));
+}
+
+window.matchMedia?.("(display-mode: standalone)")?.addEventListener?.("change", () => {
+  syncPlatformBodyClasses();
+  syncInstallButtonVisibility();
+});
+window.matchMedia?.("(display-mode: fullscreen)")?.addEventListener?.("change", () => {
+  syncPlatformBodyClasses();
+  syncInstallButtonVisibility();
+});
+
 const lastUpdateEl = document.getElementById("lastUpdate");
 const appTitleBtnEl = document.getElementById("appTitleBtn");
 const appTitleEl = document.getElementById("appTitle");
@@ -309,6 +390,8 @@ let dashboardSetupDraftResolvedIds = [];
 let dashboardAutoStarted = false;
 let leafletLoadPromise = null;
 let busIcon = null;
+let androidViewportSyncInitialized = false;
+let androidKeyboardFocusHandle = 0;
 let settings = {
   intervalMs: 10000,
   theme: "auto",
@@ -320,6 +403,8 @@ const platformUserAgent = window.navigator.userAgent || "";
 const isAndroidPlatform = /Android/i.test(platformUserAgent);
 const isAndroidWebView = isAndroidPlatform && /\bwv\b|Version\/[\d.]+/i.test(platformUserAgent);
 const isAndroidTvPlatform = isAndroidPlatform && /(TV|AFT|BRAVIA|GoogleTV|SmartTV|HbbTV)/i.test(platformUserAgent);
+const touchPointerMediaQuery = window.matchMedia ? window.matchMedia("(hover: none), (pointer: coarse)") : null;
+touchPointerMediaQuery?.addEventListener?.("change", syncPlatformBodyClasses);
 const HALTE_CODE_REGEX = /^[1-5]\d{5}$/;
 const HALTE_SEARCH_LIMIT = 8;
 let halteSearchRequestToken = 0;
@@ -1043,7 +1128,9 @@ function renderDashboardSetupInputs() {
     return `
       <label class="dashboard-setup-field${validation.error ? " is-invalid" : ""}">
         <span>${getLabel("dashboardCardLabel", "Kaart")} ${index + 1}</span>
-        <input class="dashboard-setup-input" type="text" inputmode="text" autocomplete="off" placeholder="${escapeHtml(getLabel("dashboardSetupPlaceholder", "Voertuignummer of plaat"))}" value="${currentValue}" data-index="${index}"${resolvedAttr}>
+        <div class="suggestion-input-shell">
+          <input class="dashboard-setup-input" type="text" inputmode="text" autocomplete="off" placeholder="${escapeHtml(getLabel("dashboardSetupPlaceholder", "Voertuignummer of plaat"))}" value="${currentValue}" data-index="${index}"${resolvedAttr}>
+        </div>
         <span class="dashboard-setup-field-error"${validation.error ? "" : " hidden"}>${errorMessage}</span>
       </label>
     `;
@@ -2254,7 +2341,7 @@ async function updateWeatherForCoordinates(latitude, longitude) {
 function isIosInstallable() {
   const ua = window.navigator.userAgent;
   const isIos = /iPhone|iPad|iPod/.test(ua);
-  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+  const isStandalone = isStandaloneDisplayMode();
   return isIos && !isStandalone;
 }
 
@@ -3103,9 +3190,8 @@ function initInactivityMonitor() {
 function initAppPreferences() {
   loadSettings();
   window.settings = settings;
-  document.body.classList.toggle("platform-android", isAndroidPlatform);
-  document.body.classList.toggle("platform-android-webview", isAndroidWebView);
-  document.body.classList.toggle("platform-android-tv", isAndroidTvPlatform);
+  syncPlatformBodyClasses();
+  initAndroidViewportSupport();
   loadFavorites();
   settings.intervalMs = normalizeUpdateIntervalMs(settings.intervalMs);
   updateIntervalMs = settings.intervalMs;
@@ -3135,6 +3221,7 @@ function initAppPreferences() {
   if (isIosInstallable()) {
     iosInstallHintEl.hidden = false;
   }
+  syncInstallButtonVisibility();
   initInactivityMonitor();
 }
 
@@ -3942,6 +4029,8 @@ function renderSuggestionList(listEl, inputEl, onSelect) {
   if (!listEl || !inputEl) return;
   const results = getSuggestionResults(inputEl.value.trim());
   listEl.innerHTML = "";
+  listEl.dataset.activeIndex = "-1";
+  listEl.setAttribute("role", "listbox");
 
   if (!results.length) {
     listEl.hidden = true;
@@ -3955,6 +4044,10 @@ function renderSuggestionList(listEl, inputEl, onSelect) {
     const li = document.createElement("li");
     li.className = "vehicle-suggestion-item";
     li.dataset.id = actualVehicleId;
+    li.dataset.index = String(listEl.children.length);
+    li.tabIndex = -1;
+    li.setAttribute("role", "option");
+    li.setAttribute("aria-selected", "false");
     li.innerHTML = `
       <span class="vehicle-suggestion-primary">${escapeHtml(visibleVehicleId)}</span>
       ${secondaryLabel ? `<span class="vehicle-suggestion-secondary">${escapeHtml(secondaryLabel)}</span>` : ""}
@@ -3972,16 +4065,37 @@ function renderSuggestionList(listEl, inputEl, onSelect) {
   });
 
   listEl.hidden = false;
+  if (isAndroidTvPlatform) {
+    setSuggestionActiveItem(listEl, 0);
+  }
+}
+
+function setSuggestionActiveItem(listEl, nextIndex) {
+  if (!listEl) return;
+  const items = Array.from(listEl.querySelectorAll("li"));
+  if (!items.length) {
+    listEl.dataset.activeIndex = "-1";
+    return;
+  }
+  const normalizedIndex = ((nextIndex % items.length) + items.length) % items.length;
+  listEl.dataset.activeIndex = String(normalizedIndex);
+  items.forEach((item, index) => {
+    const isActive = index === normalizedIndex;
+    item.classList.toggle("is-active", isActive);
+    item.setAttribute("aria-selected", String(isActive));
+  });
+  items[normalizedIndex].scrollIntoView({ block: "nearest", inline: "nearest" });
 }
 
 function ensureInlineSuggestionList(inputEl) {
   if (!inputEl) return null;
-  let listEl = inputEl.parentElement?.querySelector(".inline-suggestion-list");
+  const shellEl = inputEl.closest(".suggestion-input-shell") || inputEl.parentElement;
+  let listEl = shellEl?.querySelector(".inline-suggestion-list");
   if (listEl) return listEl;
   listEl = document.createElement("ul");
   listEl.className = "inline-suggestion-list";
   listEl.hidden = true;
-  inputEl.insertAdjacentElement("afterend", listEl);
+  shellEl?.appendChild(listEl);
   return listEl;
 }
 
@@ -4011,6 +4125,29 @@ function bindVehicleSuggestions(inputEl, onSelect) {
 
   inputEl.addEventListener("input", render);
   inputEl.addEventListener("focus", render);
+  inputEl.addEventListener("keydown", (event) => {
+    const items = Array.from(listEl.querySelectorAll("li"));
+    if (!items.length || listEl.hidden) return;
+    const currentIndex = Number(listEl.dataset.activeIndex || -1);
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setSuggestionActiveItem(listEl, currentIndex < 0 ? 0 : currentIndex + 1);
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setSuggestionActiveItem(listEl, currentIndex < 0 ? items.length - 1 : currentIndex - 1);
+      return;
+    }
+    if (event.key === "Enter" && currentIndex >= 0) {
+      event.preventDefault();
+      items[currentIndex]?.click();
+      return;
+    }
+    if (event.key === "Escape") {
+      hideSuggestionList(listEl);
+    }
+  });
   inputEl.addEventListener("blur", () => {
     window.setTimeout(() => {
       if (activeVehicleSuggestionInput === inputEl) activeVehicleSuggestionInput = null;

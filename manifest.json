@@ -1,13 +1,16 @@
 {
   "name": "Busbibliotheek",
   "short_name": "Busbibliotheek",
+  "id": "/",
   "description": "Zoekt een voertuig op en volg dit in realtime via live GPS-gegevens.",
   "start_url": "/",
   "scope": "/",
+  "display_override": ["standalone", "fullscreen", "minimal-ui", "browser"],
   "display": "standalone",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "theme_color": "#f4f7fb",
   "background_color": "#f4f7fb",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "media/logo.png",

@@ -6,6 +6,10 @@
 
 :root {
   color-scheme: light;
+  --app-height: 100dvh;
+  --visual-viewport-height: 100dvh;
+  --visual-viewport-offset-top: 0px;
+  --keyboard-offset: 0px;
   --radius-lg: 22px;
   --radius-md: 18px;
   --radius-sm: 14px;
@@ -494,7 +498,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: var(--app-height);
   overflow-x: hidden;
   font-family: "Source Sans 3", "Segoe UI", Arial, sans-serif;
   line-height: 1.4;
@@ -534,7 +538,7 @@ a {
   margin-inline: auto;
   max-width: 1100px;
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: var(--app-height);
   flex: 1 0 auto;
   display: flex;
   flex-direction: column;
@@ -789,6 +793,36 @@ body.platform-android-webview .favorites-backdrop {
 body.platform-android-webview.more-open .favorites-panel,
 body.platform-android-webview.settings-open .settings-panel {
   transform: none;
+}
+
+body.platform-android,
+body.platform-android .container {
+  min-height: var(--app-height);
+}
+
+body.platform-android,
+body.platform-android .dashboard-panel,
+body.platform-android .dashboard-setup-card {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body.platform-android .container,
+body.platform-android-standalone .container {
+  padding-bottom: max(0.9rem, env(safe-area-inset-bottom));
+}
+
+body.platform-android.keyboard-open {
+  background-attachment: scroll;
+}
+
+body.platform-android.keyboard-open .container {
+  padding-bottom: max(0.45rem, env(safe-area-inset-bottom));
+}
+
+body.platform-android-webview #installBtn,
+body.platform-android-standalone #installBtn,
+body.platform-android-tv #installBtn {
+  display: none !important;
 }
 
 @supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
@@ -1214,7 +1248,11 @@ button:disabled,
 
 .inline-suggestion-list {
   list-style: none;
-  margin: 0.55rem 0 0;
+  position: absolute;
+  top: calc(100% + 0.18rem);
+  left: 0;
+  right: 0;
+  margin: 0;
   border-radius: var(--radius-md);
   border: 1px solid var(--stroke);
   overflow: hidden;
@@ -1222,6 +1260,7 @@ button:disabled,
   box-shadow: var(--shadow-soft);
   max-height: min(240px, 42vh);
   overflow-y: auto;
+  z-index: 30;
 }
 
 .inline-suggestion-list[hidden] {
@@ -1252,9 +1291,18 @@ button:disabled,
   background: color-mix(in srgb, var(--accent-soft) 80%, transparent);
 }
 
+#suggestielijst li.is-active,
+.inline-suggestion-list li.is-active {
+  background: color-mix(in srgb, var(--accent-soft) 88%, transparent);
+}
+
 .vehicle-suggestion-item {
   display: grid;
   gap: 0.12rem;
+}
+
+.suggestion-input-shell {
+  position: relative;
 }
 
 .vehicle-suggestion-primary {
@@ -1643,6 +1691,11 @@ body.dashboard-open #favoritesBackdrop {
   overflow: auto;
 }
 
+.dashboard-panel-content {
+  display: grid;
+  gap: 1rem;
+}
+
 body.dashboard-open {
   overflow: hidden;
   background: var(--surface-strong);
@@ -1712,6 +1765,7 @@ body.dashboard-open {
   margin-bottom: 1rem;
   max-width: 1400px;
   margin-inline: auto;
+  width: 100%;
 }
 
 .dashboard-map-wrap.hidden {
@@ -1732,6 +1786,7 @@ body.dashboard-open {
   gap: 1rem;
   max-width: 1400px;
   margin: 0 auto;
+  width: 100%;
 }
 
 .dashboard-card {
@@ -1878,6 +1933,127 @@ body.dashboard-setup-open .dashboard-setup-card .pdf-modal-actions {
 body.platform-android .dashboard-panel,
 body.platform-android .dashboard-setup-card {
   scroll-behavior: smooth;
+}
+
+body.platform-android-tv .dashboard-panel {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: 0.9rem;
+  padding:
+    max(0.9rem, env(safe-area-inset-top))
+    clamp(1rem, 1.6vw, 1.4rem)
+    max(0.9rem, env(safe-area-inset-bottom));
+  overflow: hidden;
+}
+
+body.platform-android-tv .dashboard-panel-header,
+body.platform-android-tv .dashboard-loading-state,
+body.platform-android-tv .dashboard-panel-content,
+body.platform-android-tv .dashboard-setup-card .pdf-modal-header,
+body.platform-android-tv .dashboard-setup-card .dashboard-setup-grid,
+body.platform-android-tv .dashboard-setup-card .dashboard-setup-error,
+body.platform-android-tv .dashboard-setup-card .pdf-modal-actions {
+  max-width: 1880px;
+}
+
+body.platform-android-tv .dashboard-panel-header {
+  align-items: center;
+  margin-bottom: 0;
+}
+
+body.platform-android-tv .dashboard-panel-header h2 {
+  font-size: clamp(1.8rem, 2.7vw, 2.6rem);
+}
+
+body.platform-android-tv .dashboard-summary,
+body.platform-android-tv .dashboard-loading-state,
+body.platform-android-tv .dashboard-status,
+body.platform-android-tv .dashboard-type,
+body.platform-android-tv .dashboard-meta,
+body.platform-android-tv .dashboard-setup-field span,
+body.platform-android-tv .dashboard-setup-field-error,
+body.platform-android-tv .dashboard-setup-error {
+  font-size: clamp(0.98rem, 1.2vw, 1.15rem);
+}
+
+body.platform-android-tv .dashboard-panel-actions > button,
+body.platform-android-tv .dashboard-setup-card .pdf-modal-actions > button {
+  min-height: 3.4rem;
+  font-size: clamp(1rem, 1.15vw, 1.18rem);
+  padding-inline: 1.15rem;
+}
+
+body.platform-android-tv .dashboard-panel-content {
+  grid-template-columns: minmax(360px, 34vw) minmax(0, 1fr);
+  align-items: stretch;
+  min-height: 0;
+  height: 100%;
+}
+
+body.platform-android-tv .dashboard-map-wrap,
+body.platform-android-tv .dashboard-grid {
+  max-width: none;
+  margin: 0;
+  min-height: 0;
+}
+
+body.platform-android-tv .dashboard-map-wrap {
+  margin-bottom: 0;
+}
+
+body.platform-android-tv .dashboard-map-wrap.hidden + .dashboard-grid {
+  grid-column: 1 / -1;
+}
+
+body.platform-android-tv .dashboard-map {
+  height: 100%;
+  min-height: 0;
+}
+
+body.platform-android-tv .dashboard-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 0.8rem;
+  align-content: stretch;
+  overflow: hidden;
+}
+
+body.platform-android-tv .dashboard-card {
+  gap: 0.4rem;
+  padding: 0.9rem 0.95rem;
+}
+
+body.platform-android-tv .dashboard-card-top strong,
+body.platform-android-tv .dashboard-destination {
+  font-size: clamp(1.08rem, 1.35vw, 1.34rem);
+  line-height: 1.2;
+}
+
+body.platform-android-tv .dashboard-setup-card {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 0.8rem;
+  overflow: hidden;
+}
+
+body.platform-android-tv .dashboard-setup-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+  align-content: start;
+}
+
+body.platform-android-tv .dashboard-setup-field {
+  gap: 0.34rem;
+  padding: 0.72rem;
+}
+
+body.platform-android-tv .dashboard-setup-field input {
+  min-height: 3.35rem;
+  font-size: clamp(1.15rem, 1.5vw, 1.4rem);
+}
+
+body.platform-android-tv .inline-suggestion-list {
+  max-height: min(260px, 36vh);
 }
 
 .info-modal-body {
@@ -2135,9 +2311,12 @@ body.platform-android .dashboard-setup-card {
 }
 
 .weather-temperature {
+  display: inline-flex;
+  align-items: center;
   color: var(--text);
   font-size: 1.2rem;
   font-weight: 800;
+  line-height: 1;
   white-space: nowrap;
 }
 
@@ -4139,6 +4318,32 @@ footer h3 {
 
   .app-context-line {
     font-size: 0.88rem;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .title-home-btn:hover,
+  .icon-btn:hover,
+  .favorite-item:hover,
+  .favorite-action-btn--remove:hover,
+  .more-secondary-btn:hover,
+  .weather-card-link:hover,
+  .card:hover,
+  .chip:hover,
+  .footer-link-btn:hover,
+  .vehicle-favorite-btn:hover,
+  .inline-suggestion-list li:hover,
+  #suggestielijst li:hover,
+  button:hover,
+  .btn:hover,
+  #searchBtn:hover {
+    transform: none !important;
+    box-shadow: none !important;
+    filter: none !important;
+  }
+
+  .photo-card:hover .vehicle-photo-image {
+    transform: none !important;
   }
 }
 
