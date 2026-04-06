@@ -237,6 +237,7 @@ let routeTrail = [];
 let delayMinutes = 0;
 let currentVehicleId = "";
 let compareVehicleId = "";
+let compareEditTarget = "compare";
 let dashboardVehicleIds = [];
 let dashboardRefreshHandle = null;
 let dashboardMap = null;
@@ -799,6 +800,7 @@ function hidePdfModal() {
 
 function showCompareModal() {
   if (!currentVehicleId || !compareModalEl) return;
+  compareEditTarget = "compare";
   compareVehicleInputEl.value = "";
   compareModalEl.hidden = false;
   document.body.classList.add("pdf-modal-open");
@@ -806,6 +808,23 @@ function showCompareModal() {
     compareModalConfirmBtn?.click();
   });
   window.setTimeout(() => compareVehicleInputEl?.focus(), 20);
+}
+
+function showComparePicker(target = "compare") {
+  if (!currentVehicleId || !compareModalEl) return;
+  compareEditTarget = target === "base" ? "base" : "compare";
+  compareVehicleInputEl.value = compareEditTarget === "base"
+    ? currentVehicleId
+    : (compareVehicleId || "");
+  compareModalEl.hidden = false;
+  document.body.classList.add("pdf-modal-open");
+  bindVehicleSuggestions(compareVehicleInputEl, () => {
+    compareModalConfirmBtn?.click();
+  });
+  window.setTimeout(() => {
+    compareVehicleInputEl?.focus();
+    compareVehicleInputEl?.select();
+  }, 20);
 }
 
 function hideCompareModal() {
@@ -821,8 +840,42 @@ function clearComparison() {
     compareCardEl.setAttribute("aria-hidden", "true");
   }
   if (compareContentEl) compareContentEl.innerHTML = "";
-  if (compareCardSummaryEl) compareCardSummaryEl.textContent = getLabel("compareSummary", "Vergelijk twee voertuigen naast elkaar.");
+  if (compareCardSummaryEl) {
+    compareCardSummaryEl.textContent = "";
+    compareCardSummaryEl.hidden = true;
+  }
   updateUrlState();
+}
+
+function shouldHideComparisonField(fieldKey = "") {
+  const normalizedKey = normalizeFieldKey(fieldKey);
+  return normalizedKey === "hansea nummer" ||
+    normalizedKey === "intern nummer" ||
+    normalizedKey === "vin" ||
+    normalizedKey === "oude voertuignummers" ||
+    normalizedKey === "oude nummerplaten";
+}
+
+function collectComparisonRows(bus) {
+  const rows = [];
+  if (!bus) return rows;
+
+  const typeValue = cleanText(bus.Type || "");
+  if (typeValue && typeValue !== "/") {
+    rows.push({
+      key: "__type__",
+      label: translateVehicleFieldLabel("Type"),
+      value: typeValue,
+      isHansea: false
+    });
+  }
+
+  for (const row of collectVehicleDisplayRows(bus)) {
+    if (shouldHideComparisonField(row.key)) continue;
+    rows.push(row);
+  }
+
+  return rows;
 }
 
 function renderComparison() {
@@ -838,8 +891,8 @@ function renderComparison() {
     return;
   }
 
-  const baseRows = collectVehicleDisplayRows(baseBus);
-  const compareRows = collectVehicleDisplayRows(compareBus);
+  const baseRows = collectComparisonRows(baseBus);
+  const compareRows = collectComparisonRows(compareBus);
   const rowMap = new Map();
 
   for (const row of baseRows) rowMap.set(row.key, { label: row.label, left: row, right: null });
@@ -865,15 +918,15 @@ function renderComparison() {
 
   compareContentEl.innerHTML = `
     <div class="compare-vehicles-head">
-      <div class="compare-vehicle-pill">
+      <button class="compare-vehicle-pill compare-vehicle-pill-btn" type="button" data-compare-target="base">
         <strong>${escapeHtml(baseBus.Voertuignummer || currentVehicleId)}</strong>
-        <span>${escapeHtml(baseBus.Type || getLabel("unknownType", "Onbekend type"))}</span>
-      </div>
+        <span>${escapeHtml(getLabel("compareEditVehicle", "Klik om te wijzigen"))}</span>
+      </button>
       <div class="compare-vs">vs</div>
-      <div class="compare-vehicle-pill">
+      <button class="compare-vehicle-pill compare-vehicle-pill-btn" type="button" data-compare-target="compare">
         <strong>${escapeHtml(compareBus.Voertuignummer || compareVehicleId)}</strong>
-        <span>${escapeHtml(compareBus.Type || getLabel("unknownType", "Onbekend type"))}</span>
-      </div>
+        <span>${escapeHtml(getLabel("compareEditVehicle", "Klik om te wijzigen"))}</span>
+      </button>
     </div>
     <div class="compare-table-wrap">
       <table class="compare-table">
@@ -889,9 +942,10 @@ function renderComparison() {
     </div>
   `;
 
-  compareCardSummaryEl.textContent = getLabel("compareActiveSummary", "{left} naast {right}")
-    .replace("{left}", baseBus.Voertuignummer || currentVehicleId)
-    .replace("{right}", compareBus.Voertuignummer || compareVehicleId);
+  if (compareCardSummaryEl) {
+    compareCardSummaryEl.textContent = "";
+    compareCardSummaryEl.hidden = true;
+  }
   compareCardEl.hidden = false;
   compareCardEl.setAttribute("aria-hidden", "false");
   updateUrlState();
@@ -2147,7 +2201,10 @@ function applyTranslations() {
   staticCardTitleEl.textContent = t("staticCard");
   realtimeCardTitleEl.textContent = t("realtimeCard");
   if (compareCardTitleEl) compareCardTitleEl.textContent = getLabel("compareTitle", "Vergelijking");
-  if (compareCardSummaryEl && compareCardEl?.hidden) compareCardSummaryEl.textContent = getLabel("compareSummary", "Vergelijk twee voertuigen naast elkaar.");
+  if (compareCardSummaryEl && compareCardEl?.hidden) {
+    compareCardSummaryEl.textContent = "";
+    compareCardSummaryEl.hidden = true;
+  }
   if (compareClearBtn) compareClearBtn.setAttribute("aria-label", getLabel("compareClose", "Vergelijking sluiten"));
   if (haltModuleTitleEl) haltModuleTitleEl.textContent = getLabel("haltSearch", "Halte zoeken");
   if (haltModuleDescriptionEl) haltModuleDescriptionEl.textContent = getLabel("haltSearchDescription", "Voer een haltecode of haltenaam in om een halte van De Lijn te zoeken.");
@@ -2996,8 +3053,23 @@ compareModalConfirmBtn?.addEventListener("click", async () => {
     window.alert(getLabel("compareNoSecondFound", "Geen tweede voertuig gevonden."));
     return;
   }
-  if (resolvedId === currentVehicleId) {
+  if (compareEditTarget === "compare" && resolvedId === currentVehicleId) {
     window.alert(getLabel("compareChooseDifferent", "Kies een ander voertuig om te vergelijken."));
+    return;
+  }
+  if (compareEditTarget === "base") {
+    if (resolvedId === compareVehicleId) {
+      window.alert(getLabel("compareChooseDifferent", "Kies een ander voertuig om te vergelijken."));
+      return;
+    }
+    const nextCompareId = compareVehicleId;
+    hideCompareModal();
+    voertuigInput.value = resolvedId;
+    await zoekAlles();
+    if (nextCompareId && nextCompareId !== currentVehicleId) {
+      compareVehicleId = nextCompareId;
+      renderComparison();
+    }
     return;
   }
   compareVehicleId = resolvedId;
@@ -3045,6 +3117,14 @@ pdfModalEl?.addEventListener("click", (event) => {
 });
 compareModalEl?.addEventListener("click", (event) => {
   if (event.target === compareModalEl) hideCompareModal();
+});
+compareContentEl?.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const pill = target.closest(".compare-vehicle-pill-btn");
+  if (!pill) return;
+  const compareTarget = pill.getAttribute("data-compare-target") || "compare";
+  showComparePicker(compareTarget);
 });
 infoModalCloseBtn?.addEventListener("click", hideInfoModal);
 infoModalOkBtn?.addEventListener("click", hideInfoModal);

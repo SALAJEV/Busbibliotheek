@@ -2118,6 +2118,25 @@ body.dashboard-open {
   box-shadow: 0 16px 28px color-mix(in srgb, var(--accent-soft) 22%, transparent);
 }
 
+.compare-vehicle-pill-btn {
+  width: 100%;
+  margin: 0;
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  text-align: left;
+  appearance: none;
+  cursor: pointer;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.compare-vehicle-pill-btn:hover,
+.compare-vehicle-pill-btn:focus-visible {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--stroke));
+  box-shadow: 0 18px 34px color-mix(in srgb, var(--accent-soft) 26%, transparent);
+}
+
 .compare-vehicle-pill strong {
   font-size: 1rem;
   color: var(--text);
