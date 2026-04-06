@@ -494,6 +494,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
   font-family: "Source Sans 3", "Segoe UI", Arial, sans-serif;
   line-height: 1.4;
@@ -532,6 +533,7 @@ a {
   width: 100%;
   margin-inline: auto;
   max-width: 1100px;
+  min-height: 100vh;
   min-height: 100dvh;
   flex: 1 0 auto;
   display: flex;
@@ -762,31 +764,48 @@ body.more-open {
   overflow: hidden;
 }
 
-body.platform-android .floating-panel,
-body.platform-android .settings-backdrop,
-body.platform-android .pdf-modal,
-body.platform-android .funny-modal,
-body.platform-android .offline-overlay {
+body.platform-android-webview .floating-panel,
+body.platform-android-webview .settings-backdrop,
+body.platform-android-webview .pdf-modal,
+body.platform-android-webview .funny-modal,
+body.platform-android-webview .offline-overlay {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
 
-body.platform-android .floating-panel {
+body.platform-android-webview .floating-panel {
   z-index: 3200;
   transform: none;
   transition: opacity 0.18s ease;
   background: color-mix(in srgb, var(--surface-strong) 99%, white 1%);
 }
 
-body.platform-android .panel-backdrop,
-body.platform-android .settings-backdrop,
-body.platform-android .favorites-backdrop {
+body.platform-android-webview .panel-backdrop,
+body.platform-android-webview .settings-backdrop,
+body.platform-android-webview .favorites-backdrop {
   z-index: 3100;
 }
 
-body.platform-android.more-open .favorites-panel,
-body.platform-android.settings-open .settings-panel {
+body.platform-android-webview.more-open .favorites-panel,
+body.platform-android-webview.settings-open .settings-panel {
   transform: none;
+}
+
+@supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
+  .panel-backdrop,
+  .settings-backdrop,
+  .pdf-modal,
+  .funny-modal,
+  .offline-overlay {
+    background: rgba(2, 8, 23, 0.68);
+  }
+
+  .floating-panel,
+  .pdf-modal-card,
+  .funny-modal-card,
+  .offline-shell {
+    background: var(--surface-strong);
+  }
 }
 
 .favorites-panel h3 {
@@ -3282,15 +3301,30 @@ footer h3 {
   background: transparent;
   color: var(--accent);
   font: inherit;
-  font-weight: 700;
+  font-size: 0.92rem;
+  font-weight: 600;
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 0.18em;
+  line-height: 1.4;
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  margin: 0;
+  display: inline;
+  box-shadow: none;
+  border-radius: 0;
+  vertical-align: baseline;
 }
 
 .footer-link-btn:hover,
 .footer-link-btn:focus-visible {
   color: color-mix(in srgb, var(--accent) 78%, var(--text));
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  transform: none;
+  outline-offset: 3px;
 }
 
 .legal-modal-card {
@@ -3402,6 +3436,7 @@ footer h3 {
   }
   .container {
     width: 100%;
+    min-height: 100vh;
     min-height: 100dvh;
     padding-top: max(0.8rem, env(safe-area-inset-top));
   }
@@ -3427,6 +3462,7 @@ footer h3 {
   .container {
     width: 100%;
     flex: 1 0 auto;
+    min-height: 100vh;
     min-height: 100dvh;
     padding:
       max(0.7rem, env(safe-area-inset-top))
@@ -3468,6 +3504,15 @@ footer h3 {
     box-shadow: var(--shadow-strong);
   }
 
+  .settings-panel,
+  .favorites-panel {
+    z-index: 1725;
+    isolation: isolate;
+    background: var(--surface-strong);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
   .header-actions #installBtn {
     width: auto;
     flex: 0 1 auto;
@@ -3493,7 +3538,12 @@ footer h3 {
   }
 
   .favorites-backdrop {
-    z-index: 1690;
+    z-index: 1685;
+  }
+
+  .settings-backdrop,
+  .panel-backdrop {
+    z-index: 1680;
   }
 
   body.platform-android .favorites-panel,
@@ -3678,6 +3728,21 @@ footer h3 {
   footer {
     margin-top: auto;
     padding-inline: 0.4rem;
+  }
+
+  .review-embed-shell {
+    display: none;
+  }
+
+  .review-mobile-fallback {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .review-mobile-fallback p {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.6;
   }
 }
 

@@ -2808,6 +2808,18 @@ languageSelect.addEventListener("change", () => {
   if (currentVehicleId) toonVasteData(currentVehicleId);
   if (compareVehicleId) renderComparison();
 });
+footerReviewBtn?.addEventListener("click", showReviewModal);
+footerTermsBtn?.addEventListener("click", showTermsModal);
+reviewModalCloseBtn?.addEventListener("click", hideReviewModal);
+reviewModalDoneBtn?.addEventListener("click", hideReviewModal);
+reviewModalEl?.addEventListener("click", (event) => {
+  if (event.target === reviewModalEl) hideReviewModal();
+});
+termsModalCloseBtn?.addEventListener("click", hideTermsModal);
+termsModalDoneBtn?.addEventListener("click", hideTermsModal);
+termsModalEl?.addEventListener("click", (event) => {
+  if (event.target === termsModalEl) hideTermsModal();
+});
 funnyModalCloseBtn?.addEventListener("click", hideFunnyModal);
 funnyModalEl?.addEventListener("click", (event) => {
   if (event.target === funnyModalEl) hideFunnyModal();
@@ -2926,6 +2938,14 @@ settingsBackdropEl.addEventListener("click", () => setSettingsPanel(false));
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !dashboardSetupModalEl?.hidden) {
     hideDashboardSetupModal();
+    return;
+  }
+  if (event.key === "Escape" && !reviewModalEl?.hidden) {
+    hideReviewModal();
+    return;
+  }
+  if (event.key === "Escape" && !termsModalEl?.hidden) {
+    hideTermsModal();
     return;
   }
   if (event.key === "Escape" && !infoModalEl?.hidden) {
