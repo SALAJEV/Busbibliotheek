@@ -70,6 +70,7 @@ let updateIntervalMs = 10000;
 const voertuigInput = document.getElementById("voertuignummer");
 const suggestieLijst = document.getElementById("suggestielijst");
 const realtimeEl = document.getElementById("realtime");
+const weatherBlockEl = document.getElementById("weatherBlock");
 const vasteDataEl = document.getElementById("vasteData");
 const resultsWrapEl = document.querySelector(".results-wrap");
 const resultsGridEl = document.getElementById("resultsGrid");
@@ -261,6 +262,9 @@ let lastVerifiedInternetState = true;
 let realtimeRequestToken = 0;
 let dashboardRequestToken = 0;
 let latestSearchToken = 0;
+let weatherRequestToken = 0;
+let lastWeatherCacheKey = "";
+let lastWeatherData = null;
 let activeVehicleSuggestionInput = null;
 let settings = {
   intervalMs: 10000,
@@ -1749,6 +1753,113 @@ function formatDelayMessage(delayMinutes) {
   return lex.onTime;
 }
 
+function resetWeatherBlock() {
+  lastWeatherCacheKey = "";
+  lastWeatherData = null;
+  if (!weatherBlockEl) return;
+  weatherBlockEl.hidden = true;
+  weatherBlockEl.setAttribute("aria-hidden", "true");
+  weatherBlockEl.innerHTML = "";
+}
+
+function getWeatherPresentation(weatherCode, isDay = 1) {
+  const code = Number(weatherCode);
+  const daytime = Number(isDay) === 1;
+  const weatherMap = {
+    0: { icon: daytime ? "☀" : "☾", label: getLabel("weatherClear", "Helder") },
+    1: { icon: daytime ? "⛅" : "☁", label: getLabel("weatherMainlyClear", "Licht bewolkt") },
+    2: { icon: "⛅", label: getLabel("weatherPartlyCloudy", "Half bewolkt") },
+    3: { icon: "☁", label: getLabel("weatherCloudy", "Bewolkt") },
+    45: { icon: "🌫", label: getLabel("weatherFog", "Mist") },
+    48: { icon: "🌫", label: getLabel("weatherFog", "Mist") },
+    51: { icon: "🌦", label: getLabel("weatherDrizzle", "Motregen") },
+    53: { icon: "🌦", label: getLabel("weatherDrizzle", "Motregen") },
+    55: { icon: "🌧", label: getLabel("weatherDrizzleHeavy", "Stevige motregen") },
+    56: { icon: "🌨", label: getLabel("weatherFreezingDrizzle", "Aanhoudende ijzel") },
+    57: { icon: "🌨", label: getLabel("weatherFreezingDrizzle", "Aanhoudende ijzel") },
+    61: { icon: "🌧", label: getLabel("weatherRain", "Regen") },
+    63: { icon: "🌧", label: getLabel("weatherRain", "Regen") },
+    65: { icon: "🌧", label: getLabel("weatherHeavyRain", "Stevige regen") },
+    66: { icon: "🌨", label: getLabel("weatherFreezingRain", "IJzel") },
+    67: { icon: "🌨", label: getLabel("weatherFreezingRain", "IJzel") },
+    71: { icon: "🌨", label: getLabel("weatherSnow", "Sneeuw") },
+    73: { icon: "🌨", label: getLabel("weatherSnow", "Sneeuw") },
+    75: { icon: "❄", label: getLabel("weatherHeavySnow", "Stevige sneeuw") },
+    77: { icon: "❄", label: getLabel("weatherSnowGrains", "Sneeuwkorrels") },
+    80: { icon: "🌦", label: getLabel("weatherShowers", "Buien") },
+    81: { icon: "🌧", label: getLabel("weatherShowers", "Buien") },
+    82: { icon: "🌧", label: getLabel("weatherHeavyShowers", "Zware buien") },
+    85: { icon: "🌨", label: getLabel("weatherSnowShowers", "Sneeuwbuien") },
+    86: { icon: "🌨", label: getLabel("weatherSnowShowers", "Sneeuwbuien") },
+    95: { icon: "⛈", label: getLabel("weatherThunder", "Onweer") },
+    96: { icon: "⛈", label: getLabel("weatherThunderHail", "Onweer met hagel") },
+    99: { icon: "⛈", label: getLabel("weatherThunderHail", "Onweer met hagel") }
+  };
+  return weatherMap[code] || { icon: "🌤", label: getLabel("weatherUnknown", "Weer") };
+}
+
+function renderWeatherBlock(weatherData) {
+  if (!weatherBlockEl || !weatherData?.current) {
+    resetWeatherBlock();
+    return;
+  }
+
+  const current = weatherData.current;
+  const presentation = getWeatherPresentation(current.weather_code, current.is_day);
+  const temperature = typeof current.temperature_2m === "number" ? `${Math.round(current.temperature_2m)}°C` : "-";
+  const feelsLike = typeof current.apparent_temperature === "number" ? `${Math.round(current.apparent_temperature)}°C` : "-";
+  const wind = typeof current.wind_speed_10m === "number" ? `${Math.round(current.wind_speed_10m)} km/u` : "-";
+  const precipitation = typeof current.precipitation === "number" ? `${current.precipitation.toFixed(1)} mm` : "-";
+
+  weatherBlockEl.innerHTML = `
+    <div class="weather-card">
+      <div class="weather-card-main">
+        <span class="weather-icon" aria-hidden="true">${presentation.icon}</span>
+        <div class="weather-copy">
+          <strong class="weather-title">${escapeHtml(presentation.label)}</strong>
+          <span class="weather-source">${escapeHtml(getLabel("weatherSource", "Weer op deze locatie"))}</span>
+        </div>
+        <span class="weather-temperature">${escapeHtml(temperature)}</span>
+      </div>
+      <div class="weather-stats">
+        <span class="weather-stat"><span class="weather-stat-label">${escapeHtml(getLabel("weatherFeelsLike", "Gevoel"))}</span><strong>${escapeHtml(feelsLike)}</strong></span>
+        <span class="weather-stat"><span class="weather-stat-label">${escapeHtml(getLabel("weatherWind", "Wind"))}</span><strong>${escapeHtml(wind)}</strong></span>
+        <span class="weather-stat"><span class="weather-stat-label">${escapeHtml(getLabel("weatherRain", "Neerslag"))}</span><strong>${escapeHtml(precipitation)}</strong></span>
+      </div>
+    </div>
+  `;
+  weatherBlockEl.hidden = false;
+  weatherBlockEl.setAttribute("aria-hidden", "false");
+}
+
+async function updateWeatherForCoordinates(latitude, longitude) {
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    resetWeatherBlock();
+    return;
+  }
+
+  const cacheKey = `${latitude.toFixed(2)},${longitude.toFixed(2)}`;
+  if (cacheKey === lastWeatherCacheKey && lastWeatherData) {
+    renderWeatherBlock(lastWeatherData);
+    return;
+  }
+
+  const requestToken = ++weatherRequestToken;
+  try {
+    const weatherUrl = `${API_URL}?resource=weather&latitude=${encodeURIComponent(latitude)}&longitude=${encodeURIComponent(longitude)}`;
+    const response = await fetchWithTimeout(weatherUrl, { cache: "no-store" });
+    const weatherData = await response.json();
+    if (requestToken !== weatherRequestToken) return;
+    lastWeatherCacheKey = cacheKey;
+    lastWeatherData = weatherData;
+    renderWeatherBlock(weatherData);
+  } catch (error) {
+    if (requestToken !== weatherRequestToken) return;
+    console.warn("Weer laden mislukt", error);
+    resetWeatherBlock();
+  }
+}
+
 function isIosInstallable() {
   const ua = window.navigator.userAgent;
   const isIos = /iPhone|iPad|iPod/.test(ua);
@@ -1939,6 +2050,7 @@ function applyTranslations() {
   if (!currentVehicleId) {
     realtimeEl.innerHTML = t("noData");
     vasteDataEl.innerHTML = t("noneSelected");
+    resetWeatherBlock();
   }
   updateFeedStatusText();
   updateFavoriteButtonState();
@@ -3324,6 +3436,7 @@ function terug() {
   realtimeEl.innerHTML = t("noData");
   vasteDataEl.innerHTML = t("noneSelected");
   hideVehiclePhotoCard();
+  resetWeatherBlock();
   voertuigInput.value = "";
   currentVehicleId = "";
   realtimePausedByInactivity = false;
@@ -3592,6 +3705,7 @@ async function updateRealtime(id){
 
     if(!gps){
       realtimeEl.innerHTML=t("noData");
+      resetWeatherBlock();
       mapEl.classList.add("hidden");
       lastUpdateEl.textContent = `${t("lastUpdate")}: -`;
       lastUpdateEl.hidden = true;
@@ -3712,6 +3826,7 @@ async function updateRealtime(id){
       </div>
       <span class="delay-status ${delayClass}">${escapeHtml(msgDelay)}</span>
     `;
+    void updateWeatherForCoordinates(Number(v.position.latitude), Number(v.position.longitude));
     mapEl.classList.remove("hidden");
     lastUpdateEl.textContent = `${t("lastUpdate")}: ${new Date().toLocaleTimeString(localeForLanguage(settings.language))}`;
     lastUpdateEl.hidden = false;
@@ -3754,6 +3869,7 @@ async function updateRealtime(id){
     if (requestToken !== realtimeRequestToken || id !== currentVehicleId) return;
     console.error(e);
     realtimeEl.innerHTML = t("realtimeError");
+    resetWeatherBlock();
     mapEl.classList.add("hidden");
     lastUpdateEl.textContent = `${t("lastUpdate")}: -`;
     lastUpdateEl.hidden = true;

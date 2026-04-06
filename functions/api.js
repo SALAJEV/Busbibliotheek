@@ -3,28 +3,35 @@ export async function onRequest(context) {
   const requestUrl = new URL(context.request.url);
   const resource = requestUrl.searchParams.get("resource") || "realtime";
 
-  if (!API_KEY) {
-    return new Response(JSON.stringify({ error: "Serverconfiguratie mist DELIJN_API_KEY" }), {
-      status: 500,
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": "no-store"
-      }
-    });
+  if (resource === "realtime" || resource === "haltes") {
+    if (!API_KEY) {
+      return new Response(JSON.stringify({ error: "Serverconfiguratie mist DELIJN_API_KEY" }), {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store"
+        }
+      });
+    }
   }
 
   try {
     const upstreamUrl = buildUpstreamUrl(requestUrl, resource);
+    const requestHeaders = {
+      "Accept": "application/json"
+    };
+
+    if (resource === "realtime" || resource === "haltes") {
+      requestHeaders["Ocp-Apim-Subscription-Key"] = API_KEY;
+    }
+
     const response = await fetch(upstreamUrl, {
-      headers: {
-        "Ocp-Apim-Subscription-Key": API_KEY,
-        "Accept": "application/json"
-      },
+      headers: requestHeaders,
       cf: { cacheTtl: 0, cacheEverything: false }
     });
 
     if (!response.ok) {
-      return new Response(JSON.stringify({ error: "Fout van De Lijn API", status: response.status }), {
+      return new Response(JSON.stringify({ error: resource === "weather" ? "Fout van weerbron" : "Fout van De Lijn API", status: response.status }), {
         status: response.status,
         headers: {
           "Content-Type": "application/json",
@@ -55,6 +62,25 @@ export async function onRequest(context) {
 }
 
 function buildUpstreamUrl(requestUrl, resource) {
+  if (resource === "weather") {
+    const latitude = Number.parseFloat(requestUrl.searchParams.get("latitude"));
+    const longitude = Number.parseFloat(requestUrl.searchParams.get("longitude"));
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      throw new RequestValidationError("Ontbrekende of ongeldige latitude/longitude");
+    }
+
+    const upstreamUrl = new URL("https://api.open-meteo.com/v1/forecast");
+    upstreamUrl.searchParams.set("latitude", String(latitude));
+    upstreamUrl.searchParams.set("longitude", String(longitude));
+    upstreamUrl.searchParams.set(
+      "current",
+      "temperature_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m"
+    );
+    upstreamUrl.searchParams.set("timezone", "auto");
+    upstreamUrl.searchParams.set("forecast_days", "1");
+    return upstreamUrl.toString();
+  }
+
   if (resource === "haltes") {
     const zoekArgument = requestUrl.searchParams.get("zoekArgument")?.trim();
     if (!zoekArgument) {

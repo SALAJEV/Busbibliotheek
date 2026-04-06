@@ -1886,6 +1886,94 @@ body.dashboard-open {
   opacity: 1;
 }
 
+.weather-block[hidden] {
+  display: none !important;
+}
+
+.weather-card {
+  display: grid;
+  gap: 0.72rem;
+  margin-top: 0.72rem;
+  padding: 0.9rem 0.95rem;
+  border-radius: calc(var(--panel-radius-sm) + 1px);
+  border: 1px solid color-mix(in srgb, var(--accent) 14%, var(--stroke));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-alt) 98%, transparent), color-mix(in srgb, var(--surface) 94%, transparent)),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--accent-soft) 62%, transparent), transparent 55%);
+}
+
+.weather-card-main {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.72rem;
+}
+
+.weather-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-strong) 86%, var(--accent-soft));
+  font-size: 1.45rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.weather-copy {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.weather-title {
+  color: var(--text);
+  font-size: 0.96rem;
+  line-height: 1.25;
+}
+
+.weather-source {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.weather-temperature {
+  color: var(--text);
+  font-size: 1.2rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.weather-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.weather-stat {
+  display: grid;
+  gap: 0.16rem;
+  padding: 0.58rem 0.62rem;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 10%, var(--stroke-soft));
+  background: color-mix(in srgb, var(--surface-strong) 94%, transparent);
+}
+
+.weather-stat-label {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.weather-stat strong {
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
 .compare-card {
   grid-column: 1 / -1;
   min-height: 0;
@@ -3533,6 +3621,15 @@ footer h3 {
   .compare-card-header {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .weather-card-main,
+  .weather-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .weather-temperature {
+    justify-self: start;
   }
   .container {
     width: 100%;
