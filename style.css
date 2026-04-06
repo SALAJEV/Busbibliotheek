@@ -762,6 +762,33 @@ body.more-open {
   overflow: hidden;
 }
 
+body.platform-android .floating-panel,
+body.platform-android .settings-backdrop,
+body.platform-android .pdf-modal,
+body.platform-android .funny-modal,
+body.platform-android .offline-overlay {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.platform-android .floating-panel {
+  z-index: 3200;
+  transform: none;
+  transition: opacity 0.18s ease;
+  background: color-mix(in srgb, var(--surface-strong) 99%, white 1%);
+}
+
+body.platform-android .panel-backdrop,
+body.platform-android .settings-backdrop,
+body.platform-android .favorites-backdrop {
+  z-index: 3100;
+}
+
+body.platform-android.more-open .favorites-panel,
+body.platform-android.settings-open .settings-panel {
+  transform: none;
+}
+
 .favorites-panel h3 {
   margin: 0;
   color: var(--text);
@@ -1376,6 +1403,12 @@ body.settings-open .settings-panel {
   opacity: 1;
   transform: translateY(0) scale(1);
   pointer-events: auto;
+}
+
+body.platform-android .settings-panel,
+body.platform-android .favorites-panel {
+  border-width: 1px;
+  box-shadow: 0 20px 44px rgba(15, 23, 42, 0.22);
 }
 
 /* ===============================
@@ -3277,6 +3310,14 @@ footer h3 {
 
   .favorites-backdrop {
     z-index: 1690;
+  }
+
+  body.platform-android .favorites-panel,
+  body.platform-android .settings-panel {
+    top: max(0.6rem, env(safe-area-inset-top) + 0.28rem);
+    right: 0.6rem;
+    left: 0.6rem;
+    max-height: calc(100dvh - env(safe-area-inset-top) - 1.2rem);
   }
 
   .more-panel {

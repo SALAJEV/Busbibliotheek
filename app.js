@@ -265,6 +265,9 @@ let settings = {
   colorTheme: "classic",
   language: "nl"
 };
+const platformUserAgent = window.navigator.userAgent || "";
+const isAndroidPlatform = /Android/i.test(platformUserAgent);
+const isAndroidWebView = isAndroidPlatform && /\bwv\b|Version\/[\d.]+/i.test(platformUserAgent);
 const LAST_HALTES_KEY = "lastHaltes";
 const HALTE_CODE_REGEX = /^[1-5]\d{5}$/;
 const HALTE_SEARCH_LIMIT = 8;
@@ -2244,7 +2247,7 @@ function setSettingsPanel(open) {
   document.body.classList.toggle("settings-open", settingsOpen);
   settingsPanelEl.hidden = !settingsOpen;
   settingsPanelEl.setAttribute("aria-hidden", String(!settingsOpen));
-  settingsPanelEl.toggleAttribute("inert", !settingsOpen);
+  if ("inert" in settingsPanelEl) settingsPanelEl.inert = !settingsOpen;
   settingsToggleBtn.setAttribute("aria-expanded", String(settingsOpen));
   settingsToggleBtn.classList.toggle("active", settingsOpen);
 }
@@ -2255,7 +2258,7 @@ function setFavoritesPanel(open) {
   favoritesPanelOpen = shouldOpen;
   favoritesPanelEl.hidden = !favoritesPanelOpen;
   favoritesPanelEl.setAttribute("aria-hidden", String(!favoritesPanelOpen));
-  favoritesPanelEl.toggleAttribute("inert", !favoritesPanelOpen);
+  if ("inert" in favoritesPanelEl) favoritesPanelEl.inert = !favoritesPanelOpen;
   favoritesToggleBtn.setAttribute("aria-expanded", String(favoritesPanelOpen));
   favoritesToggleBtn.classList.toggle("active", favoritesPanelOpen);
   document.body.classList.toggle("more-open", favoritesPanelOpen);
@@ -2459,6 +2462,8 @@ function initInactivityMonitor() {
 function initAppPreferences() {
   loadSettings();
   window.settings = settings;
+  document.body.classList.toggle("platform-android", isAndroidPlatform);
+  document.body.classList.toggle("platform-android-webview", isAndroidWebView);
   loadFavorites();
   settings.intervalMs = normalizeUpdateIntervalMs(settings.intervalMs);
   updateIntervalMs = settings.intervalMs;
