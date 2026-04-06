@@ -1,4 +1,4 @@
-# Busbibliotheek database versie 29 maart 2026
+# 29/03/2026
 "vehicle_id";"bus";"license_plate";"id_date";"ud_date";"owner";"spotted";"hansea_id";"intern_id";"VIN";"hide-vin";"old_vehicle_id";"old_license_plate";"operator";"notes"
 "013023";"MAN Lion's City G A23";"1-VPZ-070";"23/01/2019";"/";"Van Hoorebeke & Zoon";1;"/";"/";"/";0;"/";"/";"De Lijn";"Huurbus bij De Lijn Destelbergen sinds september 2025."
 "013024";"MAN Lion's City A21";"1-WBS-002";"16/04/2019";"/";"Van Hoorebeke & Zoon";0;"/";"/";"/";0;"/";"/";"De Lijn";"Huurbus bij De Lijn Gentbrugge sinds oktober 2025, vervangt 613025."
