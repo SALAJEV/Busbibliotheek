@@ -68,6 +68,7 @@ const NETWORK_CHECK_INTERVAL_MS = 15000;
 const NETWORK_CHECK_CACHE_MS = 10000;
 const FAVORITES_KEY = "bb_favorites_v1";
 const SETTINGS_KEY = "bb_settings_v1";
+const DASHBOARD_MAX_VEHICLES = 9;
 let updateIntervalMs = 10000;
 
 const voertuigInput = document.getElementById("voertuignummer");
@@ -210,6 +211,7 @@ const dashboardSetupModalEl = document.getElementById("dashboardSetupModal");
 const dashboardSetupTitleEl = document.getElementById("dashboardSetupTitle");
 const dashboardSetupGridEl = document.getElementById("dashboardSetupGrid");
 const dashboardSetupSummaryEl = document.getElementById("dashboardSetupSummary");
+const dashboardSetupErrorEl = document.getElementById("dashboardSetupError");
 const dashboardSetupCloseBtn = document.getElementById("dashboardSetupCloseBtn");
 const dashboardSetupCancelBtn = document.getElementById("dashboardSetupCancelBtn");
 const dashboardSetupConfirmBtn = document.getElementById("dashboardSetupConfirmBtn");
@@ -301,17 +303,23 @@ let lastWeatherCoordinates = null;
 let activeVehicleSuggestionInput = null;
 let favoriteDragState = null;
 let favoriteDragSuppressUntil = 0;
+let dashboardSetupValidation = [];
+let dashboardSetupDraftValues = [];
+let dashboardSetupDraftResolvedIds = [];
+let dashboardAutoStarted = false;
 let leafletLoadPromise = null;
 let busIcon = null;
 let settings = {
   intervalMs: 10000,
   theme: "auto",
   colorTheme: "classic",
-  language: "nl"
+  language: "nl",
+  dashboardVehicleIds: []
 };
 const platformUserAgent = window.navigator.userAgent || "";
 const isAndroidPlatform = /Android/i.test(platformUserAgent);
 const isAndroidWebView = isAndroidPlatform && /\bwv\b|Version\/[\d.]+/i.test(platformUserAgent);
+const isAndroidTvPlatform = isAndroidPlatform && /(TV|AFT|BRAVIA|GoogleTV|SmartTV|HbbTV)/i.test(platformUserAgent);
 const HALTE_CODE_REGEX = /^[1-5]\d{5}$/;
 const HALTE_SEARCH_LIMIT = 8;
 let halteSearchRequestToken = 0;
@@ -454,6 +462,20 @@ const VEHICLE_FIELD_TRANSLATION_FALLBACKS = {
 function normalizeUpdateIntervalMs(intervalMs) {
   const value = Number(intervalMs);
   return ALLOWED_UPDATE_INTERVALS.includes(value) ? value : 10000;
+}
+
+function normalizeDashboardVehicleIds(ids) {
+  if (!Array.isArray(ids)) return [];
+  return ids
+    .map((id) => normalize(id))
+    .filter(Boolean)
+    .slice(0, DASHBOARD_MAX_VEHICLES);
+}
+
+function persistDashboardVehicleIds(ids) {
+  dashboardVehicleIds = normalizeDashboardVehicleIds(ids);
+  settings.dashboardVehicleIds = [...dashboardVehicleIds];
+  saveSettings();
 }
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
@@ -687,7 +709,7 @@ function updateUrlState() {
 }
 
 function updateDocumentTitle(vehicleId = "") {
-  const normalizedVehicleId = normalize(vehicleId || currentVehicleId);
+  const normalizedVehicleId = getVehicleDisplayId(vehicleId || currentVehicleId);
   document.title = normalizedVehicleId
     ? `${getLabel("vehicleTitlePrefix", "Voertuig")} ${normalizedVehicleId}`
     : "Busbibliotheek";
@@ -813,7 +835,7 @@ function showPdfModal(vehicleId) {
   }
   if (pdfModalSummaryEl) {
     const owner = getVehicleField(bus, "Eigenaar") || "-";
-    pdfModalSummaryEl.textContent = `${bus.Voertuignummer} · ${bus.Type || getLabel("unknownType", "Onbekend type")} · ${owner}`;
+    pdfModalSummaryEl.textContent = `${getVehicleDisplayId(bus) || bus.Voertuignummer} · ${bus.Type || getLabel("unknownType", "Onbekend type")} · ${owner}`;
   }
   if (!pdfModalEl) return;
   pdfModalEl.hidden = false;
@@ -831,6 +853,7 @@ function showCompareModal() {
   if (!currentVehicleId || !compareModalEl) return;
   compareEditTarget = "compare";
   compareVehicleInputEl.value = "";
+  setVehicleInputResolvedId(compareVehicleInputEl, "");
   compareModalEl.hidden = false;
   document.body.classList.add("pdf-modal-open");
   bindVehicleSuggestions(compareVehicleInputEl, () => {
@@ -842,9 +865,9 @@ function showCompareModal() {
 function showComparePicker(target = "compare") {
   if (!currentVehicleId || !compareModalEl) return;
   compareEditTarget = target === "base" ? "base" : "compare";
-  compareVehicleInputEl.value = compareEditTarget === "base"
-    ? currentVehicleId
-    : (compareVehicleId || "");
+  const initialVehicleId = compareEditTarget === "base" ? currentVehicleId : (compareVehicleId || "");
+  compareVehicleInputEl.value = getVehicleDisplayId(initialVehicleId);
+  setVehicleInputResolvedId(compareVehicleInputEl, initialVehicleId);
   compareModalEl.hidden = false;
   document.body.classList.add("pdf-modal-open");
   bindVehicleSuggestions(compareVehicleInputEl, () => {
@@ -922,6 +945,8 @@ function renderComparison() {
     return;
   }
 
+  const baseDisplayId = getVehicleDisplayId(baseBus) || currentVehicleId;
+  const compareDisplayId = getVehicleDisplayId(compareBus) || compareVehicleId;
   const baseRows = collectComparisonRows(baseBus);
   const compareRows = collectComparisonRows(compareBus);
   const rowMap = new Map();
@@ -942,20 +967,20 @@ function renderComparison() {
   const rowsHtml = Array.from(rowMap.values()).map((row) => `
     <tr>
       <th scope="row">${escapeHtml(row.label)}</th>
-      <td data-column="${escapeHtml(baseBus.Voertuignummer || currentVehicleId)}">${renderCellValue(row.left)}</td>
-      <td data-column="${escapeHtml(compareBus.Voertuignummer || compareVehicleId)}">${renderCellValue(row.right)}</td>
+      <td data-column="${escapeHtml(baseDisplayId)}">${renderCellValue(row.left)}</td>
+      <td data-column="${escapeHtml(compareDisplayId)}">${renderCellValue(row.right)}</td>
     </tr>
   `).join("");
 
   compareContentEl.innerHTML = `
     <div class="compare-vehicles-head">
       <button class="compare-vehicle-pill compare-vehicle-pill-btn" type="button" data-compare-target="base">
-        <strong>${escapeHtml(baseBus.Voertuignummer || currentVehicleId)}</strong>
+        <strong>${escapeHtml(baseDisplayId)}</strong>
         <span>${escapeHtml(getLabel("compareEditVehicle", "Klik om te wijzigen"))}</span>
       </button>
       <div class="compare-vs">vs</div>
       <button class="compare-vehicle-pill compare-vehicle-pill-btn" type="button" data-compare-target="compare">
-        <strong>${escapeHtml(compareBus.Voertuignummer || compareVehicleId)}</strong>
+        <strong>${escapeHtml(compareDisplayId)}</strong>
         <span>${escapeHtml(getLabel("compareEditVehicle", "Klik om te wijzigen"))}</span>
       </button>
     </div>
@@ -964,8 +989,8 @@ function renderComparison() {
         <thead>
           <tr>
             <th class="compare-table-corner" aria-hidden="true"></th>
-            <th scope="col">${escapeHtml(baseBus.Voertuignummer || currentVehicleId)}</th>
-            <th scope="col">${escapeHtml(compareBus.Voertuignummer || compareVehicleId)}</th>
+            <th scope="col">${escapeHtml(baseDisplayId)}</th>
+            <th scope="col">${escapeHtml(compareDisplayId)}</th>
           </tr>
         </thead>
         <tbody>${rowsHtml}</tbody>
@@ -1007,26 +1032,109 @@ async function applyDeepLinkIfNeeded() {
 
 function renderDashboardSetupInputs() {
   if (!dashboardSetupGridEl) return;
-  dashboardSetupGridEl.innerHTML = Array.from({ length: 9 }, (_, index) => {
-    const currentValue = escapeHtml(dashboardVehicleIds[index] || "");
+  dashboardSetupGridEl.innerHTML = Array.from({ length: DASHBOARD_MAX_VEHICLES }, (_, index) => {
+    const internalValue = dashboardVehicleIds[index] || "";
+    const draftValue = dashboardSetupDraftValues[index];
+    const currentValue = escapeHtml(draftValue != null ? draftValue : getVisibleVehicleId(internalValue));
+    const validation = dashboardSetupValidation[index] || {};
+    const errorMessage = escapeHtml(validation.error || "");
+    const resolvedId = dashboardSetupDraftResolvedIds[index] || internalValue;
+    const resolvedAttr = resolvedId ? ` data-resolved-vehicle-id="${escapeHtml(resolvedId)}"` : "";
     return `
-      <label class="dashboard-setup-field">
+      <label class="dashboard-setup-field${validation.error ? " is-invalid" : ""}">
         <span>${getLabel("dashboardCardLabel", "Kaart")} ${index + 1}</span>
-        <input class="dashboard-setup-input" type="text" inputmode="text" autocomplete="off" placeholder="${escapeHtml(getLabel("dashboardSetupPlaceholder", "Voertuignummer of plaat"))}" value="${currentValue}">
+        <input class="dashboard-setup-input" type="text" inputmode="text" autocomplete="off" placeholder="${escapeHtml(getLabel("dashboardSetupPlaceholder", "Voertuignummer of plaat"))}" value="${currentValue}" data-index="${index}"${resolvedAttr}>
+        <span class="dashboard-setup-field-error"${validation.error ? "" : " hidden"}>${errorMessage}</span>
       </label>
     `;
   }).join("");
 
   dashboardSetupGridEl.querySelectorAll(".dashboard-setup-input").forEach((inputEl) => {
-    bindVehicleSuggestions(inputEl, () => {});
+    bindVehicleSuggestions(inputEl, (vehicleId) => {
+      const index = Number(inputEl.dataset.index || -1);
+      if (Number.isInteger(index) && index >= 0) {
+        dashboardSetupDraftResolvedIds[index] = vehicleId;
+        dashboardSetupDraftValues[index] = inputEl.value;
+      }
+    });
+    inputEl.addEventListener("input", () => {
+      setVehicleInputResolvedId(inputEl, "");
+      const index = Number(inputEl.dataset.index || -1);
+      if (Number.isInteger(index) && index >= 0) {
+        dashboardSetupDraftValues[index] = inputEl.value;
+        dashboardSetupDraftResolvedIds[index] = "";
+      }
+      if (Number.isInteger(index) && index >= 0 && dashboardSetupValidation[index]?.error) {
+        dashboardSetupValidation[index] = { error: "" };
+        renderDashboardSetupInputs();
+        dashboardSetupGridEl.querySelector(`.dashboard-setup-input[data-index="${index}"]`)?.focus();
+      }
+    });
   });
 }
 
+function setDashboardSetupError(message = "") {
+  if (!dashboardSetupErrorEl) return;
+  dashboardSetupErrorEl.hidden = !message;
+  dashboardSetupErrorEl.textContent = message;
+}
+
+function validateDashboardSetupInputs() {
+  const inputs = Array.from(dashboardSetupGridEl?.querySelectorAll(".dashboard-setup-input") || []);
+  const nextValidation = [];
+  const nextIds = [];
+  const seenIds = new Set();
+
+  inputs.forEach((inputEl, index) => {
+    const query = inputEl.value.trim();
+    dashboardSetupDraftValues[index] = query;
+    const preferredVehicleId = getVehicleInputResolvedId(inputEl);
+    const resolved = resolveVehicleQuery(query, preferredVehicleId);
+    const resolvedVehicleId = resolved.vehicleId || "";
+    const isDuplicate = !!resolvedVehicleId && seenIds.has(resolvedVehicleId);
+    const error = getDashboardVehicleValidationMessage(query, resolvedVehicleId, resolved.bus, isDuplicate);
+    nextValidation[index] = { error };
+    if (query && !error && resolvedVehicleId) {
+      nextIds.push(resolvedVehicleId);
+      seenIds.add(resolvedVehicleId);
+    }
+  });
+
+  dashboardSetupValidation = nextValidation;
+  const hasErrors = nextValidation.some((item) => item?.error);
+  const hasAnyInput = inputs.some((inputEl) => inputEl.value.trim());
+  return {
+    ids: nextIds,
+    hasErrors,
+    hasAnyInput
+  };
+}
+
+function getSanitizedDashboardVehicleIds(ids = []) {
+  const uniqueIds = [];
+  const seenIds = new Set();
+  normalizeDashboardVehicleIds(ids).forEach((id) => {
+    const resolved = resolveVehicleSearch(id);
+    const resolvedId = resolved.vehicleId || "";
+    if (!resolved.bus || !resolvedId) return;
+    if (!isDashboardEligibleVehicleId(resolvedId)) return;
+    if (seenIds.has(resolvedId)) return;
+    seenIds.add(resolvedId);
+    uniqueIds.push(resolvedId);
+  });
+  return uniqueIds;
+}
+
 function showDashboardSetupModal() {
-  if (!stalkModeMediaQuery.matches) return;
+  if (!isStalkModeAvailable()) return;
+  dashboardSetupValidation = [];
+  dashboardSetupDraftValues = Array.from({ length: DASHBOARD_MAX_VEHICLES }, (_, index) => getVisibleVehicleId(dashboardVehicleIds[index] || ""));
+  dashboardSetupDraftResolvedIds = Array.from({ length: DASHBOARD_MAX_VEHICLES }, (_, index) => dashboardVehicleIds[index] || "");
+  setDashboardSetupError("");
   renderDashboardSetupInputs();
   dashboardSetupModalEl.hidden = false;
   document.body.classList.add("pdf-modal-open");
+  document.body.classList.add("dashboard-setup-open");
   window.setTimeout(() => dashboardSetupGridEl?.querySelector("input")?.focus(), 20);
 }
 
@@ -1034,10 +1142,19 @@ function hideDashboardSetupModal() {
   if (!dashboardSetupModalEl) return;
   dashboardSetupModalEl.hidden = true;
   document.body.classList.remove("pdf-modal-open");
+  document.body.classList.remove("dashboard-setup-open");
+  dashboardSetupValidation = [];
+  dashboardSetupDraftValues = [];
+  dashboardSetupDraftResolvedIds = [];
+  setDashboardSetupError("");
+}
+
+function isStalkModeAvailable() {
+  return stalkModeMediaQuery.matches || isAndroidTvPlatform;
 }
 
 function syncStalkModeAvailability() {
-  const isAvailable = stalkModeMediaQuery.matches;
+  const isAvailable = isStalkModeAvailable();
   if (dashboardToggleBtn) dashboardToggleBtn.hidden = !isAvailable;
   if (!isAvailable) {
     hideDashboardSetupModal();
@@ -1067,7 +1184,7 @@ function buildDashboardMapTooltip(snapshot) {
   return `
     <div class="dashboard-map-tooltip-card">
       <span class="line-badge" style="--line-badge-bg:${snapshot.routeColor};--line-badge-fg:${snapshot.routeTextColor};">${escapeHtml(snapshot.routeShort)}</span>
-      <strong>${escapeHtml(snapshot.vehicleId)}</strong>
+      <strong>${escapeHtml(snapshot.displayVehicleId || snapshot.vehicleId)}</strong>
       <span>${escapeHtml(snapshot.destinationText || "-")}</span>
     </div>
   `;
@@ -1141,6 +1258,15 @@ function setDashboardLoading(active) {
 }
 
 function getRoutePresentationFromRealtime(id, entities, bus) {
+  if (isHiddenAlphaVehicleId(id)) {
+    return {
+      status: "offline",
+      vehicleId: id,
+      displayVehicleId: getVehicleDisplayId(bus || id),
+      type: bus?.Type || "",
+      message: getLabel("dashboardNoRealtime", "Geen realtime beschikbaar")
+    };
+  }
   const normalizedRequestedId = cleanText(id);
   const gpsEntity = [...entities].reverse().find((entity) => {
     const vehiclePayload = getEntityVehiclePayload(entity);
@@ -1157,6 +1283,7 @@ function getRoutePresentationFromRealtime(id, entities, bus) {
     return {
       status: "offline",
       vehicleId: id,
+      displayVehicleId: getVehicleDisplayId(bus || id),
       type: bus?.Type || "",
       message: getLabel("dashboardNoRealtime", "Geen realtime beschikbaar")
     };
@@ -1199,6 +1326,7 @@ function getRoutePresentationFromRealtime(id, entities, bus) {
   return {
     status: "live",
     vehicleId: id,
+    displayVehicleId: getVehicleDisplayId(bus || id),
     type: bus?.Type || "",
     routeShort,
     destinationText,
@@ -1238,11 +1366,12 @@ async function refreshDashboardPanel() {
     const snapshots = [];
     const cardsHtml = dashboardVehicleIds.map((id) => {
       const bus = findBusById(id);
+      const displayVehicleId = getVehicleDisplayId(bus || id) || id;
       if (!bus) {
         return `
-          <article class="dashboard-card is-offline">
+          <article class="dashboard-card is-offline" tabindex="0">
             <div class="dashboard-card-top">
-              <strong>${escapeHtml(id)}</strong>
+              <strong>${escapeHtml(displayVehicleId)}</strong>
               <span class="dashboard-status">${escapeHtml(getLabel("dashboardNotFound", "Niet gevonden"))}</span>
             </div>
             <p class="dashboard-meta">${escapeHtml(getLabel("dashboardNoVehicleData", "Geen voertuigdata gevonden."))}</p>
@@ -1252,9 +1381,9 @@ async function refreshDashboardPanel() {
 
       if (isOutOfService(bus)) {
         return `
-          <article class="dashboard-card is-offline">
+          <article class="dashboard-card is-offline" tabindex="0">
             <div class="dashboard-card-top">
-              <strong>${escapeHtml(bus.Voertuignummer || id)}</strong>
+              <strong>${escapeHtml(displayVehicleId)}</strong>
               <span class="dashboard-status">${escapeHtml(getLabel("dashboardOutOfService", "Uit dienst"))}</span>
             </div>
             <p class="dashboard-type">${escapeHtml(bus.Type || "")}</p>
@@ -1267,9 +1396,9 @@ async function refreshDashboardPanel() {
       snapshots.push(snapshot);
       if (snapshot.status !== "live") {
         return `
-          <article class="dashboard-card is-offline">
+          <article class="dashboard-card is-offline" tabindex="0">
             <div class="dashboard-card-top">
-              <strong>${escapeHtml(bus.Voertuignummer || id)}</strong>
+              <strong>${escapeHtml(displayVehicleId)}</strong>
               <span class="dashboard-status">${escapeHtml(getLabel("dashboardOffline", "Offline"))}</span>
             </div>
             <p class="dashboard-type">${escapeHtml(bus.Type || "")}</p>
@@ -1279,9 +1408,9 @@ async function refreshDashboardPanel() {
       }
 
       return `
-        <article class="dashboard-card is-live">
+        <article class="dashboard-card is-live" tabindex="0">
           <div class="dashboard-card-top">
-            <strong>${escapeHtml(bus.Voertuignummer || id)}</strong>
+            <strong>${escapeHtml(displayVehicleId)}</strong>
             <span class="line-badge" style="--line-badge-bg:${snapshot.routeColor};--line-badge-fg:${snapshot.routeTextColor};">${escapeHtml(snapshot.routeShort)}</span>
           </div>
           <p class="dashboard-type">${escapeHtml(bus.Type || "")}</p>
@@ -1306,16 +1435,19 @@ async function refreshDashboardPanel() {
 }
 
 async function openDashboardPanel() {
-  if (!stalkModeMediaQuery.matches) return;
+  if (!isStalkModeAvailable()) return;
   if (!dashboardVehicleIds.length) {
     showDashboardSetupModal();
     return;
   }
+  setFavoritesPanel(false);
+  setSettingsPanel(false);
   dashboardPanelEl.hidden = false;
   dashboardPanelEl.setAttribute("aria-hidden", "false");
   document.body.classList.add("dashboard-open");
   await initDashboardMap();
   await refreshDashboardPanel();
+  window.setTimeout(() => dashboardEditBtn?.focus(), 30);
   stopDashboardRefresh();
   dashboardRefreshHandle = window.setInterval(() => {
     refreshDashboardPanel().catch((error) => console.warn("Dashboard refresh mislukt", error));
@@ -1697,8 +1829,9 @@ async function resolveVehiclePhotoEntries(vehicleId) {
 
 function buildVehiclePhotoCopy(entry, vehicleId) {
   const altTemplate = translateTemplate("photoAlt", "Foto van voertuig {id}");
+  const visibleVehicleId = getVehicleDisplayId(vehicleId);
   return {
-    alt: entry?.alt || fillTemplate(altTemplate, vehicleId),
+    alt: entry?.alt || fillTemplate(altTemplate, visibleVehicleId),
     caption: entry?.caption || "",
     meta: entry?.meta || ""
   };
@@ -2134,6 +2267,7 @@ function loadSettings() {
     settings = { ...settings, ...parsed };
     settings.theme = settings.theme === "light" || settings.theme === "dark" || settings.theme === "auto" ? settings.theme : "auto";
     settings.colorTheme = normalizeColorTheme(settings.colorTheme);
+    settings.dashboardVehicleIds = normalizeDashboardVehicleIds(settings.dashboardVehicleIds);
     window.settings = settings;
   } catch (e) {
     console.warn("Settings laden mislukt", e);
@@ -2722,7 +2856,8 @@ async function resetSiteData() {
     intervalMs: 10000,
     theme: "auto",
     colorTheme: "classic",
-    language: "nl"
+    language: "nl",
+    dashboardVehicleIds: []
   };
   window.settings = settings;
 
@@ -2782,6 +2917,7 @@ function renderFavorites() {
   favorites.forEach((id) => {
     const bus = findBusById(id);
     const vehicleType = normalize(bus?.Type);
+    const displayId = getVehicleDisplayId(bus || id) || id;
     const item = document.createElement("div");
     item.className = "favorite-item";
     item.dataset.id = id;
@@ -2789,7 +2925,7 @@ function renderFavorites() {
     item.setAttribute("tabindex", "0");
     item.innerHTML = `
       <div class="favorite-chip">
-        <span class="chip-title">${escapeHtml(id)}</span>
+        <span class="chip-title">${escapeHtml(displayId)}</span>
         ${vehicleType ? `<span class="chip-subtitle">${escapeHtml(vehicleType)}</span>` : ""}
       </div>
       <button class="favorite-action-btn favorite-action-btn--remove" type="button" data-action="remove" aria-label="${escapeHtml(t("favoriteRemove"))}">&times;</button>
@@ -2798,14 +2934,16 @@ function renderFavorites() {
       if (Date.now() < favoriteDragSuppressUntil) return;
       const target = event.target;
       if (target instanceof Element && target.closest(".favorite-action-btn")) return;
-      voertuigInput.value = id;
+      setVehicleInputResolvedId(voertuigInput, id);
+      voertuigInput.value = displayId;
       setFavoritesPanel(false);
       zoekAlles();
     });
     item.addEventListener("keydown", (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;
       event.preventDefault();
-      voertuigInput.value = id;
+      setVehicleInputResolvedId(voertuigInput, id);
+      voertuigInput.value = displayId;
       setFavoritesPanel(false);
       zoekAlles();
     });
@@ -2967,9 +3105,11 @@ function initAppPreferences() {
   window.settings = settings;
   document.body.classList.toggle("platform-android", isAndroidPlatform);
   document.body.classList.toggle("platform-android-webview", isAndroidWebView);
+  document.body.classList.toggle("platform-android-tv", isAndroidTvPlatform);
   loadFavorites();
   settings.intervalMs = normalizeUpdateIntervalMs(settings.intervalMs);
   updateIntervalMs = settings.intervalMs;
+  dashboardVehicleIds = normalizeDashboardVehicleIds(settings.dashboardVehicleIds);
   intervalSelect.value = String(updateIntervalMs);
   themeSelect.value = settings.theme;
   settings.colorTheme = normalizeColorTheme(settings.colorTheme);
@@ -3025,7 +3165,7 @@ voertuigInput.addEventListener("keydown", (event) => {
   }
 });
 dashboardToggleBtn?.addEventListener("click", () => {
-  if (!stalkModeMediaQuery.matches) return;
+  if (!isStalkModeAvailable()) return;
   setFavoritesPanel(false);
   showDashboardSetupModal();
 });
@@ -3188,7 +3328,7 @@ compareModalConfirmBtn?.addEventListener("click", async () => {
   const query = compareVehicleInputEl?.value.trim() || "";
   if (!query) return;
   if (voertuigen.length === 0) await laadVoertuigen();
-  const resolved = resolveVehicleSearch(query);
+  const resolved = resolveVehicleQuery(query, getVehicleInputResolvedId(compareVehicleInputEl));
   const resolvedId = resolved.vehicleId || normalize(query);
   if (!resolved.bus) {
     window.alert(getLabel("compareNoSecondFound", "Geen tweede voertuig gevonden."));
@@ -3205,7 +3345,8 @@ compareModalConfirmBtn?.addEventListener("click", async () => {
     }
     const nextCompareId = compareVehicleId;
     hideCompareModal();
-    voertuigInput.value = resolvedId;
+    setVehicleInputResolvedId(voertuigInput, resolvedId);
+    voertuigInput.value = getVehicleDisplayId(resolvedId);
     await zoekAlles();
     if (nextCompareId && nextCompareId !== currentVehicleId) {
       compareVehicleId = nextCompareId;
@@ -3229,27 +3370,25 @@ dashboardSetupModalEl?.addEventListener("click", (event) => {
   if (event.target === dashboardSetupModalEl) hideDashboardSetupModal();
 });
 dashboardSetupConfirmBtn?.addEventListener("click", async () => {
-  if (!stalkModeMediaQuery.matches) {
+  if (!isStalkModeAvailable()) {
     hideDashboardSetupModal();
     return;
   }
-  const inputs = Array.from(dashboardSetupGridEl?.querySelectorAll(".dashboard-setup-input") || []);
-  const nextIds = inputs
-    .map((input) => input.value.trim())
-    .filter(Boolean)
-    .map((query) => {
-      const resolved = resolveVehicleSearch(query);
-      return resolved.vehicleId || normalize(query);
-    })
-    .filter(Boolean)
-    .slice(0, 9);
-
-  dashboardVehicleIds = [...new Set(nextIds)];
-  hideDashboardSetupModal();
-  if (!dashboardVehicleIds.length) {
+  const validationResult = validateDashboardSetupInputs();
+  renderDashboardSetupInputs();
+  if (validationResult.hasErrors) {
+    setDashboardSetupError(getLabel("dashboardSetupInvalid", "Controleer de rood gemarkeerde velden."));
+    dashboardSetupGridEl?.querySelector(".dashboard-setup-field.is-invalid .dashboard-setup-input")?.focus();
+    return;
+  }
+  if (!validationResult.hasAnyInput) {
+    persistDashboardVehicleIds([]);
+    hideDashboardSetupModal();
     closeDashboardPanel();
     return;
   }
+  persistDashboardVehicleIds(validationResult.ids);
+  hideDashboardSetupModal();
   await openDashboardPanel();
 });
 stalkModeMediaQuery.addEventListener?.("change", syncStalkModeAvailability);
@@ -3292,48 +3431,59 @@ settingsInfoBtn?.addEventListener("click", () => {
 settingsCloseBtn?.addEventListener("click", () => setSettingsPanel(false));
 settingsBackdropEl?.addEventListener("click", () => setSettingsPanel(false));
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && !halteSearchModalEl?.hidden) {
+  const isBackKey = event.key === "Escape" || event.key === "GoBack" || event.key === "BrowserBack";
+  if (isBackKey && !halteSearchModalEl?.hidden) {
     hideHalteSearchModal();
     return;
   }
-  if (event.key === "Escape" && !dashboardSetupModalEl?.hidden) {
+  if (isBackKey && !dashboardSetupModalEl?.hidden) {
     hideDashboardSetupModal();
     return;
   }
-  if (event.key === "Escape" && !reviewModalEl?.hidden) {
+  if (isBackKey && !reviewModalEl?.hidden) {
     hideReviewModal();
     return;
   }
-  if (event.key === "Escape" && !termsModalEl?.hidden) {
+  if (isBackKey && !termsModalEl?.hidden) {
     hideTermsModal();
     return;
   }
-  if (event.key === "Escape" && !weatherModalEl?.hidden) {
+  if (isBackKey && !weatherModalEl?.hidden) {
     hideWeatherModal();
     return;
   }
-  if (event.key === "Escape" && !infoModalEl?.hidden) {
+  if (isBackKey && !infoModalEl?.hidden) {
     hideInfoModal();
     return;
   }
-  if (event.key === "Escape" && !compareModalEl?.hidden) {
+  if (isBackKey && !compareModalEl?.hidden) {
     hideCompareModal();
     return;
   }
-  if (event.key === "Escape" && !pdfModalEl?.hidden) {
+  if (isBackKey && !pdfModalEl?.hidden) {
     hidePdfModal();
     return;
   }
-  if (event.key === "Escape" && !funnyModalEl?.hidden) {
+  if (isBackKey && !funnyModalEl?.hidden) {
     hideFunnyModal();
     return;
   }
-  if (event.key === "Escape" && favoritesPanelOpen) {
+  if (isBackKey && favoritesPanelOpen) {
     setFavoritesPanel(false);
     return;
   }
-  if (event.key === "Escape" && settingsOpen) {
+  if (isBackKey && settingsOpen) {
     setSettingsPanel(false);
+    return;
+  }
+  if (isAndroidTvPlatform && (event.key === "ArrowRight" || event.key === "ArrowDown") && (!dashboardSetupModalEl?.hidden || !dashboardPanelEl?.hidden)) {
+    event.preventDefault();
+    moveDashboardFocus(1);
+    return;
+  }
+  if (isAndroidTvPlatform && (event.key === "ArrowLeft" || event.key === "ArrowUp") && (!dashboardSetupModalEl?.hidden || !dashboardPanelEl?.hidden)) {
+    event.preventDefault();
+    moveDashboardFocus(-1);
   }
 });
 window.addEventListener("online", () => {
@@ -3371,6 +3521,29 @@ function parseCSVLine(line, delimiter = ','){
 
 // Helper: normalize ids/strings for matching
 const normalize = s => (s||"").toString().replace(/"/g, "").trim();
+function isHiddenAlphaVehicleId(value = "") {
+  return /^A\d{4,6}$/i.test(normalize(value));
+}
+function getVisibleVehicleId(value = "") {
+  const normalized = normalize(value);
+  return isHiddenAlphaVehicleId(normalized) ? normalized.slice(1) : normalized;
+}
+function getVehicleDisplayId(vehicleOrId) {
+  if (vehicleOrId && typeof vehicleOrId === "object") {
+    return getVisibleVehicleId(vehicleOrId.Voertuignummer || "");
+  }
+  return getVisibleVehicleId(vehicleOrId || "");
+}
+function getVehicleInputResolvedId(inputEl) {
+  if (!inputEl) return "";
+  return normalize(inputEl.dataset.resolvedVehicleId || "");
+}
+function setVehicleInputResolvedId(inputEl, vehicleId = "") {
+  if (!inputEl) return;
+  const normalized = normalize(vehicleId);
+  if (normalized) inputEl.dataset.resolvedVehicleId = normalized;
+  else delete inputEl.dataset.resolvedVehicleId;
+}
 const cleanText = (value) => {
   const normalized = normalize(value);
   return normalized === "/" ? "" : normalized;
@@ -3506,6 +3679,7 @@ function splitLegacyValues(rawValue, splitOnSpaces = false) {
 
 function buildVehicleSearchEntry(vehicle) {
   const primaryId = normalize(vehicle.Voertuignummer);
+  const visiblePrimaryId = getVisibleVehicleId(primaryId);
   const prefixes = [];
   const exactIds = [];
   const exactPlates = [];
@@ -3525,6 +3699,9 @@ function buildVehicleSearchEntry(vehicle) {
 
   pushPrefix(vehicle.Voertuignummer);
   pushExactId(vehicle.Voertuignummer);
+  if (visiblePrimaryId && visiblePrimaryId !== primaryId) {
+    pushPrefix(visiblePrimaryId);
+  }
   pushPrefix(getVehicleField(vehicle, "Hansea nummer"));
   pushExactId(getVehicleField(vehicle, "Hansea nummer"));
 
@@ -3547,6 +3724,7 @@ function buildVehicleSearchEntry(vehicle) {
   return {
     vehicle,
     primaryId,
+    visiblePrimaryId,
     prefixes: [...new Set(prefixes)],
     exactIds: [...new Set(exactIds)],
     exactPlates: [...new Set(exactPlates)]
@@ -3607,6 +3785,39 @@ function resolveVehicleSearch(query) {
   };
 }
 
+function resolveVehicleQuery(query, preferredVehicleId = "") {
+  const preferredId = normalize(preferredVehicleId);
+  if (preferredId) {
+    const preferredBus = resolveVehicleSearch(preferredId).bus;
+    if (preferredBus) {
+      return {
+        bus: preferredBus,
+        vehicleId: normalize(preferredBus.Voertuignummer)
+      };
+    }
+  }
+  return resolveVehicleSearch(query);
+}
+
+function isDashboardEligibleVehicleId(vehicleId = "") {
+  return /^\d{4}$|^\d{6}$/.test(getVisibleVehicleId(vehicleId));
+}
+
+function getDashboardVehicleValidationMessage(query, resolvedVehicleId, resolvedBus, isDuplicate) {
+  const trimmedQuery = normalize(query);
+  if (!trimmedQuery) return "";
+  if (!resolvedBus || !resolvedVehicleId) {
+    return getLabel("dashboardVehicleUnknown", "Dit voertuignummer bestaat niet.");
+  }
+  if (!isDashboardEligibleVehicleId(resolvedVehicleId)) {
+    return getLabel("dashboardVehicleFormat", "Alleen bestaande voertuignummers met 4 of 6 cijfers zijn geldig.");
+  }
+  if (isDuplicate) {
+    return getLabel("dashboardVehicleDuplicate", "Dit voertuig staat al in de stalkmodus.");
+  }
+  return "";
+}
+
 function buildSuggestionLabel(vehicle) {
   const vehicleType = normalize(vehicle.Type);
   const plate = normalize(getVehicleField(vehicle, vehiclePlateFieldKey));
@@ -3618,6 +3829,11 @@ function buildSuggestionLabel(vehicle) {
   if (hanseaId && hanseaId !== "/") parts.push(`Hansea ${hanseaId}`);
   if (oldVehicleNumbers.length) parts.push(`oud ${oldVehicleNumbers.join(", ")}`);
   return parts.join(" - ");
+}
+
+function buildSuggestionDisplayLabel(vehicle) {
+  const primary = getVehicleDisplayId(vehicle);
+  return primary || normalize(vehicle?.Voertuignummer);
 }
 
 function getSuggestionResults(query = "", limit = 8) {
@@ -3734,21 +3950,23 @@ function renderSuggestionList(listEl, inputEl, onSelect) {
 
   results.forEach((vehicle) => {
     const secondaryLabel = buildSuggestionLabel(vehicle);
+    const visibleVehicleId = buildSuggestionDisplayLabel(vehicle);
+    const actualVehicleId = normalize(vehicle.Voertuignummer);
     const li = document.createElement("li");
     li.className = "vehicle-suggestion-item";
-    li.dataset.id = normalize(vehicle.Voertuignummer);
+    li.dataset.id = actualVehicleId;
     li.innerHTML = `
-      <span class="vehicle-suggestion-primary">${escapeHtml(normalize(vehicle.Voertuignummer))}</span>
+      <span class="vehicle-suggestion-primary">${escapeHtml(visibleVehicleId)}</span>
       ${secondaryLabel ? `<span class="vehicle-suggestion-secondary">${escapeHtml(secondaryLabel)}</span>` : ""}
     `;
     li.addEventListener("mousedown", (event) => {
       event.preventDefault();
     });
     li.addEventListener("click", () => {
-      const vehicleId = normalize(vehicle.Voertuignummer);
-      inputEl.value = vehicleId;
+      setVehicleInputResolvedId(inputEl, actualVehicleId);
+      inputEl.value = visibleVehicleId;
       hideSuggestionList(listEl);
-      onSelect(vehicleId);
+      onSelect(actualVehicleId);
     });
     listEl.appendChild(li);
   });
@@ -3775,6 +3993,9 @@ function bindVehicleSuggestions(inputEl, onSelect) {
   if (!listEl) return;
 
   const render = () => {
+    if (getVehicleInputResolvedId(inputEl) && inputEl.value.trim() !== getVehicleDisplayId(getVehicleInputResolvedId(inputEl))) {
+      setVehicleInputResolvedId(inputEl, "");
+    }
     if (!voertuigen.length) {
       void laadVoertuigen()
         .then(() => {
@@ -3931,13 +4152,51 @@ async function laadStops() {
 
 initAppPreferences();
 
+async function maybeAutoStartDashboardForAndroidTv() {
+  if (!isAndroidTvPlatform || dashboardAutoStarted || window.location.search.includes("bus=")) return;
+  dashboardAutoStarted = true;
+  if (voertuigen.length === 0) await laadVoertuigen();
+  const sanitizedIds = getSanitizedDashboardVehicleIds(settings.dashboardVehicleIds);
+  if (sanitizedIds.length !== settings.dashboardVehicleIds.length) {
+    persistDashboardVehicleIds(sanitizedIds);
+  } else {
+    dashboardVehicleIds = sanitizedIds;
+  }
+
+  if (dashboardVehicleIds.length) {
+    await openDashboardPanel();
+    window.setTimeout(() => dashboardEditBtn?.focus(), 40);
+    return;
+  }
+
+  showDashboardSetupModal();
+}
+
+function getDashboardFocusables() {
+  const focusScope = !dashboardSetupModalEl?.hidden ? dashboardSetupModalEl : !dashboardPanelEl?.hidden ? dashboardPanelEl : null;
+  if (!focusScope) return [];
+  return Array.from(focusScope.querySelectorAll('button:not([hidden]):not([disabled]), input:not([hidden]):not([disabled]), [tabindex="0"]'))
+    .filter((element) => element instanceof HTMLElement && !element.hasAttribute("hidden"));
+}
+
+function moveDashboardFocus(step) {
+  const focusables = getDashboardFocusables();
+  if (!focusables.length) return;
+  const activeIndex = focusables.findIndex((element) => element === document.activeElement);
+  const nextIndex = activeIndex === -1 ? 0 : (activeIndex + step + focusables.length) % focusables.length;
+  focusables[nextIndex]?.focus();
+}
+
 function warmUpVehiclesAndDeepLinks() {
   void laadVoertuigen()
-    .then(() => applyDeepLinkIfNeeded())
+    .then(async () => {
+      await applyDeepLinkIfNeeded();
+      await maybeAutoStartDashboardForAndroidTv();
+    })
     .catch((e) => console.warn("Warm-up voertuigen mislukt", e));
 }
 
-if (window.location.search.includes("bus=")) {
+if (window.location.search.includes("bus=") || isAndroidTvPlatform) {
   warmUpVehiclesAndDeepLinks();
 } else {
   scheduleNonCriticalTask(warmUpVehiclesAndDeepLinks, 1400);
@@ -3995,14 +4254,15 @@ async function zoekAlles() {
   }
   if (voertuigen.length === 0) await laadVoertuigen();
   if (searchToken !== latestSearchToken) return;
-  const resolved = resolveVehicleSearch(query);
+  const resolved = resolveVehicleQuery(query, getVehicleInputResolvedId(voertuigInput));
   const activeVehicleId = resolved.vehicleId || normalize(query);
   const bus = resolved.bus;
   currentVehicleId = activeVehicleId;
   realtimePausedByInactivity = false;
   if (compareVehicleId === currentVehicleId) compareVehicleId = "";
-  if (resolved.vehicleId && activeVehicleId !== query) {
-    voertuigInput.value = activeVehicleId;
+  if (resolved.vehicleId) {
+    setVehicleInputResolvedId(voertuigInput, activeVehicleId);
+    voertuigInput.value = getVehicleDisplayId(activeVehicleId);
   }
   updateFavoriteButtonState();
 
@@ -4060,6 +4320,7 @@ function terug() {
   hideVehiclePhotoCard();
   resetWeatherBlock();
   voertuigInput.value = "";
+  setVehicleInputResolvedId(voertuigInput, "");
   currentVehicleId = "";
   realtimePausedByInactivity = false;
   compareVehicleId = "";
@@ -4110,7 +4371,7 @@ function toonVasteData(id){
   const safeFavoriteId = id.replace(/"/g, "&quot;");
   const favoriteClass = favorites.includes(id) ? "vehicle-favorite-btn is-favorite" : "vehicle-favorite-btn";
 
-  let html=`<div class="vehicle-title-row"><p class="voertuignummer-display">${bus.Voertuignummer}</p><button id="favoriteInlineBtn" class="${favoriteClass}" type="button" title="${favoriteLabel}" aria-label="${favoriteLabel}" aria-pressed="${favorites.includes(id)}" data-id="${safeFavoriteId}">${favoriteStateSymbol}</button></div>`;
+  let html=`<div class="vehicle-title-row"><p class="voertuignummer-display">${escapeHtml(getVehicleDisplayId(bus) || bus.Voertuignummer)}</p><button id="favoriteInlineBtn" class="${favoriteClass}" type="button" title="${favoriteLabel}" aria-label="${favoriteLabel}" aria-pressed="${favorites.includes(id)}" data-id="${safeFavoriteId}">${favoriteStateSymbol}</button></div>`;
   if(bus.Type) html += `<p class="vehicle-type">${bus.Type}</p>`;
   html+="<table>";
   for (const row of collectVehicleDisplayRows(bus)) {

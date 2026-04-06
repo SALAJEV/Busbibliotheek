@@ -1614,6 +1614,17 @@ body.pdf-modal-open {
   overflow: hidden;
 }
 
+body.dashboard-open .header-bar,
+body.dashboard-open #iosInstallHint,
+body.dashboard-open .search-shell,
+body.dashboard-open .results-wrap,
+body.dashboard-open footer,
+body.dashboard-open #favoritesBackdrop {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
 .compare-field input {
   width: 100%;
   margin: 0;
@@ -1634,6 +1645,7 @@ body.pdf-modal-open {
 
 body.dashboard-open {
   overflow: hidden;
+  background: var(--surface-strong);
 }
 
 .dashboard-panel[hidden] {
@@ -1645,7 +1657,7 @@ body.dashboard-open {
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 0.82rem;
+  margin-bottom: 1.1rem;
   max-width: 1400px;
   margin-inline: auto;
 }
@@ -1663,6 +1675,7 @@ body.dashboard-open {
   display: flex;
   gap: 0.5rem;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .dashboard-close-btn {
@@ -1696,7 +1709,7 @@ body.dashboard-open {
 }
 
 .dashboard-map-wrap {
-  margin-bottom: 0.85rem;
+  margin-bottom: 1rem;
   max-width: 1400px;
   margin-inline: auto;
 }
@@ -1706,8 +1719,8 @@ body.dashboard-open {
 }
 
 .dashboard-map {
-  height: min(48vh, 520px);
-  border-radius: 16px;
+  height: min(52vh, 560px);
+  border-radius: 22px;
   overflow: hidden;
   border: 1px solid var(--stroke-strong);
   box-shadow: none;
@@ -1716,7 +1729,7 @@ body.dashboard-open {
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.78rem;
+  gap: 1rem;
   max-width: 1400px;
   margin: 0 auto;
 }
@@ -1724,11 +1737,19 @@ body.dashboard-open {
 .dashboard-card {
   display: grid;
   gap: 0.55rem;
-  padding: 0.8rem 0.84rem;
-  border-radius: var(--panel-radius-sm);
+  padding: 1rem 1.05rem;
+  border-radius: 18px;
   border: 1px solid var(--stroke);
   background: var(--surface-alt);
   box-shadow: none;
+}
+
+.dashboard-card:focus-visible,
+.dashboard-panel-actions > button:focus-visible,
+.dashboard-setup-field input:focus-visible,
+.dashboard-setup-close-btn:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 78%, white 12%);
+  outline-offset: 3px;
 }
 
 .dashboard-card.is-live {
@@ -1806,6 +1827,57 @@ body.dashboard-open {
 .dashboard-setup-field input {
   width: 100%;
   margin: 0;
+}
+
+.dashboard-setup-field.is-invalid {
+  border-color: color-mix(in srgb, var(--danger) 68%, var(--stroke));
+  background: color-mix(in srgb, var(--surface-alt) 90%, var(--danger) 10%);
+}
+
+.dashboard-setup-field-error,
+.dashboard-setup-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.dashboard-setup-error {
+  margin-top: 0.8rem;
+}
+
+body.dashboard-setup-open .pdf-modal {
+  padding: 0;
+  background: var(--surface-strong);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+body.dashboard-setup-open .dashboard-setup-card {
+  width: 100vw;
+  max-width: none;
+  max-height: none;
+  min-height: 100dvh;
+  border-radius: 0;
+  border: 0;
+  padding:
+    max(1rem, env(safe-area-inset-top))
+    clamp(1rem, 2vw, 1.5rem)
+    max(1rem, env(safe-area-inset-bottom));
+}
+
+body.dashboard-setup-open .dashboard-setup-card .pdf-modal-header,
+body.dashboard-setup-open .dashboard-setup-card .dashboard-setup-grid,
+body.dashboard-setup-open .dashboard-setup-card .dashboard-setup-error,
+body.dashboard-setup-open .dashboard-setup-card .pdf-modal-actions {
+  max-width: 1400px;
+  width: 100%;
+  margin-inline: auto;
+}
+
+body.platform-android .dashboard-panel,
+body.platform-android .dashboard-setup-card {
+  scroll-behavior: smooth;
 }
 
 .info-modal-body {
