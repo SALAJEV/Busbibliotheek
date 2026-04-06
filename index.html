@@ -390,6 +390,22 @@
   </div>
 </div>
 
+<div id="weatherModal" class="pdf-modal" hidden role="dialog" aria-modal="true" aria-labelledby="weatherModalTitle">
+  <div class="pdf-modal-card weather-modal-card">
+    <div class="pdf-modal-header">
+      <div>
+        <h3 id="weatherModalTitle">Weer op locatie</h3>
+        <p id="weatherModalSummary" class="pdf-modal-summary">Weergegevens van dezelfde bron als de weerkaart.</p>
+      </div>
+      <button id="weatherModalCloseBtn" class="settings-close-btn" type="button" aria-label="Sluiten">&times;</button>
+    </div>
+    <div id="weatherModalBody" class="pdf-modal-body weather-modal-body"></div>
+    <div class="pdf-modal-actions">
+      <button id="weatherModalDoneBtn" class="btn" type="button">Sluiten</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="translations.js?v=20260218-1"></script>
 <script src="app.js?v=20260406-2" defer></script>

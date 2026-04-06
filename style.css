@@ -3331,8 +3331,45 @@ footer h3 {
   width: min(100%, 52rem);
 }
 
+.weather-modal-card {
+  width: min(100%, 34rem);
+}
+
 .legal-modal-body {
   gap: 1rem;
+}
+
+.weather-modal-body {
+  gap: 0.9rem;
+}
+
+.weather-modal-hero {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: var(--panel-radius-sm);
+  border: 1px solid var(--stroke);
+  background: var(--surface-alt);
+}
+
+.weather-modal-icon {
+  flex: 0 0 auto;
+}
+
+.weather-modal-hero-copy {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.weather-modal-hero-copy strong {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.weather-modal-hero-copy span {
+  color: var(--muted);
+  font-size: 0.92rem;
 }
 
 .legal-copy h4 {

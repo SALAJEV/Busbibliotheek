@@ -151,6 +151,12 @@ const termsModalSummaryEl = document.getElementById("termsModalSummary");
 const termsModalBodyEl = document.getElementById("termsModalBody");
 const termsModalCloseBtn = document.getElementById("termsModalCloseBtn");
 const termsModalDoneBtn = document.getElementById("termsModalDoneBtn");
+const weatherModalEl = document.getElementById("weatherModal");
+const weatherModalTitleEl = document.getElementById("weatherModalTitle");
+const weatherModalSummaryEl = document.getElementById("weatherModalSummary");
+const weatherModalBodyEl = document.getElementById("weatherModalBody");
+const weatherModalCloseBtn = document.getElementById("weatherModalCloseBtn");
+const weatherModalDoneBtn = document.getElementById("weatherModalDoneBtn");
 const feedStatusEl = document.getElementById("feedStatus");
 const funnyModalEl = document.getElementById("funnyModal");
 const funnyModalTitleEl = document.getElementById("funnyModalTitle");
@@ -280,6 +286,7 @@ let latestSearchToken = 0;
 let weatherRequestToken = 0;
 let lastWeatherCacheKey = "";
 let lastWeatherData = null;
+let lastWeatherCoordinates = null;
 let activeVehicleSuggestionInput = null;
 let settings = {
   intervalMs: 10000,
@@ -1826,6 +1833,7 @@ function formatDelayMessage(delayMinutes) {
 function resetWeatherBlock() {
   lastWeatherCacheKey = "";
   lastWeatherData = null;
+  lastWeatherCoordinates = null;
   if (!weatherBlockEl) return;
   weatherBlockEl.hidden = true;
   weatherBlockEl.setAttribute("aria-hidden", "true");
@@ -1868,8 +1876,54 @@ function getWeatherPresentation(weatherCode, isDay = 1) {
   return weatherMap[code] || { icon: "🌤", label: getLabel("weatherUnknown", "Weer") };
 }
 
-function getWeatherExternalUrl(latitude, longitude) {
-  return `https://www.google.com/search?q=${encodeURIComponent(`weer ${latitude},${longitude}`)}`;
+function formatWeatherMetric(value, suffix, digits = 0) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "-";
+  const formatted = digits > 0 ? value.toFixed(digits) : Math.round(value).toString();
+  return `${formatted}${suffix}`;
+}
+
+function renderWeatherModal(weatherData, latitude, longitude) {
+  if (!weatherModalBodyEl || !weatherData?.current) return;
+  const current = weatherData.current;
+  const presentation = getWeatherPresentation(current.weather_code, current.is_day);
+  const rows = [
+    [getLabel("weatherNow", "Toestand"), presentation.label],
+    [getLabel("weatherTemperature", "Temperatuur"), formatWeatherMetric(current.temperature_2m, "°C")],
+    [getLabel("weatherFeelsLike", "Gevoelstemperatuur"), formatWeatherMetric(current.apparent_temperature, "°C")],
+    [getLabel("weatherWind", "Wind"), formatWeatherMetric(current.wind_speed_10m, " km/u")],
+    [getLabel("weatherRain", "Neerslag"), formatWeatherMetric(current.precipitation, " mm", 1)],
+    [getLabel("weatherCoordinates", "Coördinaten"), `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`]
+  ];
+  weatherModalBodyEl.innerHTML = `
+    <div class="weather-modal-hero">
+      <span class="weather-icon weather-modal-icon" aria-hidden="true">${presentation.icon}</span>
+      <div class="weather-modal-hero-copy">
+        <strong>${escapeHtml(presentation.label)}</strong>
+        <span>${escapeHtml(formatWeatherMetric(current.temperature_2m, "°C"))}</span>
+      </div>
+    </div>
+    <div class="info-list">
+      ${rows.map(([label, value]) => `
+        <div class="info-row">
+          <span class="info-label">${escapeHtml(label)}</span>
+          <span class="info-value">${escapeHtml(value)}</span>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function showWeatherModal() {
+  if (!weatherModalEl || !lastWeatherData || !lastWeatherCoordinates) return;
+  renderWeatherModal(lastWeatherData, lastWeatherCoordinates.latitude, lastWeatherCoordinates.longitude);
+  weatherModalEl.hidden = false;
+  document.body.classList.add("pdf-modal-open");
+}
+
+function hideWeatherModal() {
+  if (!weatherModalEl) return;
+  weatherModalEl.hidden = true;
+  document.body.classList.remove("pdf-modal-open");
 }
 
 function renderWeatherBlock(weatherData, latitude, longitude) {
@@ -1881,16 +1935,9 @@ function renderWeatherBlock(weatherData, latitude, longitude) {
   const current = weatherData.current;
   const presentation = getWeatherPresentation(current.weather_code, current.is_day);
   const temperature = typeof current.temperature_2m === "number" ? `${Math.round(current.temperature_2m)}°C` : "-";
-  const weatherUrl = Number.isFinite(latitude) && Number.isFinite(longitude)
-    ? getWeatherExternalUrl(latitude, longitude)
-    : "";
-  const wrapperTag = weatherUrl ? "a" : "div";
-  const wrapperAttributes = weatherUrl
-    ? ` class="weather-card weather-card-link" href="${escapeHtml(weatherUrl)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(getLabel("weatherOpenForecast", "Open weersite"))}"`
-    : ` class="weather-card"`;
 
   weatherBlockEl.innerHTML = `
-    <${wrapperTag}${wrapperAttributes}>
+    <button class="weather-card weather-card-link" type="button" aria-label="${escapeHtml(getLabel("weatherOpenForecast", "Open weerdetails"))}">
       <div class="weather-card-main">
         <span class="weather-icon" aria-hidden="true">${presentation.icon}</span>
         <div class="weather-copy">
@@ -1899,8 +1946,9 @@ function renderWeatherBlock(weatherData, latitude, longitude) {
         </div>
         <span class="weather-temperature">${escapeHtml(temperature)}</span>
       </div>
-    </${wrapperTag}>
+    </button>
   `;
+  weatherBlockEl.querySelector(".weather-card-link")?.addEventListener("click", showWeatherModal);
   weatherBlockEl.hidden = false;
   weatherBlockEl.setAttribute("aria-hidden", "false");
 }
@@ -1925,6 +1973,7 @@ async function updateWeatherForCoordinates(latitude, longitude) {
     if (requestToken !== weatherRequestToken) return;
     lastWeatherCacheKey = cacheKey;
     lastWeatherData = weatherData;
+    lastWeatherCoordinates = { latitude, longitude };
     renderWeatherBlock(weatherData, latitude, longitude);
   } catch (error) {
     if (requestToken !== weatherRequestToken) return;
@@ -2126,6 +2175,13 @@ function applyTranslations() {
   if (termsModalSummaryEl) termsModalSummaryEl.textContent = getLabel("termsSummary", "Korte standaardvoorwaarden voor het gebruik van Busbibliotheek.");
   if (termsModalCloseBtn) termsModalCloseBtn.setAttribute("aria-label", getLabel("close", "Sluiten"));
   if (termsModalDoneBtn) termsModalDoneBtn.textContent = getLabel("close", "Sluiten");
+  if (weatherModalTitleEl) weatherModalTitleEl.textContent = getLabel("weatherModalTitle", "Weer op locatie");
+  if (weatherModalSummaryEl) weatherModalSummaryEl.textContent = getLabel("weatherModalSummary", "Weergegevens van dezelfde bron als de weerkaart.");
+  if (weatherModalCloseBtn) weatherModalCloseBtn.setAttribute("aria-label", getLabel("close", "Sluiten"));
+  if (weatherModalDoneBtn) weatherModalDoneBtn.textContent = getLabel("close", "Sluiten");
+  if (!weatherModalEl?.hidden && lastWeatherData && lastWeatherCoordinates) {
+    renderWeatherModal(lastWeatherData, lastWeatherCoordinates.latitude, lastWeatherCoordinates.longitude);
+  }
   if (!termsModalEl?.hidden) renderTermsModalContent();
   if (pageLoadingTextEl) pageLoadingTextEl.textContent = t("loading");
   lastUpdateEl.textContent = `${t("lastUpdate")}: -`;
@@ -2820,6 +2876,11 @@ termsModalDoneBtn?.addEventListener("click", hideTermsModal);
 termsModalEl?.addEventListener("click", (event) => {
   if (event.target === termsModalEl) hideTermsModal();
 });
+weatherModalCloseBtn?.addEventListener("click", hideWeatherModal);
+weatherModalDoneBtn?.addEventListener("click", hideWeatherModal);
+weatherModalEl?.addEventListener("click", (event) => {
+  if (event.target === weatherModalEl) hideWeatherModal();
+});
 funnyModalCloseBtn?.addEventListener("click", hideFunnyModal);
 funnyModalEl?.addEventListener("click", (event) => {
   if (event.target === funnyModalEl) hideFunnyModal();
@@ -2946,6 +3007,10 @@ document.addEventListener("keydown", (event) => {
   }
   if (event.key === "Escape" && !termsModalEl?.hidden) {
     hideTermsModal();
+    return;
+  }
+  if (event.key === "Escape" && !weatherModalEl?.hidden) {
+    hideWeatherModal();
     return;
   }
   if (event.key === "Escape" && !infoModalEl?.hidden) {
