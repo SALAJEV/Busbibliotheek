@@ -2104,7 +2104,6 @@ async function searchHaltesLocal(zoekTerm) {
       if (a.score !== b.score) return a.score - b.score;
       return cleanText(a.stop?.stop_name).localeCompare(cleanText(b.stop?.stop_name), "nl");
     })
-    })
     .forEach(({ stop, stopCode, score }) => {
       const stopName = cleanText(stop?.stop_name) || stopCode;
       const groupName = getGroupedHalteBaseName(stopName) || stopName;
