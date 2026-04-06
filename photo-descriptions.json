@@ -1,5 +1,5 @@
 {
-  "_instructions": "Gebruik per voertuignummer een array van foto's. Velden per foto: file, description, maker, place, date, alt, order. 'file' mag alleen de bestandsnaam zijn (bijvoorbeeld 4452-1.jpeg) of een pad zoals media/4452-1.jpeg.",
+  "_instructions": "Gebruik per voertuignummer of oud voertuignummer een array van foto's. Velden per foto: file, description, maker, place, date, alt, order. 'file' mag alleen de bestandsnaam zijn (bijvoorbeeld 4452-1.jpeg) of een pad zoals media/4452-1.jpeg. De combinatie maker/plaats/datum komt automatisch onder de foto.",
   "2889": [
     {
       "file": "2889.jpeg",

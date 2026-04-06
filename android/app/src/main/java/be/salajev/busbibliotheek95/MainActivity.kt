@@ -173,6 +173,7 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color, 
                         setSupportZoom(false)
                         builtInZoomControls = false
                         displayZoomControls = false
+                        textZoom = 100
                         mediaPlaybackRequiresUserGesture = false
                         setGeolocationEnabled(true)
                         
@@ -314,17 +315,10 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color, 
 
                         override fun onPageFinished(view: WebView?, url: String?) {
                             super.onPageFinished(view, url)
-                            val theme = if (isDarkTheme) "dark" else "light"
                             view?.loadUrl("javascript:(function() { " +
                                     "var style = document.createElement('style');" +
                                     "style.innerHTML = '*{ -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; outline: none; }';" +
                                     "document.head.appendChild(style);" +
-                                    // De cruciale fix voor de browser engine:
-                                    "var meta = document.createElement('meta');" +
-                                    "meta.name = 'color-scheme';" +
-                                    "meta.content = 'dark light';" +
-                                    "document.head.appendChild(meta);" +
-                                    "if(typeof setTheme === 'function') { setTheme('$theme'); }" +
                                     "})()")
                         }
 
@@ -339,8 +333,6 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color, 
             modifier = Modifier.fillMaxSize(),
             update = { view -> 
                 updateDarkMode(view, isDarkTheme)
-                // Stuur thema-update direct naar JS als het systeemthema verandert
-                view.evaluateJavascript("if(typeof setTheme === 'function') { setTheme('${if (isDarkTheme) "dark" else "light"}'); }", null)
             }
         )
 
@@ -366,8 +358,6 @@ private fun updateDarkMode(webView: WebView, isDarkTheme: Boolean) {
     val color = if (isDarkTheme) android.graphics.Color.parseColor("#121212") else android.graphics.Color.WHITE
     webView.setBackgroundColor(color)
     
-    val theme = if (isDarkTheme) "dark" else "light"
-    webView.evaluateJavascript("if(typeof setTheme === 'function') { setTheme('$theme'); }", null)
 }
 
 @Composable

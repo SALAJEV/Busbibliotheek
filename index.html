@@ -2,14 +2,16 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="description" content="Busbibliotheek voor bussen van De Lijn: zoek een voertuig en volg het live.">
-<meta name="color-scheme" content="light">
+<meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#f4f7fb">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Busbibliotheek">
+<link rel="icon" type="image/png" href="media/navicon.png">
+<link rel="shortcut icon" href="media/navicon.png">
 <link rel="apple-touch-icon" href="media/logo.png">
 <link rel="manifest" href="manifest.json">
 <title>Busbibliotheek</title>
@@ -33,7 +35,7 @@
   <div class="header-bar">
     <div class="header-intro">
       <button id="appTitleBtn" class="title-home-btn" type="button">
-        <h1 id="appTitle">Busbibliotheek (beta)</h1>
+        <h1 id="appTitle">Busbibliotheek</h1>
       </button>
       <p id="appSubtitle">Zoek een voertuig en volg het in realtime.</p>
       <p id="appContextLine" class="app-context-line">Over bussen van de Vlaamse vervoermaatschappij De Lijn.</p>
@@ -89,16 +91,18 @@
   </div>
   <div id="iosInstallHint" class="hint" hidden></div>
 
-  <div class="search-row">
-    <input id="voertuignummer" placeholder="Voertuignummer of nummerplaat" autocomplete="off">
-    <button id="searchBtn" type="button" title="Zoeken" aria-label="Zoeken">
-      <svg class="search-btn-icon" aria-hidden="true" viewBox="0 0 24 24">
-        <circle cx="11" cy="11" r="6.5"></circle>
-        <path d="M16 16l5 5"></path>
-      </svg>
-    </button>
+  <div class="search-shell">
+    <div class="search-row">
+      <input id="voertuignummer" placeholder="Voertuignummer of nummerplaat" autocomplete="off">
+      <button id="searchBtn" type="button" title="Zoeken" aria-label="Zoeken">
+        <svg class="search-btn-icon" aria-hidden="true" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="6.5"></circle>
+          <path d="M16 16l5 5"></path>
+        </svg>
+      </button>
+    </div>
+    <ul id="suggestielijst" hidden></ul>
   </div>
-  <ul id="suggestielijst"></ul>
 
   <section id="dashboardPanel" class="dashboard-panel" hidden aria-hidden="true">
     <div class="dashboard-panel-header">
@@ -108,8 +112,12 @@
       </div>
       <div class="dashboard-panel-actions">
         <button id="dashboardEditBtn" class="btn" type="button">Aanpassen</button>
-        <button id="dashboardCloseBtn" class="settings-close-btn" type="button" aria-label="Stalk modus sluiten">&times;</button>
+        <button id="dashboardCloseBtn" class="btn dashboard-close-btn" type="button" aria-label="Stalk modus sluiten">Sluiten</button>
       </div>
+    </div>
+    <div id="dashboardLoadingState" class="dashboard-loading-state" hidden aria-hidden="true">
+      <span class="page-loading-spinner" aria-hidden="true"></span>
+      <p id="dashboardLoadingText">Stalk modus wordt geladen...</p>
     </div>
     <div id="dashboardMapWrap" class="dashboard-map-wrap hidden">
       <div id="dashboardMap" class="dashboard-map" aria-label="Kaart met live voertuigen"></div>
@@ -243,6 +251,9 @@
         <option value="ru">&#1056;&#1091;&#1089;&#1089;&#1082;&#1080;&#1081;</option>
       </select>
     </div>
+  </div>
+  <div class="settings-actions">
+    <button id="settingsInfoBtn" class="btn more-secondary-btn" type="button">Info</button>
   </div>
   <p id="feedStatus" class="settings-feed-status" hidden></p>
 </aside>

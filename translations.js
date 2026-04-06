@@ -526,7 +526,7 @@ localeMap: {
 ;
 
 Object.assign(window.BB_TRANSLATIONS.i18n.nl, {
-  appTitle: "Busbibliotheek (beta)",
+  appTitle: "Busbibliotheek",
   metaDescription: "Busbibliotheek voor bussen van De Lijn: zoek een voertuig en volg het live.",
   splashAria: "Busbibliotheek laden",
   madeBy: "Made by Busspotter 95",
@@ -612,7 +612,7 @@ Object.assign(window.BB_TRANSLATIONS.i18n.nl, {
 });
 
 Object.assign(window.BB_TRANSLATIONS.i18n.fr, {
-  appTitle: "Busbibliotheek (bêta)",
+  appTitle: "Busbibliotheek",
   metaDescription: "Busbibliotheek pour les bus de De Lijn : recherchez un véhicule et suivez-le en direct.",
   splashAria: "Chargement de Busbibliotheek",
   madeBy: "Créé par Busspotter 95",
@@ -698,7 +698,7 @@ Object.assign(window.BB_TRANSLATIONS.i18n.fr, {
 });
 
 Object.assign(window.BB_TRANSLATIONS.i18n.en, {
-  appTitle: "Busbibliotheek (beta)",
+  appTitle: "Busbibliotheek",
   metaDescription: "Busbibliotheek for De Lijn buses: search for a vehicle and track it live.",
   splashAria: "Loading Busbibliotheek",
   madeBy: "Made by Busspotter 95",
@@ -784,7 +784,7 @@ Object.assign(window.BB_TRANSLATIONS.i18n.en, {
 });
 
 Object.assign(window.BB_TRANSLATIONS.i18n.de, {
-  appTitle: "Busbibliotheek (Beta)",
+  appTitle: "Busbibliotheek",
   metaDescription: "Busbibliotheek für Busse von De Lijn: Suche ein Fahrzeug und verfolge es live.",
   splashAria: "Busbibliotheek wird geladen",
   madeBy: "Von Busspotter 95 erstellt",
@@ -870,7 +870,7 @@ Object.assign(window.BB_TRANSLATIONS.i18n.de, {
 });
 
 Object.assign(window.BB_TRANSLATIONS.i18n.pl, {
-  appTitle: "Busbibliotheek (beta)",
+  appTitle: "Busbibliotheek",
   metaDescription: "Busbibliotheek dla autobusów De Lijn: wyszukaj pojazd i śledź go na żywo.",
   splashAria: "Ładowanie Busbibliotheek",
   madeBy: "Stworzone przez Busspotter 95",
@@ -956,7 +956,7 @@ Object.assign(window.BB_TRANSLATIONS.i18n.pl, {
 });
 
 Object.assign(window.BB_TRANSLATIONS.i18n.es, {
-  appTitle: "Busbibliotheek (beta)",
+  appTitle: "Busbibliotheek",
   metaDescription: "Busbibliotheek para autobuses de De Lijn: busca un vehículo y síguelo en directo.",
   splashAria: "Cargando Busbibliotheek",
   madeBy: "Hecho por Busspotter 95",
@@ -1042,7 +1042,7 @@ Object.assign(window.BB_TRANSLATIONS.i18n.es, {
 });
 
 Object.assign(window.BB_TRANSLATIONS.i18n.ru, {
-  appTitle: "Busbibliotheek (бета)",
+  appTitle: "Busbibliotheek",
   metaDescription: "Busbibliotheek для автобусов De Lijn: найдите транспорт и отслеживайте его вживую.",
   splashAria: "Загрузка Busbibliotheek",
   madeBy: "Создано Busspotter 95",

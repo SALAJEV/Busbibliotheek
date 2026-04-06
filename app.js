@@ -24,6 +24,7 @@ const settingsPanelEl = document.getElementById("settingsPanel");
 const settingsBackdropEl = document.getElementById("settingsBackdrop");
 const settingsToggleBtn = document.getElementById("settingsToggleBtn");
 const settingsCloseBtn = document.getElementById("settingsCloseBtn");
+const settingsInfoBtn = document.getElementById("settingsInfoBtn");
 const favoritesBackdropEl = document.getElementById("favoritesBackdrop");
 const favoritesToggleBtn = document.getElementById("favoritesToggleBtn");
 const favoritesPanelEl = document.getElementById("favoritesPanel");
@@ -54,6 +55,7 @@ window.addEventListener('appinstalled', () => {
 const BASE_URL = "https://pub-611b5bc156eb455ba86d9bcece9aea1c.r2.dev";
 const API_URL = "https://busbibliotheek95.pages.dev/api";
 const PYTHON_MAIN_DOWNLOAD_URL = "https://busbibliotheek95.pages.dev/python/script.py";
+const APK_DOWNLOAD_URL = `${window.location.origin}/android/app/release/app-release.apk`;
 const NETWORK_CHECK_URL = `${window.location.origin}/manifest.json?network-check=1`;
 const NETWORK_CHECK_TIMEOUT_MS = 5000;
 const NETWORK_CHECK_INTERVAL_MS = 15000;
@@ -170,6 +172,8 @@ const dashboardGridEl = document.getElementById("dashboardGrid");
 const dashboardSummaryEl = document.getElementById("dashboardSummary");
 const dashboardMapWrapEl = document.getElementById("dashboardMapWrap");
 const dashboardMapEl = document.getElementById("dashboardMap");
+const dashboardLoadingStateEl = document.getElementById("dashboardLoadingState");
+const dashboardLoadingTextEl = document.getElementById("dashboardLoadingText");
 const dashboardEditBtn = document.getElementById("dashboardEditBtn");
 const dashboardCloseBtn = document.getElementById("dashboardCloseBtn");
 const dashboardSetupModalEl = document.getElementById("dashboardSetupModal");
@@ -254,6 +258,7 @@ let lastVerifiedInternetState = true;
 let realtimeRequestToken = 0;
 let dashboardRequestToken = 0;
 let latestSearchToken = 0;
+let activeVehicleSuggestionInput = null;
 let settings = {
   intervalMs: 10000,
   theme: "auto",
@@ -564,6 +569,13 @@ function updateUrlState() {
   window.history.replaceState({}, "", nextUrl);
 }
 
+function updateDocumentTitle(vehicleId = "") {
+  const normalizedVehicleId = normalize(vehicleId || currentVehicleId);
+  document.title = normalizedVehicleId
+    ? `Voertuig ${normalizedVehicleId} – Busbibliotheek`
+    : "Busbibliotheek";
+}
+
 function getVehicleDisplayValue(bus, fieldKey, rawValue) {
   const value = rawValue == null ? "" : rawValue.toString().trim();
   const key = fieldKey.toLowerCase();
@@ -703,6 +715,9 @@ function showCompareModal() {
   compareVehicleInputEl.value = "";
   compareModalEl.hidden = false;
   document.body.classList.add("pdf-modal-open");
+  bindVehicleSuggestions(compareVehicleInputEl, () => {
+    compareModalConfirmBtn?.click();
+  });
   window.setTimeout(() => compareVehicleInputEl?.focus(), 20);
 }
 
@@ -828,6 +843,10 @@ function renderDashboardSetupInputs() {
       </label>
     `;
   }).join("");
+
+  dashboardSetupGridEl.querySelectorAll(".dashboard-setup-input").forEach((inputEl) => {
+    bindVehicleSuggestions(inputEl, () => {});
+  });
 }
 
 function showDashboardSetupModal() {
@@ -928,10 +947,21 @@ function renderDashboardMap(snapshots) {
 function closeDashboardPanel() {
   stopDashboardRefresh();
   if (!dashboardPanelEl) return;
+  setDashboardLoading(false);
   dashboardPanelEl.hidden = true;
   dashboardPanelEl.setAttribute("aria-hidden", "true");
   document.body.classList.remove("dashboard-open");
   renderDashboardMap([]);
+}
+
+function setDashboardLoading(active) {
+  if (!dashboardLoadingStateEl) return;
+  dashboardLoadingStateEl.hidden = !active;
+  dashboardLoadingStateEl.setAttribute("aria-hidden", String(!active));
+  dashboardPanelEl?.classList.toggle("is-loading", !!active);
+  if (dashboardLoadingTextEl) {
+    dashboardLoadingTextEl.textContent = getLabel("dashboardLoading", "Stalk modus wordt geladen...");
+  }
 }
 
 function getRoutePresentationFromRealtime(id, entities, bus) {
@@ -1009,87 +1039,94 @@ function getRoutePresentationFromRealtime(id, entities, bus) {
 async function refreshDashboardPanel() {
   const requestToken = ++dashboardRequestToken;
   if (!dashboardPanelEl || !dashboardGridEl || !dashboardVehicleIds.length) return;
-  const hasInternet = await verifyInternetConnection();
-  if (requestToken !== dashboardRequestToken) return;
-  if (!hasInternet) {
-    renderDashboardMap([]);
-    dashboardGridEl.innerHTML = `<div class="dashboard-empty">${escapeHtml(getLabel("dashboardNoInternet", "Geen internetverbinding voor live dashboard."))}</div>`;
-    return;
+  setDashboardLoading(true);
+  try {
+    const hasInternet = await verifyInternetConnection();
+    if (requestToken !== dashboardRequestToken) return;
+    if (!hasInternet) {
+      renderDashboardMap([]);
+      dashboardGridEl.innerHTML = `<div class="dashboard-empty">${escapeHtml(getLabel("dashboardNoInternet", "Geen internetverbinding voor live dashboard."))}</div>`;
+      return;
+    }
+
+    if (voertuigen.length === 0) await laadVoertuigen();
+    if (trips.length === 0) await laadTrips();
+    if (routes.length === 0) await laadRoutes();
+    if (stopsById.size === 0) await laadStops();
+
+    const res = await fetchWithTimeout(API_URL);
+    const data = await res.json();
+    if (requestToken !== dashboardRequestToken || dashboardPanelEl.hidden) return;
+    const entities = Array.isArray(data.entity) ? data.entity : [];
+
+    const snapshots = [];
+    const cardsHtml = dashboardVehicleIds.map((id) => {
+      const bus = findBusById(id);
+      if (!bus) {
+        return `
+          <article class="dashboard-card is-offline">
+            <div class="dashboard-card-top">
+              <strong>${escapeHtml(id)}</strong>
+              <span class="dashboard-status">${escapeHtml(getLabel("dashboardNotFound", "Niet gevonden"))}</span>
+            </div>
+            <p class="dashboard-meta">${escapeHtml(getLabel("dashboardNoVehicleData", "Geen voertuigdata gevonden."))}</p>
+          </article>
+        `;
+      }
+
+      if (isOutOfService(bus)) {
+        return `
+          <article class="dashboard-card is-offline">
+            <div class="dashboard-card-top">
+              <strong>${escapeHtml(bus.Voertuignummer || id)}</strong>
+              <span class="dashboard-status">${escapeHtml(getLabel("dashboardOutOfService", "Uit dienst"))}</span>
+            </div>
+            <p class="dashboard-type">${escapeHtml(bus.Type || "")}</p>
+            <p class="dashboard-meta">${escapeHtml(getLabel("dashboardNoRealtimeWithPeriod", "Geen realtime beschikbaar."))}</p>
+          </article>
+        `;
+      }
+
+      const snapshot = getRoutePresentationFromRealtime(id, entities, bus);
+      snapshots.push(snapshot);
+      if (snapshot.status !== "live") {
+        return `
+          <article class="dashboard-card is-offline">
+            <div class="dashboard-card-top">
+              <strong>${escapeHtml(bus.Voertuignummer || id)}</strong>
+              <span class="dashboard-status">${escapeHtml(getLabel("dashboardOffline", "Offline"))}</span>
+            </div>
+            <p class="dashboard-type">${escapeHtml(bus.Type || "")}</p>
+            <p class="dashboard-meta">${escapeHtml(snapshot.message || getLabel("dashboardNoRealtime", "Geen realtime beschikbaar"))}</p>
+          </article>
+        `;
+      }
+
+      return `
+        <article class="dashboard-card is-live">
+          <div class="dashboard-card-top">
+            <strong>${escapeHtml(bus.Voertuignummer || id)}</strong>
+            <span class="line-badge" style="--line-badge-bg:${snapshot.routeColor};--line-badge-fg:${snapshot.routeTextColor};">${escapeHtml(snapshot.routeShort)}</span>
+          </div>
+          <p class="dashboard-type">${escapeHtml(bus.Type || "")}</p>
+          <p class="dashboard-destination">${escapeHtml(snapshot.destinationText)}</p>
+          <p class="dashboard-meta">${escapeHtml(getLabel("dashboardStopPrefix", "Halte:"))} ${escapeHtml(snapshot.currentStopName)}</p>
+          <p class="dashboard-meta">${escapeHtml(snapshot.delayMessage)}</p>
+        </article>
+      `;
+    }).join("");
+
+    renderDashboardMap(snapshots);
+    dashboardGridEl.innerHTML = cardsHtml;
+    const liveCount = snapshots.filter((snapshot) => snapshot.status === "live").length;
+    dashboardSummaryEl.textContent = getLabel("dashboardLiveSummary", "{live} van {total} voertuigen live op kaart")
+      .replace("{live}", String(liveCount))
+      .replace("{total}", String(dashboardVehicleIds.length));
+  } finally {
+    if (requestToken === dashboardRequestToken) {
+      setDashboardLoading(false);
+    }
   }
-
-  if (voertuigen.length === 0) await laadVoertuigen();
-  if (trips.length === 0) await laadTrips();
-  if (routes.length === 0) await laadRoutes();
-  if (stopsById.size === 0) await laadStops();
-
-  const res = await fetchWithTimeout(API_URL);
-  const data = await res.json();
-  if (requestToken !== dashboardRequestToken || dashboardPanelEl.hidden) return;
-  const entities = Array.isArray(data.entity) ? data.entity : [];
-
-  const snapshots = [];
-  const cardsHtml = dashboardVehicleIds.map((id) => {
-    const bus = findBusById(id);
-    if (!bus) {
-      return `
-        <article class="dashboard-card is-offline">
-          <div class="dashboard-card-top">
-            <strong>${escapeHtml(id)}</strong>
-            <span class="dashboard-status">${escapeHtml(getLabel("dashboardNotFound", "Niet gevonden"))}</span>
-          </div>
-          <p class="dashboard-meta">${escapeHtml(getLabel("dashboardNoVehicleData", "Geen voertuigdata gevonden."))}</p>
-        </article>
-      `;
-    }
-
-    if (isOutOfService(bus)) {
-      return `
-        <article class="dashboard-card is-offline">
-          <div class="dashboard-card-top">
-            <strong>${escapeHtml(bus.Voertuignummer || id)}</strong>
-            <span class="dashboard-status">${escapeHtml(getLabel("dashboardOutOfService", "Uit dienst"))}</span>
-          </div>
-          <p class="dashboard-type">${escapeHtml(bus.Type || "")}</p>
-          <p class="dashboard-meta">${escapeHtml(getLabel("dashboardNoRealtimeWithPeriod", "Geen realtime beschikbaar."))}</p>
-        </article>
-      `;
-    }
-
-    const snapshot = getRoutePresentationFromRealtime(id, entities, bus);
-    snapshots.push(snapshot);
-    if (snapshot.status !== "live") {
-      return `
-        <article class="dashboard-card is-offline">
-          <div class="dashboard-card-top">
-            <strong>${escapeHtml(bus.Voertuignummer || id)}</strong>
-            <span class="dashboard-status">${escapeHtml(getLabel("dashboardOffline", "Offline"))}</span>
-          </div>
-          <p class="dashboard-type">${escapeHtml(bus.Type || "")}</p>
-          <p class="dashboard-meta">${escapeHtml(snapshot.message || getLabel("dashboardNoRealtime", "Geen realtime beschikbaar"))}</p>
-        </article>
-      `;
-    }
-
-    return `
-      <article class="dashboard-card is-live">
-        <div class="dashboard-card-top">
-          <strong>${escapeHtml(bus.Voertuignummer || id)}</strong>
-          <span class="line-badge" style="--line-badge-bg:${snapshot.routeColor};--line-badge-fg:${snapshot.routeTextColor};">${escapeHtml(snapshot.routeShort)}</span>
-        </div>
-        <p class="dashboard-type">${escapeHtml(bus.Type || "")}</p>
-        <p class="dashboard-destination">${escapeHtml(snapshot.destinationText)}</p>
-        <p class="dashboard-meta">${escapeHtml(getLabel("dashboardStopPrefix", "Halte:"))} ${escapeHtml(snapshot.currentStopName)}</p>
-        <p class="dashboard-meta">${escapeHtml(snapshot.delayMessage)}</p>
-      </article>
-    `;
-  }).join("");
-
-  renderDashboardMap(snapshots);
-  dashboardGridEl.innerHTML = cardsHtml;
-  const liveCount = snapshots.filter((snapshot) => snapshot.status === "live").length;
-  dashboardSummaryEl.textContent = getLabel("dashboardLiveSummary", "{live} van {total} voertuigen live op kaart")
-    .replace("{live}", String(liveCount))
-    .replace("{total}", String(dashboardVehicleIds.length));
 }
 
 async function openDashboardPanel() {
@@ -1408,21 +1445,44 @@ function normalizePhotoEntry(entry, fallbackVehicleId, index = 0) {
 
 function getConfiguredPhotoEntries(vehicleId) {
   const lookup = getPhotoDescriptionsLookup();
-  const directEntries = lookup[vehicleId] ?? lookup[normalize(vehicleId)];
-  if (!Array.isArray(directEntries)) return [];
-  return directEntries
-    .map((entry, index) => normalizePhotoEntry(entry, vehicleId, index))
+  const bus = findBusById(vehicleId);
+  const aliases = new Set([
+    normalize(vehicleId),
+    normalize(bus?.Voertuignummer)
+  ]);
+
+  splitLegacyValues(getVehicleField(bus, oldVehicleNumbersFieldKey), true).forEach((alias) => aliases.add(normalize(alias)));
+
+  const entries = [];
+  aliases.forEach((alias) => {
+    const directEntries = lookup[alias];
+    if (Array.isArray(directEntries)) {
+      directEntries.forEach((entry, index) => {
+        const normalizedEntry = normalizePhotoEntry(entry, alias, index);
+        if (normalizedEntry) entries.push(normalizedEntry);
+      });
+    }
+  });
+
+  return entries
     .filter(Boolean)
     .sort((left, right) => left.sortOrder - right.sortOrder);
 }
 
 function getFallbackPhotoEntries(vehicleId) {
-  const normalizedVehicleId = normalize(vehicleId);
-  if (!normalizedVehicleId) return [];
+  const bus = findBusById(vehicleId);
+  const aliases = new Set([
+    normalize(vehicleId),
+    normalize(bus?.Voertuignummer)
+  ]);
+  splitLegacyValues(getVehicleField(bus, oldVehicleNumbersFieldKey), true).forEach((alias) => aliases.add(normalize(alias)));
   const extensions = ["jpeg", "jpg", "png", "webp"];
   const fallbackEntries = [];
-  extensions.forEach((extension) => {
-    fallbackEntries.push({ src: `media/${encodeURIComponent(normalizedVehicleId)}.${extension}`, caption: "", meta: "", alt: "", sortOrder: fallbackEntries.length });
+  aliases.forEach((alias) => {
+    if (!alias) return;
+    extensions.forEach((extension) => {
+      fallbackEntries.push({ src: `media/${encodeURIComponent(alias)}.${extension}`, caption: "", meta: "", alt: "", sortOrder: fallbackEntries.length });
+    });
   });
   return fallbackEntries;
 }
@@ -1760,10 +1820,10 @@ prefersDarkScheme.addEventListener?.("change", () => {
 
 function applyTranslations() {
   document.documentElement.lang = settings.language || DEFAULT_LANG;
-  document.title = getLabel("appTitle", "Busbibliotheek (beta)");
+  updateDocumentTitle();
   if (metaDescriptionEl) metaDescriptionEl.setAttribute("content", getLabel("metaDescription", "Busbibliotheek voor bussen van De Lijn: zoek een voertuig en volg het live."));
   splash?.setAttribute("aria-label", getLabel("splashAria", "Busbibliotheek laden"));
-  appTitleEl.textContent = getLabel("appTitle", "Busbibliotheek (beta)");
+  appTitleEl.textContent = getLabel("appTitle", "Busbibliotheek");
   appSubtitleEl.textContent = t("subtitle");
   appContextLineEl.textContent = t("appContextLine");
   if (splashCreditEl) splashCreditEl.textContent = getLabel("madeBy", "Made by Busspotter 95");
@@ -1785,6 +1845,7 @@ function applyTranslations() {
   voertuigInput.placeholder = t("vehiclePlaceholder");
   favoritesTitleEl.textContent = t("favorites");
   settingsTitleEl.textContent = t("settings");
+  if (settingsInfoBtn) settingsInfoBtn.textContent = getLabel("infoTitle", "Info");
   intervalLabelEl.textContent = t("interval");
   themeLabelEl.textContent = t("theme");
   colorThemeLabelEl.textContent = t("colorTheme");
@@ -1942,6 +2003,25 @@ function clearHalteSearchResults() {
   haltSearchResultsContainerEl.hidden = true;
 }
 
+function getGroupedHalteBaseName(rawName = "") {
+  const value = cleanText(rawName);
+  if (!value) return "";
+  return value
+    .replace(/\s*[-,]?\s*perron\s+[a-z0-9]+$/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getHalteRealtimeLink(codes = []) {
+  const normalizedCodes = [...new Set(
+    (Array.isArray(codes) ? codes : [codes])
+      .map((code) => String(code || "").trim())
+      .filter((code) => HALTE_CODE_REGEX.test(code))
+  )];
+  if (!normalizedCodes.length) return "";
+  return `https://www.delijn.be/realtime/${normalizedCodes.join("+")}/20`;
+}
+
 function renderHalteSearchResults(haltes = []) {
   if (!haltSearchResultsContainerEl || !haltSearchResultsListEl) return;
   haltSearchResultsListEl.innerHTML = "";
@@ -1949,21 +2029,25 @@ function renderHalteSearchResults(haltes = []) {
   if (!haltes.length) return;
 
   haltes.forEach((halte) => {
-    const halteCode = String(halte?.haltenummer || "").trim();
-    if (!HALTE_CODE_REGEX.test(halteCode)) return;
+    const halteCodes = Array.isArray(halte?.haltenummers)
+      ? halte.haltenummers
+      : [String(halte?.haltenummer || "").trim()];
+    const validCodes = halteCodes.filter((code) => HALTE_CODE_REGEX.test(code));
+    if (!validCodes.length) return;
 
-    const omschrijving = String(halte?.omschrijvingLang || halte?.omschrijving || halteCode).trim();
+    const primaryCode = validCodes[0];
+    const omschrijving = String(halte?.omschrijvingLang || halte?.omschrijving || primaryCode).trim();
     const gemeente = String(halte?.omschrijvingGemeente || "").trim();
     const chip = document.createElement("button");
     chip.type = "button";
     chip.className = "chip";
     chip.innerHTML = `
       <span class="chip-title">${escapeHtml(omschrijving)}</span>
-      <span class="chip-subtitle">${escapeHtml(gemeente ? `${gemeente} · ${halteCode}` : halteCode)}</span>
+      <span class="chip-subtitle">${escapeHtml(gemeente ? `${gemeente} · ${validCodes.join(" + ")}` : validCodes.join(" + "))}</span>
     `;
     chip.addEventListener("click", () => {
-      if (haltecodeInputEl) haltecodeInputEl.value = halteCode;
-      openHalteRealtime(halteCode);
+      if (haltecodeInputEl) haltecodeInputEl.value = omschrijving;
+      openHalteRealtime(validCodes);
     });
     haltSearchResultsListEl.appendChild(chip);
   });
@@ -1998,8 +2082,9 @@ async function searchHaltesLocal(zoekTerm) {
   const normalizedQuery = normalizeSearchText(zoekTerm);
   if (!normalizedQuery) return [];
 
-  const seenCodes = new Set();
-  return stops
+  const groupedMatches = new Map();
+
+  stops
     .map((stop) => {
       const stopCode = cleanText(stop?.stop_code || stop?.stop_id);
       return {
@@ -2013,23 +2098,46 @@ async function searchHaltesLocal(zoekTerm) {
       if (a.score !== b.score) return a.score - b.score;
       return cleanText(a.stop?.stop_name).localeCompare(cleanText(b.stop?.stop_name), "nl");
     })
-    .filter(({ stopCode }) => {
-      if (seenCodes.has(stopCode)) return false;
-      seenCodes.add(stopCode);
-      return true;
     })
-    .slice(0, HALTE_SEARCH_LIMIT)
-    .map(({ stop, stopCode }) => ({
-      haltenummer: stopCode,
-      omschrijving: cleanText(stop?.stop_name) || stopCode,
-      omschrijvingLang: cleanText(stop?.stop_name) || stopCode,
-      omschrijvingGemeente: cleanText(stop?.stop_desc)
-    }));
+    .forEach(({ stop, stopCode, score }) => {
+      const stopName = cleanText(stop?.stop_name) || stopCode;
+      const groupName = getGroupedHalteBaseName(stopName) || stopName;
+      const municipality = cleanText(stop?.stop_desc);
+      const groupKey = `${normalizeSearchText(groupName)}|${normalizeSearchText(municipality)}`;
+
+      if (!groupedMatches.has(groupKey)) {
+        groupedMatches.set(groupKey, {
+          haltenummers: [],
+          omschrijving: groupName,
+          omschrijvingLang: groupName,
+          omschrijvingGemeente: municipality,
+          score
+        });
+      }
+
+      const group = groupedMatches.get(groupKey);
+      if (!group.haltenummers.includes(stopCode)) {
+        group.haltenummers.push(stopCode);
+      }
+      if (score < group.score) {
+        group.score = score;
+      }
+    });
+
+  return Array.from(groupedMatches.values())
+    .sort((a, b) => {
+      if (a.score !== b.score) return a.score - b.score;
+      return a.omschrijving.localeCompare(b.omschrijving, "nl");
+    })
+    .slice(0, HALTE_SEARCH_LIMIT);
 }
 
 function openHalteRealtime(codeOverride = "") {
-  const haltecode = (codeOverride || haltecodeInputEl?.value || "").trim();
-  if (!HALTE_CODE_REGEX.test(haltecode)) {
+  const haltecodes = Array.isArray(codeOverride)
+    ? codeOverride
+    : [(codeOverride || haltecodeInputEl?.value || "").trim()];
+  const validCodes = [...new Set(haltecodes.filter((code) => HALTE_CODE_REGEX.test(code)))];
+  if (!validCodes.length) {
     setHalteStatus(getLabel("haltSearchInvalid", "Voer een haltecode of haltenaam in."));
     clearHalteSearchResults();
     if (navigator.vibrate) navigator.vibrate(160);
@@ -2039,11 +2147,12 @@ function openHalteRealtime(codeOverride = "") {
   halteSearchRequestToken += 1;
   setHalteStatus("");
   clearHalteSearchResults();
-  const lastHaltes = loadLastHaltes().filter((code) => code !== haltecode);
-  lastHaltes.unshift(haltecode);
+  const primaryCode = validCodes[0];
+  const lastHaltes = loadLastHaltes().filter((code) => code !== primaryCode);
+  lastHaltes.unshift(primaryCode);
   saveLastHaltes(lastHaltes.slice(0, 5));
   renderLastHaltes();
-  window.open(`https://www.delijn.be/realtime/${haltecode}/20`, "_blank", "noopener,noreferrer");
+  window.open(getHalteRealtimeLink(validCodes), "_blank", "noopener,noreferrer");
   return true;
 }
 
@@ -2164,16 +2273,25 @@ function hideFunnyModal() {
   document.body.classList.remove("funny-open");
 }
 
-function startPythonDownload() {
+function triggerDirectDownload(url, fileName) {
   const downloadLink = document.createElement("a");
-  downloadLink.href = PYTHON_MAIN_DOWNLOAD_URL;
-  downloadLink.download = "script.py";
+  downloadLink.href = url;
+  downloadLink.download = fileName;
   downloadLink.rel = "noopener";
   downloadLink.style.display = "none";
   document.body.appendChild(downloadLink);
   downloadLink.click();
   downloadLink.remove();
+}
+
+function startPythonDownload() {
+  triggerDirectDownload(PYTHON_MAIN_DOWNLOAD_URL, "script.py");
   window.alert(getLabel("pythonDownloadStarted", "De download van script.py is gestart."));
+}
+
+function startApkDownload() {
+  triggerDirectDownload(APK_DOWNLOAD_URL, "Busbibliotheek.apk");
+  window.alert(getLabel("apkDownloadStarted", "De download van Busbibliotheek.apk is gestart."));
 }
 
 function loadFavorites() {
@@ -2211,19 +2329,26 @@ function renderFavorites() {
   favorites.forEach((id) => {
     const bus = findBusById(id);
     const vehicleType = normalize(bus?.Type);
-    const chip = document.createElement("button");
-    chip.type = "button";
-    chip.className = "chip";
-    chip.innerHTML = `
-      <span class="chip-title">${escapeHtml(id)}</span>
-      ${vehicleType ? `<span class="chip-subtitle">${escapeHtml(vehicleType)}</span>` : ""}
+    const item = document.createElement("div");
+    item.className = "favorite-item";
+    item.dataset.id = id;
+    item.innerHTML = `
+      <button class="chip favorite-chip" type="button">
+        <span class="chip-title">${escapeHtml(id)}</span>
+        ${vehicleType ? `<span class="chip-subtitle">${escapeHtml(vehicleType)}</span>` : ""}
+      </button>
+      <div class="favorite-item-actions">
+        <button class="favorite-action-btn" type="button" data-action="up" aria-label="${escapeHtml(getLabel("favoriteMoveUp", "Favoriet omhoog"))}">&#8593;</button>
+        <button class="favorite-action-btn" type="button" data-action="down" aria-label="${escapeHtml(getLabel("favoriteMoveDown", "Favoriet omlaag"))}">&#8595;</button>
+        <button class="favorite-action-btn favorite-action-btn--danger" type="button" data-action="remove" aria-label="${escapeHtml(t("favoriteRemove"))}">&times;</button>
+      </div>
     `;
-    chip.addEventListener("click", () => {
+    item.querySelector(".favorite-chip")?.addEventListener("click", () => {
       voertuigInput.value = id;
       setFavoritesPanel(false);
       zoekAlles();
     });
-    favoritesListEl.appendChild(chip);
+    favoritesListEl.appendChild(item);
   });
 }
 
@@ -2254,6 +2379,27 @@ function toggleFavorite(explicitId = "") {
     favorites.unshift(id);
     favorites = [...new Set(favorites)].slice(0, 20);
   }
+  saveFavorites();
+  renderFavorites();
+  updateFavoriteButtonState();
+}
+
+function moveFavorite(id, direction) {
+  const index = favorites.indexOf(id);
+  if (index < 0) return;
+  const nextIndex = direction === "up" ? index - 1 : index + 1;
+  if (nextIndex < 0 || nextIndex >= favorites.length) return;
+  const nextFavorites = [...favorites];
+  [nextFavorites[index], nextFavorites[nextIndex]] = [nextFavorites[nextIndex], nextFavorites[index]];
+  favorites = nextFavorites;
+  saveFavorites();
+  renderFavorites();
+  updateFavoriteButtonState();
+}
+
+function removeFavorite(id) {
+  if (!id) return;
+  favorites = favorites.filter((favoriteId) => favoriteId !== id);
   saveFavorites();
   renderFavorites();
   updateFavoriteButtonState();
@@ -2358,7 +2504,10 @@ appTitleBtnEl?.addEventListener("click", () => {
   hideFunnyModal();
   terug();
 });
-voertuigInput.addEventListener("input", toonSuggesties);
+bindVehicleSuggestions(voertuigInput, () => {
+  voertuigInput.blur();
+  zoekAlles();
+});
 voertuigInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     event.preventDefault();
@@ -2379,6 +2528,18 @@ favoritesToggleBtn.addEventListener("click", (event) => {
 });
 favoritesPanelEl.addEventListener("click", (event) => {
   event.stopPropagation();
+});
+favoritesListEl?.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const actionBtn = target.closest(".favorite-action-btn");
+  if (!actionBtn) return;
+  const favoriteItem = actionBtn.closest(".favorite-item");
+  const id = favoriteItem?.getAttribute("data-id") || "";
+  const action = actionBtn.getAttribute("data-action");
+  if (action === "up") moveFavorite(id, "up");
+  if (action === "down") moveFavorite(id, "down");
+  if (action === "remove") removeFavorite(id);
 });
 haltecodeSearchBtn?.addEventListener("click", () => searchHaltes());
 haltecodeInputEl?.addEventListener("keydown", (event) => {
@@ -2550,6 +2711,10 @@ offlineRetryBtn?.addEventListener("click", () => {
 settingsToggleBtn.addEventListener("click", () => {
   setFavoritesPanel(false);
   setSettingsPanel(!settingsOpen);
+});
+settingsInfoBtn?.addEventListener("click", () => {
+  setSettingsPanel(false);
+  showInfoModal();
 });
 settingsCloseBtn.addEventListener("click", () => setSettingsPanel(false));
 settingsBackdropEl.addEventListener("click", () => setSettingsPanel(false));
@@ -2764,6 +2929,9 @@ function resolveVehicleSearch(query) {
     const plate = normalizePlateLookup(getVehicleField(vehicle, vehiclePlateFieldKey));
     if (normalizedPlateQuery && plate && plate === normalizedPlateQuery) return true;
 
+    const hanseaId = normalizeLookup(getVehicleField(vehicle, "Hansea nummer"));
+    if (hanseaId && hanseaId === normalizedQuery) return true;
+
     const oldVehicleNumbers = splitLegacyValues(getVehicleField(vehicle, oldVehicleNumbersFieldKey), true);
     if (oldVehicleNumbers.some((value) => normalizeLookup(value) === normalizedQuery)) return true;
 
@@ -2786,6 +2954,9 @@ function matchesSuggestionQuery(vehicle, normalizedQuery, normalizedPlateQuery) 
   const plate = normalizePlateLookup(getVehicleField(vehicle, vehiclePlateFieldKey));
   if (normalizedPlateQuery && plate && plate.startsWith(normalizedPlateQuery)) return true;
 
+  const hanseaId = normalizeLookup(getVehicleField(vehicle, "Hansea nummer"));
+  if (normalizedQuery && hanseaId && hanseaId.startsWith(normalizedQuery)) return true;
+
   const oldVehicleNumbers = splitLegacyValues(getVehicleField(vehicle, oldVehicleNumbersFieldKey), true);
   if (normalizedQuery && oldVehicleNumbers.some((value) => normalizeLookup(value).startsWith(normalizedQuery))) return true;
 
@@ -2800,11 +2971,101 @@ function buildSuggestionLabel(vehicle) {
   const vehicleType = normalize(vehicle.Type);
   const plate = normalize(getVehicleField(vehicle, vehiclePlateFieldKey));
   const oldVehicleNumbers = splitLegacyValues(getVehicleField(vehicle, oldVehicleNumbersFieldKey), true).slice(0, 2);
+  const hanseaId = normalize(getVehicleField(vehicle, "Hansea nummer"));
   const parts = [`${vehicleNumber}`];
   if (vehicleType && vehicleType !== "/") parts.push(vehicleType);
   if (plate && plate !== "/") parts.push(plate);
+  if (hanseaId && hanseaId !== "/") parts.push(`Hansea ${hanseaId}`);
   if (oldVehicleNumbers.length) parts.push(`oud ${oldVehicleNumbers.join(", ")}`);
   return parts.join(" - ");
+}
+
+function getSuggestionResults(query = "", limit = 8) {
+  const normalizedQuery = normalizeLookup(query);
+  const normalizedPlateQuery = normalizePlateLookup(query);
+
+  if (!normalizedQuery && !normalizedPlateQuery) {
+    return favorites
+      .map((id) => findBusById(id))
+      .filter(Boolean)
+      .slice(0, limit);
+  }
+
+  return voertuigen
+    .filter((vehicle) => matchesSuggestionQuery(vehicle, normalizedQuery, normalizedPlateQuery))
+    .slice(0, limit);
+}
+
+function hideSuggestionList(listEl) {
+  if (!listEl) return;
+  listEl.innerHTML = "";
+  listEl.hidden = true;
+}
+
+function renderSuggestionList(listEl, inputEl, onSelect) {
+  if (!listEl || !inputEl) return;
+  const results = getSuggestionResults(inputEl.value.trim());
+  listEl.innerHTML = "";
+
+  if (!results.length) {
+    listEl.hidden = true;
+    return;
+  }
+
+  results.forEach((vehicle) => {
+    const li = document.createElement("li");
+    li.className = "vehicle-suggestion-item";
+    li.dataset.id = normalize(vehicle.Voertuignummer);
+    li.innerHTML = `
+      <span class="vehicle-suggestion-primary">${escapeHtml(normalize(vehicle.Voertuignummer))}</span>
+      <span class="vehicle-suggestion-secondary">${escapeHtml(buildSuggestionLabel(vehicle))}</span>
+    `;
+    li.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+    });
+    li.addEventListener("click", () => {
+      const vehicleId = normalize(vehicle.Voertuignummer);
+      inputEl.value = vehicleId;
+      hideSuggestionList(listEl);
+      onSelect(vehicleId);
+    });
+    listEl.appendChild(li);
+  });
+
+  listEl.hidden = false;
+}
+
+function ensureInlineSuggestionList(inputEl) {
+  if (!inputEl) return null;
+  let listEl = inputEl.parentElement?.querySelector(".inline-suggestion-list");
+  if (listEl) return listEl;
+  listEl = document.createElement("ul");
+  listEl.className = "inline-suggestion-list";
+  listEl.hidden = true;
+  inputEl.insertAdjacentElement("afterend", listEl);
+  return listEl;
+}
+
+function bindVehicleSuggestions(inputEl, onSelect) {
+  if (!inputEl || inputEl.dataset.vehicleSuggestionsBound === "1") return;
+  inputEl.dataset.vehicleSuggestionsBound = "1";
+
+  const listEl = inputEl.id === "voertuignummer" ? suggestieLijst : ensureInlineSuggestionList(inputEl);
+  if (!listEl) return;
+
+  const render = () => {
+    activeVehicleSuggestionInput = inputEl;
+    renderSuggestionList(listEl, inputEl, onSelect);
+  };
+
+  inputEl.addEventListener("input", render);
+  inputEl.addEventListener("focus", render);
+  inputEl.addEventListener("blur", () => {
+    window.setTimeout(() => {
+      if (activeVehicleSuggestionInput === inputEl) activeVehicleSuggestionInput = null;
+      hideSuggestionList(listEl);
+    }, 120);
+  });
 }
 
 // Custom bus pin as DivIcon so we can rotate the image based on bearing
@@ -2942,25 +3203,10 @@ void laadVoertuigen()
   .catch((e) => console.warn("Warm-up voertuigen mislukt", e));
 
 function toonSuggesties() {
-  const query = voertuigInput.value.trim();
-  const normalizedQuery = normalizeLookup(query);
-  const normalizedPlateQuery = normalizePlateLookup(query);
-  suggestieLijst.innerHTML = "";
-  if(!normalizedQuery && !normalizedPlateQuery) return;
-
-  voertuigen.filter(v => matchesSuggestionQuery(v, normalizedQuery, normalizedPlateQuery))
-    .slice(0,8)
-    .forEach(v=>{
-      const li=document.createElement("li");
-      li.textContent = buildSuggestionLabel(v);
-      li.onclick=()=>{
-        voertuigInput.value = normalize(v.Voertuignummer);
-        suggestieLijst.innerHTML="";
-        voertuigInput.blur(); // Focus weghalen zodat geen enter meer nodig is
-        zoekAlles();
-      };
-      suggestieLijst.appendChild(li);
-    });
+  renderSuggestionList(suggestieLijst, voertuigInput, () => {
+    voertuigInput.blur();
+    zoekAlles();
+  });
 }
 
 async function zoekAlles() {
@@ -2977,25 +3223,31 @@ async function zoekAlles() {
   setPageLoading(true);
   setFavoritesPanel(false);
   if (query.toLowerCase() === "python") {
-    suggestieLijst.innerHTML = "";
+    hideSuggestionList(suggestieLijst);
     startPythonDownload();
     setPageLoading(false);
     return;
   }
+  if (query.toLowerCase() === "android" || query.toLowerCase() === "apk") {
+    hideSuggestionList(suggestieLijst);
+    startApkDownload();
+    setPageLoading(false);
+    return;
+  }
   if (query.toLowerCase() === "info") {
-    suggestieLijst.innerHTML = "";
+    hideSuggestionList(suggestieLijst);
     showInfoModal();
     setPageLoading(false);
     return;
   }
   if (query.toLowerCase() === "best") {
-    suggestieLijst.innerHTML = "";
+    hideSuggestionList(suggestieLijst);
     showFunnyModal();
     setPageLoading(false);
     return;
   }
   if (query.toLowerCase() === "bus beih") {
-    suggestieLijst.innerHTML = "";
+    hideSuggestionList(suggestieLijst);
     window.open("https://salajev.github.io/bus.be-fcl/index.html", "_blank", "noopener,noreferrer");
     setPageLoading(false);
     return;
@@ -3013,11 +3265,12 @@ async function zoekAlles() {
   }
   updateFavoriteButtonState();
 
-  suggestieLijst.innerHTML = "";
+  hideSuggestionList(suggestieLijst);
   resultsWrapEl.classList.add("show");
   resultsGridEl.classList.add("show");
   closeBtnEl.style.display = "inline-flex";
   updateUrlState();
+  updateDocumentTitle(activeVehicleId);
 
   toonVasteData(activeVehicleId);
   renderComparison();
@@ -3084,6 +3337,8 @@ function terug() {
   clearComparison();
   updateFavoriteButtonState();
   updateUrlState();
+  updateDocumentTitle("");
+  hideSuggestionList(suggestieLijst);
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 

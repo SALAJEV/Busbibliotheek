@@ -710,7 +710,7 @@ p {
   position: fixed;
   top: 1rem;
   right: 1rem;
-  z-index: 1650;
+  z-index: 1710;
   width: min(430px, calc(100vw - 1.5rem));
   max-height: calc(100vh - 2rem);
   overflow-y: auto;
@@ -740,7 +740,7 @@ p {
 }
 
 .panel-backdrop {
-  z-index: 1540;
+  z-index: 1700;
 }
 
 .favorites-backdrop {
@@ -781,6 +781,41 @@ body.more-open {
   max-width: 100%;
   justify-content: flex-start;
   text-align: left;
+}
+
+.favorite-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.55rem;
+  align-items: stretch;
+}
+
+.favorite-chip {
+  min-width: 0;
+}
+
+.favorite-item-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.favorite-action-btn {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 12px;
+  border: 1px solid var(--button-secondary-border);
+  background: var(--button-secondary-bg);
+  color: var(--text);
+  font-size: 0.95rem;
+  box-shadow: none;
+}
+
+.favorite-action-btn--danger {
+  color: var(--danger);
 }
 
 .more-panel {
@@ -1013,6 +1048,11 @@ button:disabled,
   -webkit-backdrop-filter: none;
 }
 
+.search-shell {
+  position: relative;
+  z-index: 8;
+}
+
 .search-row input {
   margin-bottom: 0;
   flex: 1 1 auto;
@@ -1078,34 +1118,74 @@ button:disabled,
 
 #suggestielijst {
   list-style: none;
-  margin-bottom: 0.7rem;
+  position: absolute;
+  top: calc(100% + 0.18rem);
+  left: 0;
+  right: 0;
+  margin: 0;
   border-radius: var(--radius-md);
   border: 1px solid var(--stroke);
   overflow: hidden;
-  background: var(--surface);
-  box-shadow: none;
+  background: color-mix(in srgb, var(--surface-strong) 98%, transparent);
+  box-shadow: var(--shadow-soft);
+  max-height: min(320px, 52vh);
+  overflow-y: auto;
 }
 
 #suggestielijst:empty {
   display: none;
 }
 
-#suggestielijst li {
+.inline-suggestion-list {
+  list-style: none;
+  margin: 0.55rem 0 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--stroke);
+  overflow: hidden;
+  background: color-mix(in srgb, var(--surface-strong) 98%, transparent);
+  box-shadow: var(--shadow-soft);
+  max-height: min(240px, 42vh);
+  overflow-y: auto;
+}
+
+.inline-suggestion-list[hidden] {
+  display: none !important;
+}
+
+#suggestielijst li,
+.inline-suggestion-list li {
   padding: 0.56rem 0.78rem;
   cursor: pointer;
   background: transparent;
   color: var(--text);
   transition: all 0.18s ease;
-  font-weight: 500;
+  font-weight: 600;
 }
 
-#suggestielijst li + li {
+#suggestielijst li + li,
+.inline-suggestion-list li + li {
   border-top: 1px solid var(--stroke-soft);
 }
 
-#suggestielijst li:hover {
+#suggestielijst li:hover,
+.inline-suggestion-list li:hover {
   background: color-mix(in srgb, var(--accent-soft) 80%, transparent);
-  padding-left: 0.9rem;
+}
+
+.vehicle-suggestion-item {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.vehicle-suggestion-primary {
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.vehicle-suggestion-secondary {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
 }
 
 /* ===============================
@@ -1237,7 +1317,7 @@ button:disabled,
 .settings-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 1360;
+  z-index: 1700;
   background: var(--overlay-bg);
   backdrop-filter: blur(calc(var(--overlay-blur) - 4px));
   opacity: 0;
@@ -1482,6 +1562,36 @@ body.dashboard-open {
   align-items: center;
 }
 
+.dashboard-close-btn {
+  min-width: 0;
+  width: auto;
+  padding-inline: 0.95rem;
+}
+
+.dashboard-loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  margin: 0 auto 0.9rem;
+  max-width: 1400px;
+  padding: 0.95rem 1rem;
+  border-radius: var(--panel-radius-sm);
+  border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--stroke));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-alt) 98%, transparent), color-mix(in srgb, var(--surface) 94%, transparent));
+  color: var(--text);
+}
+
+.dashboard-loading-state[hidden] {
+  display: none !important;
+}
+
+.dashboard-panel.is-loading .dashboard-grid,
+.dashboard-panel.is-loading .dashboard-map-wrap {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
 .dashboard-map-wrap {
   margin-bottom: 0.85rem;
   max-width: 1400px;
@@ -1633,7 +1743,7 @@ body.dashboard-open {
 .results-wrap {
   display: none;
   position: relative;
-  margin-top: 1.2rem;
+  margin-top: 0.85rem;
 }
 
 .results-wrap.show {
@@ -1649,7 +1759,7 @@ body.dashboard-open {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.42rem;
 }
 
 .grid {
@@ -1734,11 +1844,13 @@ body.dashboard-open {
 
 .compare-card {
   grid-column: 1 / -1;
-  padding: 1rem 1rem 0.95rem;
+  min-height: 0;
+  padding: 1.08rem 1.1rem 1rem;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 92%, transparent), color-mix(in srgb, var(--surface) 96%, transparent)),
-    radial-gradient(circle at top right, color-mix(in srgb, var(--accent-soft) 75%, transparent), transparent 52%);
-  border-color: color-mix(in srgb, var(--accent) 16%, var(--stroke));
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 94%, transparent), color-mix(in srgb, var(--surface) 98%, transparent)),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--accent-soft) 82%, transparent), transparent 56%);
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--stroke));
+  box-shadow: var(--shadow-strong);
 }
 
 .compare-card[hidden] {
@@ -1763,6 +1875,7 @@ body.dashboard-open {
   margin: 0;
   color: var(--muted);
   font-size: 0.92rem;
+  line-height: 1.55;
 }
 
 .compare-vehicles-head {
@@ -1778,9 +1891,9 @@ body.dashboard-open {
   gap: 0.16rem;
   padding: 0.9rem 0.95rem;
   border-radius: var(--panel-radius-sm);
-  border: 1px solid color-mix(in srgb, var(--accent) 12%, var(--stroke));
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-alt) 96%, transparent), color-mix(in srgb, var(--surface) 92%, transparent));
-  box-shadow: 0 10px 24px color-mix(in srgb, var(--accent-soft) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--stroke));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-alt) 98%, transparent), color-mix(in srgb, var(--surface) 94%, transparent));
+  box-shadow: 0 16px 28px color-mix(in srgb, var(--accent-soft) 22%, transparent);
 }
 
 .compare-vehicle-pill strong {
@@ -2214,6 +2327,13 @@ tr + tr td {
   font-size: 0.84rem;
   font-weight: 600;
   line-height: 1.45;
+}
+
+.settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
 }
 
 .vehicle-photo-caption {
