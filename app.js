@@ -1882,34 +1882,44 @@ function formatWeatherMetric(value, suffix, digits = 0) {
   return `${formatted}${suffix}`;
 }
 
+function getWeatherSourceText() {
+  return getLabel("weatherApiSource", "Bron: Open-Meteo via Busbibliotheek");
+}
+
 function renderWeatherModal(weatherData, latitude, longitude) {
   if (!weatherModalBodyEl || !weatherData?.current) return;
   const current = weatherData.current;
   const presentation = getWeatherPresentation(current.weather_code, current.is_day);
   const rows = [
-    [getLabel("weatherNow", "Toestand"), presentation.label],
-    [getLabel("weatherTemperature", "Temperatuur"), formatWeatherMetric(current.temperature_2m, "°C")],
-    [getLabel("weatherFeelsLike", "Gevoelstemperatuur"), formatWeatherMetric(current.apparent_temperature, "°C")],
-    [getLabel("weatherWind", "Wind"), formatWeatherMetric(current.wind_speed_10m, " km/u")],
-    [getLabel("weatherRain", "Neerslag"), formatWeatherMetric(current.precipitation, " mm", 1)],
-    [getLabel("weatherCoordinates", "Coördinaten"), `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`]
+    ["◌", getLabel("weatherNow", "Toestand"), presentation.label],
+    ["🌡", getLabel("weatherTemperature", "Temperatuur"), formatWeatherMetric(current.temperature_2m, "°C")],
+    ["🤍", getLabel("weatherFeelsLike", "Gevoelstemperatuur"), formatWeatherMetric(current.apparent_temperature, "°C")],
+    ["🌀", getLabel("weatherWind", "Wind"), formatWeatherMetric(current.wind_speed_10m, " km/u")],
+    ["☔", getLabel("weatherRain", "Neerslag"), formatWeatherMetric(current.precipitation, " mm", 1)],
+    ["◎", getLabel("weatherCoordinates", "Coördinaten"), `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`]
   ];
   weatherModalBodyEl.innerHTML = `
     <div class="weather-modal-hero">
       <span class="weather-icon weather-modal-icon" aria-hidden="true">${presentation.icon}</span>
       <div class="weather-modal-hero-copy">
         <strong>${escapeHtml(presentation.label)}</strong>
-        <span>${escapeHtml(formatWeatherMetric(current.temperature_2m, "°C"))}</span>
+        <span>${escapeHtml(getLabel("weatherModalLive", "Live op deze locatie"))}</span>
+      </div>
+      <div class="weather-modal-temp">
+        <strong>${escapeHtml(formatWeatherMetric(current.temperature_2m, "°C"))}</strong>
+        <span>${escapeHtml(getLabel("weatherModalTapHint", "Zelfde databron als op de kaart"))}</span>
       </div>
     </div>
-    <div class="info-list">
-      ${rows.map(([label, value]) => `
-        <div class="info-row">
-          <span class="info-label">${escapeHtml(label)}</span>
-          <span class="info-value">${escapeHtml(value)}</span>
+    <div class="weather-detail-grid">
+      ${rows.map(([icon, label, value]) => `
+        <div class="weather-detail-card">
+          <span class="weather-detail-icon" aria-hidden="true">${icon}</span>
+          <span class="weather-detail-label">${escapeHtml(label)}</span>
+          <strong class="weather-detail-value">${escapeHtml(value)}</strong>
         </div>
       `).join("")}
     </div>
+    <p class="weather-modal-source">${escapeHtml(getWeatherSourceText())}</p>
   `;
 }
 
@@ -1943,6 +1953,7 @@ function renderWeatherBlock(weatherData, latitude, longitude) {
         <div class="weather-copy">
           <strong class="weather-title">${escapeHtml(presentation.label)}</strong>
           <span class="weather-source">${escapeHtml(getLabel("weatherSource", "Tik voor meer weerinfo"))}</span>
+          <span class="weather-source weather-source-meta">${escapeHtml(getWeatherSourceText())}</span>
         </div>
         <span class="weather-temperature">${escapeHtml(temperature)}</span>
       </div>
