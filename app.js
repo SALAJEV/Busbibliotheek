@@ -2133,6 +2133,7 @@ function setSettingsPanel(open) {
   if (open) setFavoritesPanel(false);
   settingsOpen = !!open;
   document.body.classList.toggle("settings-open", settingsOpen);
+  settingsPanelEl.hidden = !settingsOpen;
   settingsPanelEl.setAttribute("aria-hidden", String(!settingsOpen));
   settingsPanelEl.toggleAttribute("inert", !settingsOpen);
   settingsToggleBtn.setAttribute("aria-expanded", String(settingsOpen));

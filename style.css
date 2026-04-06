@@ -684,7 +684,6 @@ p {
   position: relative;
   display: flex;
   margin-left: 0;
-  z-index: 1350;
 }
 
 .more-toggle-btn {
@@ -711,7 +710,7 @@ p {
   position: fixed;
   top: 1rem;
   right: 1rem;
-  z-index: 1400;
+  z-index: 1650;
   width: min(430px, calc(100vw - 1.5rem));
   max-height: calc(100vh - 2rem);
   overflow-y: auto;
@@ -741,11 +740,11 @@ p {
 }
 
 .panel-backdrop {
-  z-index: 1360;
+  z-index: 1540;
 }
 
 .favorites-backdrop {
-  z-index: 1360;
+  z-index: 1540;
 }
 
 body.more-open .favorites-backdrop {
@@ -3142,7 +3141,6 @@ footer h3 {
     position: fixed;
     top: max(0.42rem, env(safe-area-inset-top) + 0.22rem);
     right: 0.7rem;
-    z-index: 1710;
     order: 2;
     margin-left: 0;
   }
