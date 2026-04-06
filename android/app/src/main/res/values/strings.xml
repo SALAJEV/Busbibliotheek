@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">Busbibliotheek</string>
+    <string name="maker_name">Busspotter</string>
+    <string name="no_internet_title">Geen internetverbinding</string>
+    <string name="no_internet_text">Het lijkt erop dat je geen actieve internetverbinding hebt. Controleer je instellingen en probeer het opnieuw.</string>
+    <string name="retry">Opnieuw proberen</string>
+    <string name="settings">Instellingen</string>
+    <string name="leaving_app">Je verlaat de app. De link wordt geopend in je browser.</string>
+    <string name="exit_toast">Tik nogmaals om af te sluiten</string>
+    <string name="download_title">Download</string>
+    <string name="download_message">Wil je \'%1$s\' downloaden?</string>
+    <string name="download_button">Download</string>
+    <string name="download_started">Download gestart...</string>
+    <string name="download_failed">Download mislukt</string>
+    <string name="cancel">Annuleren</string>
+</resources>

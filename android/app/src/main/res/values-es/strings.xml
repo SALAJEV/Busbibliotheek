@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">Busbibliotheek</string>
+    <string name="maker_name">Busspotter 95</string>
+    <string name="no_internet_title">Sin conexión a Internet</string>
+    <string name="no_internet_text">Parece que no tienes una conexión a Internet activa. Por favor, comprueba tu configuración e inténtalo de nuevo.</string>
+    <string name="retry">Reintentar</string>
+    <string name="settings">Configuración</string>
+    <string name="leaving_app">Estás saliendo de la aplicación. El enlace se abrirá en tu navegador.</string>
+    <string name="exit_toast">Presiona atrás de nuevo para salir</string>
+    <string name="download_title">Descargar</string>
+    <string name="download_message">¿Quieres descargar \'%1$s\'?</string>
+    <string name="download_button">Descargar</string>
+    <string name="download_started">Descarga iniciada...</string>
+    <string name="download_failed">Descarga fallida</string>
+    <string name="cancel">Cancelar</string>
+</resources>
