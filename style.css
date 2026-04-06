@@ -1742,6 +1742,10 @@ body.dashboard-open {
   border-color: color-mix(in srgb, var(--accent) 16%, var(--stroke));
 }
 
+.compare-card[hidden] {
+  display: none !important;
+}
+
 .compare-card-header {
   display: flex;
   justify-content: space-between;
@@ -3216,6 +3220,72 @@ footer h3 {
     justify-self: center;
   }
 
+  .compare-table-wrap {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .compare-table {
+    min-width: 0;
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .compare-table thead {
+    display: none;
+  }
+
+  .compare-table tbody {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .compare-table tbody tr {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.58rem;
+    padding: 0.8rem;
+    border-radius: calc(var(--panel-radius-sm) + 1px);
+    border: 1px solid color-mix(in srgb, var(--accent) 10%, var(--stroke));
+    background: linear-gradient(180deg, color-mix(in srgb, var(--surface-alt) 94%, transparent), color-mix(in srgb, var(--surface) 96%, transparent));
+  }
+
+  .compare-table tbody tr:nth-child(odd) th,
+  .compare-table tbody tr:nth-child(odd) td {
+    background: transparent;
+  }
+
+  .compare-table tbody th,
+  .compare-table tbody td {
+    width: 100%;
+    padding: 0;
+    border: 0;
+  }
+
+  .compare-table tbody th {
+    font-size: 0.92rem;
+  }
+
+  .compare-table tbody td {
+    display: grid;
+    gap: 0.22rem;
+    padding: 0.62rem 0.68rem;
+    border-radius: var(--radius-md);
+    border: 1px solid color-mix(in srgb, var(--accent) 10%, var(--stroke-soft));
+    background: color-mix(in srgb, var(--surface-strong) 94%, transparent);
+  }
+
+  .compare-table tbody td::before {
+    content: attr(data-column);
+    color: var(--muted);
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
   .vehicle-actions-row {
     align-items: stretch;
   }
@@ -3293,10 +3363,6 @@ footer h3 {
   .compare-card-header {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .compare-table {
-    min-width: 520px;
   }
   .container {
     width: 100%;

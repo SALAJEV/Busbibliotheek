@@ -756,8 +756,8 @@ function renderComparison() {
   const rowsHtml = Array.from(rowMap.values()).map((row) => `
     <tr>
       <th scope="row">${escapeHtml(row.label)}</th>
-      <td>${renderCellValue(row.left)}</td>
-      <td>${renderCellValue(row.right)}</td>
+      <td data-column="${escapeHtml(baseBus.Voertuignummer || currentVehicleId)}">${renderCellValue(row.left)}</td>
+      <td data-column="${escapeHtml(compareBus.Voertuignummer || compareVehicleId)}">${renderCellValue(row.right)}</td>
     </tr>
   `).join("");
 
