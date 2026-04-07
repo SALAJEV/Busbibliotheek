@@ -1,17 +1,17 @@
 [versions]
 agp = "9.1.0"
-coreKtx = "1.12.0"
+coreKtx = "1.15.0"
 junit = "4.13.2"
-junitVersion = "1.1.5"
-espressoCore = "3.5.1"
-lifecycleRuntimeKtx = "2.7.0"
-activityCompose = "1.8.2"
-kotlin = "2.0.21"
-kotlinAndroid = "2.0.21"
-composeBom = "2024.04.01"
-webkit = "1.10.0"
-browser = "1.8.0"
-desugar_jdk_libs = "2.0.4"
+junitVersion = "1.2.1"
+espressoCore = "3.6.1"
+lifecycleRuntimeKtx = "2.8.7"
+activityCompose = "1.10.0"
+kotlin = "2.1.10"
+kotlinAndroid = "2.1.10"
+composeBom = "2025.02.00"
+webkit = "1.12.1"
+browser = "1.8.1"
+desugar_jdk_libs = "2.1.4"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }

@@ -352,7 +352,7 @@ const INACTIVITY_CHECK_MS = 15000;
 let lastUserInteractionAt = Date.now();
 let realtimePausedByInactivity = false;
 let deeplinkHandled = false;
-const APP_VERSION = "2026.04.07-10";
+const APP_VERSION = "2026.04.07-11";
 const dataLoadTimestamps = {
   realtime: 0
 };
@@ -1555,57 +1555,6 @@ async function openDashboardPanel() {
 }
 
 
-function hexToRgb(hexValue) {
-  const normalized = (hexValue || "").replace("#", "").trim();
-  if (normalized.length !== 6) return [17, 24, 39];
-  return [
-    Number.parseInt(normalized.slice(0, 2), 16),
-    Number.parseInt(normalized.slice(2, 4), 16),
-    Number.parseInt(normalized.slice(4, 6), 16)
-  ];
-}
-
-function fileToDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result?.toString() || "");
-    reader.onerror = () => reject(reader.error || new Error("Bestand kon niet gelezen worden"));
-    reader.readAsDataURL(file);
-  });
-}
-
-async function loadImageAsDataUrl(src) {
-  try {
-    const response = await fetch(src, { cache: "force-cache" });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const blob = await response.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    try {
-      const image = await new Promise((resolve, reject) => {
-        const element = new Image();
-        element.onload = () => resolve(element);
-        element.onerror = () => reject(new Error("Afbeelding kon niet worden geladen"));
-        element.src = objectUrl;
-      });
-
-      const canvas = document.createElement("canvas");
-      canvas.width = image.naturalWidth || image.width;
-      canvas.height = image.naturalHeight || image.height;
-      const context = canvas.getContext("2d");
-      if (!context) throw new Error("Canvas-context niet beschikbaar");
-
-      context.fillStyle = "#ffffff";
-      context.fillRect(0, 0, canvas.width, canvas.height);
-      context.drawImage(image, 0, 0);
-      return canvas.toDataURL("image/jpeg", 0.92);
-    } finally {
-      URL.revokeObjectURL(objectUrl);
-    }
-  } catch (_) {
-    return null;
-  }
-}
-
 async function loadJsPdfLibrary() {
   if (window.jspdf?.jsPDF) return window.jspdf.jsPDF;
   if (jsPdfLoadPromise) return jsPdfLoadPromise;
@@ -1642,14 +1591,6 @@ async function loadHtml2CanvasLibrary() {
   });
 
   return html2CanvasLoadPromise;
-}
-
-function drawPdfRoundedCard(doc, x, y, w, h, fillHex, strokeHex) {
-  const [fillR, fillG, fillB] = hexToRgb(fillHex);
-  const [strokeR, strokeG, strokeB] = hexToRgb(strokeHex);
-  doc.setFillColor(fillR, fillG, fillB);
-  doc.setDrawColor(strokeR, strokeG, strokeB);
-  doc.roundedRect(x, y, w, h, 5, 5, "FD");
 }
 
 function buildBusPdfHtml(bus, vehicleId, themeKey = "geel") {
@@ -3700,6 +3641,34 @@ function parseCSVLine(line, delimiter = ','){
   return fields.map(f => f.trim().replace(/^"|"$/g, ''));
 }
 
+function parseDelimitedTable(text, options = {}) {
+  const {
+    delimiter = ",",
+    commentPrefix = "",
+    sourceLabel = "bestand"
+  } = options;
+  const lines = String(text || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && (!commentPrefix || !line.startsWith(commentPrefix)));
+
+  if (!lines.length) {
+    throw new Error(`${sourceLabel} bevat geen bruikbare gegevens`);
+  }
+
+  const headers = parseCSVLine(lines[0], delimiter).map((header) => header.trim());
+  const rows = lines.slice(1).map((line) => {
+    const values = parseCSVLine(line, delimiter);
+    const record = {};
+    headers.forEach((header, index) => {
+      record[header] = values[index] || "/";
+    });
+    return record;
+  });
+
+  return { headers, rows };
+}
+
 // Helper: normalize ids/strings for matching
 const normalize = s => (s||"").toString().replace(/"/g, "").trim();
 function isHiddenAlphaVehicleId(value = "") {
@@ -4358,19 +4327,16 @@ async function laadVoertuigen() {
     const res = await fetchWithTimeout(`${BASE_URL}/vehicles.txt`, { cache: "no-store" });
     const text = await res.text();
     vehiclesSourceUpdatedAt = parseVehiclesSourceUpdatedAt(text);
-    const regels = text
-      .split(/\r?\n/)
-      .map((regel) => regel.trim())
-      .filter((regel) => regel && !regel.startsWith("#"));
-    const headers = parseCSVLine(regels[0], ";").map((header) => header.trim());
+    const { headers, rows } = parseDelimitedTable(text, {
+      delimiter: ";",
+      commentPrefix: "#",
+      sourceLabel: "vehicles.txt"
+    });
     vehiclePlateFieldKey = "Nummerplaat";
     oldVehicleNumbersFieldKey = "Oude voertuignummers";
     oldLicensePlatesFieldKey = "Oude nummerplaten";
     vehicleHideVinFieldKey = "hide-vin";
-
-    voertuigen = regels.slice(1)
-      .filter((regel) => regel.trim())
-      .map((regel) => mapVehicleRecord(headers, parseCSVLine(regel, ";")));
+    voertuigen = rows.map((record) => mapVehicleRecord(headers, headers.map((header) => record[header] || "/")));
     rebuildVehicleIndexes();
     renderFavorites();
   })();
@@ -4385,29 +4351,21 @@ async function laadTrips() {
   if (trips.length) return;
   if (tripsLoadPromise) return tripsLoadPromise;
   tripsLoadPromise = (async () => {
-  const res = await fetchWithTimeout(`${BASE_URL}/trips.txt`, { cache: "no-store" });
-  const text = await res.text();
-  const regels = text.trim().split(/\r?\n/);
-  const headers = parseCSVLine(regels[0]).map(h => h.trim());
+    const res = await fetchWithTimeout(`${BASE_URL}/trips.txt`, { cache: "no-store" });
+    const text = await res.text();
+    trips = parseDelimitedTable(text, { sourceLabel: "trips.txt" }).rows;
 
-  trips = regels.slice(1).map(r => {
-    const values = parseCSVLine(r);
-    const obj = {};
-    headers.forEach((h, i) => obj[h] = values[i] || "/");
-    return obj;
-  });
-
-  tripsById.clear();
-  tripsByRouteId.clear();
-  tripsByRouteKey.clear();
-  trips.forEach((trip) => {
-    const tripId = normalize(trip.trip_id);
-    if (tripId) tripsById.set(tripId, trip);
-    const routeId = normalize(trip.route_id);
-    addTripToLookup(tripsByRouteId, routeId, trip);
-    const routeKey = getRouteKey(routeId);
-    addTripToLookup(tripsByRouteKey, routeKey, trip);
-  });
+    tripsById.clear();
+    tripsByRouteId.clear();
+    tripsByRouteKey.clear();
+    trips.forEach((trip) => {
+      const tripId = normalize(trip.trip_id);
+      if (tripId) tripsById.set(tripId, trip);
+      const routeId = normalize(trip.route_id);
+      addTripToLookup(tripsByRouteId, routeId, trip);
+      const routeKey = getRouteKey(routeId);
+      addTripToLookup(tripsByRouteKey, routeKey, trip);
+    });
   })();
   try {
     await tripsLoadPromise;
@@ -4420,26 +4378,18 @@ async function laadRoutes() {
   if (routes.length) return;
   if (routesLoadPromise) return routesLoadPromise;
   routesLoadPromise = (async () => {
-  const res = await fetchWithTimeout(`${BASE_URL}/routes.txt`, { cache: "no-store" });
-  const text = await res.text();
-  const regels = text.trim().split(/\r?\n/);
-  const headers = parseCSVLine(regels[0]).map(h => h.trim());
+    const res = await fetchWithTimeout(`${BASE_URL}/routes.txt`, { cache: "no-store" });
+    const text = await res.text();
+    routes = parseDelimitedTable(text, { sourceLabel: "routes.txt" }).rows;
 
-  routes = regels.slice(1).map(r => {
-    const values = parseCSVLine(r);
-    const obj = {};
-    headers.forEach((h, i) => obj[h] = values[i] || "/");
-    return obj;
-  });
-
-  routesById.clear();
-  routesByKey.clear();
-  routes.forEach((route) => {
-    const routeId = normalize(route.route_id);
-    if (routeId) routesById.set(routeId, route);
-    const routeKey = getRouteKey(routeId);
-    if (routeKey && !routesByKey.has(routeKey)) routesByKey.set(routeKey, route);
-  });
+    routesById.clear();
+    routesByKey.clear();
+    routes.forEach((route) => {
+      const routeId = normalize(route.route_id);
+      if (routeId) routesById.set(routeId, route);
+      const routeKey = getRouteKey(routeId);
+      if (routeKey && !routesByKey.has(routeKey)) routesByKey.set(routeKey, route);
+    });
   })();
   try {
     await routesLoadPromise;
@@ -4452,25 +4402,17 @@ async function laadStops() {
   if (stopsById.size) return;
   if (stopsLoadPromise) return stopsLoadPromise;
   stopsLoadPromise = (async () => {
-  const res = await fetchWithTimeout(`${BASE_URL}/stops.txt`, { cache: "no-store" });
-  const text = await res.text();
-  const regels = text.trim().split(/\r?\n/);
-  const headers = parseCSVLine(regels[0]).map(h => h.trim());
+    const res = await fetchWithTimeout(`${BASE_URL}/stops.txt`, { cache: "no-store" });
+    const text = await res.text();
+    stops = parseDelimitedTable(text, { sourceLabel: "stops.txt" }).rows;
 
-  stops = regels.slice(1).map(r => {
-    const values = parseCSVLine(r);
-    const obj = {};
-    headers.forEach((h, i) => obj[h] = values[i] || "/");
-    return obj;
-  });
-
-  stopsById.clear();
-  stops.forEach((stop) => {
-    const stopId = normalize(stop.stop_id);
-    const stopCode = normalize(stop.stop_code);
-    if (stopId) stopsById.set(stopId, stop);
-    if (stopCode) stopsById.set(stopCode, stop);
-  });
+    stopsById.clear();
+    stops.forEach((stop) => {
+      const stopId = normalize(stop.stop_id);
+      const stopCode = normalize(stop.stop_code);
+      if (stopId) stopsById.set(stopId, stop);
+      if (stopCode) stopsById.set(stopCode, stop);
+    });
   })();
   try {
     await stopsLoadPromise;

@@ -1,9 +1,9 @@
-const CACHE_NAME = 'busbibliotheek-v41';
+const CACHE_NAME = 'busbibliotheek-v42';
 const CORE_ASSETS = [
   '/',
   '/index.html',
   '/app.js',
-  '/app.js?v=20260407-10',
+  '/app.js?v=20260407-11',
   '/manifest.json',
   '/style.css',
   '/style.css?v=20260407-7',
@@ -11,9 +11,9 @@ const CORE_ASSETS = [
   '/translations.js?v=20260218-1',
   '/photo-descriptions.json',
   '/media/logo.png',
-  '/media/logo.png',
   '/media/navicon.png',
-  '/media/hansea.png'
+  '/media/hansea.png',
+  '/media/favicon.ico'
 ];
 const OPTIONAL_ASSETS = [
   'https://unpkg.com/leaflet/dist/leaflet.css',

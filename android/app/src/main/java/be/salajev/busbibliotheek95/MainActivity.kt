@@ -51,9 +51,6 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import java.io.File
-import java.io.FileOutputStream
-import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.time.LocalDate
@@ -163,13 +160,16 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun observeConnectivity(context: Context): Flow<Boolean> = callbackFlow {
-        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val connectivityManager = context.getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
         val callback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) { trySend(true) }
             override fun onLost(network: Network) { trySend(false) }
             override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
                 val hasInternet = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-                        capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                        (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            @Suppress("InlinedApi")
+                            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                        } else true)
                 trySend(hasInternet)
             }
         }
@@ -364,7 +364,14 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color) 
                                     }
                                 }
                                 
-                                val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+                                val downloadsUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                    @Suppress("InlinedApi")
+                                    MediaStore.Downloads.EXTERNAL_CONTENT_URI
+                                } else {
+                                    MediaStore.Files.getContentUri("external")
+                                }
+                                
+                                val uri = resolver.insert(downloadsUri, contentValues)
                                 uri?.let {
                                     resolver.openOutputStream(it).use { outputStream ->
                                         outputStream?.write(bytes)
