@@ -1,9 +1,9 @@
-const CACHE_NAME = 'busbibliotheek-v32';
+const CACHE_NAME = 'busbibliotheek-v33';
 const CORE_ASSETS = [
   '/',
   '/index.html',
   '/app.js',
-  '/app.js?v=20260407-1',
+  '/app.js?v=20260407-2',
   '/manifest.json',
   '/style.css',
   '/style.css?v=20260407-1',
@@ -74,6 +74,16 @@ self.addEventListener('fetch', event => {
   }
 
   if (request.method !== 'GET') {
+    return;
+  }
+
+  const isUncachedVehiclePhotoRequest =
+    url.origin === self.location.origin &&
+    url.pathname.startsWith('/media/') &&
+    !['/media/logo.png', '/media/navicon.png', '/media/hansea.png', '/media/favicon.ico', '/media/logo.svg'].includes(url.pathname);
+
+  if (isUncachedVehiclePhotoRequest) {
+    event.respondWith(fetch(request, { cache: 'no-store' }).catch(() => offlineTextResponse));
     return;
   }
 

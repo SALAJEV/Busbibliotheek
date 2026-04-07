@@ -354,7 +354,7 @@ const INACTIVITY_CHECK_MS = 15000;
 let lastUserInteractionAt = Date.now();
 let realtimePausedByInactivity = false;
 let deeplinkHandled = false;
-const APP_VERSION = "2026.04.06-1";
+const APP_VERSION = "2026.04.07-2";
 const dataLoadTimestamps = {
   vehicles: 0,
   trips: 0,
@@ -1908,8 +1908,14 @@ function probePhotoEntry(entry) {
     probe.loading = "eager";
     probe.onload = () => resolve(entry);
     probe.onerror = () => resolve(null);
-    probe.src = entry.src;
+    probe.src = buildVehiclePhotoRequestUrl(entry.src);
   });
+}
+
+function buildVehiclePhotoRequestUrl(src) {
+  if (!src) return "";
+  const separator = src.includes("?") ? "&" : "?";
+  return `${src}${separator}v=${encodeURIComponent(APP_VERSION)}&t=${Date.now()}`;
 }
 
 async function resolveVehiclePhotoEntries(vehicleId) {
@@ -1966,7 +1972,7 @@ function renderActiveVehiclePhoto() {
   currentVehiclePhotoIndex = safeIndex;
   const activeEntry = currentVehiclePhotoEntries[safeIndex];
   const copy = buildVehiclePhotoCopy(activeEntry, currentPhotoVehicleId);
-  vehiclePhotoImgEl.src = activeEntry.src;
+  vehiclePhotoImgEl.src = buildVehiclePhotoRequestUrl(activeEntry.src);
   vehiclePhotoImgEl.alt = copy.alt;
   vehiclePhotoCaptionEl.textContent = copy.caption;
   vehiclePhotoCaptionEl.hidden = !copy.caption;
