@@ -352,7 +352,7 @@ const INACTIVITY_CHECK_MS = 15000;
 let lastUserInteractionAt = Date.now();
 let realtimePausedByInactivity = false;
 let deeplinkHandled = false;
-const APP_VERSION = "2026.04.07-12";
+const APP_VERSION = "2026.04.07-16";
 const dataLoadTimestamps = {
   realtime: 0
 };
@@ -378,6 +378,69 @@ let lastWeatherFetchedAt = 0;
 let activeVehicleSuggestionInput = null;
 let favoriteDragState = null;
 let favoriteDragSuppressUntil = 0;
+const overlayModalElements = [];
+
+function registerOverlayModal(modalEl) {
+  if (!modalEl || overlayModalElements.includes(modalEl)) return;
+  overlayModalElements.push(modalEl);
+}
+
+[
+  pdfModalEl,
+  compareModalEl,
+  dashboardSetupModalEl,
+  infoModalEl,
+  halteSearchModalEl,
+  reviewModalEl,
+  termsModalEl,
+  weatherModalEl,
+  funnyModalEl
+].forEach(registerOverlayModal);
+
+function syncOverlayModalBodyState() {
+  const hasPdfStyleModalOpen = overlayModalElements.some((modalEl) =>
+    modalEl &&
+    !modalEl.hidden &&
+    modalEl !== funnyModalEl
+  );
+  const hasFunnyModalOpen = Boolean(funnyModalEl && !funnyModalEl.hidden);
+  document.body.classList.toggle("pdf-modal-open", hasPdfStyleModalOpen);
+  document.body.classList.toggle("funny-open", hasFunnyModalOpen);
+}
+
+function openOverlayModal(modalEl, options = {}) {
+  if (!modalEl) return;
+  const {
+    focusTarget = null,
+    closeMenu = true
+  } = options;
+  if (closeMenu) setFavoritesPanel(false);
+  modalEl.hidden = false;
+  modalEl.setAttribute("aria-hidden", "false");
+  modalEl.classList.add("is-open");
+  modalEl.style.display = "grid";
+  syncOverlayModalBodyState();
+  window.requestAnimationFrame(() => {
+    const nextFocusTarget =
+      focusTarget instanceof HTMLElement
+        ? focusTarget
+        : modalEl.querySelector("button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])");
+    if (nextFocusTarget instanceof HTMLElement) {
+      window.setTimeout(() => nextFocusTarget.focus({ preventScroll: true }), 30);
+    }
+  });
+}
+
+function closeOverlayModal(modalEl, options = {}) {
+  if (!modalEl) return;
+  const { onAfterClose = null } = options;
+  modalEl.classList.remove("is-open");
+  modalEl.setAttribute("aria-hidden", "true");
+  modalEl.style.removeProperty("display");
+  modalEl.hidden = true;
+  syncOverlayModalBodyState();
+  if (typeof onAfterClose === "function") onAfterClose();
+}
 let dashboardSetupValidation = [];
 let dashboardSetupDraftValues = [];
 let dashboardSetupDraftResolvedIds = [];
@@ -397,6 +460,7 @@ const platformUserAgent = window.navigator.userAgent || "";
 const isAndroidPlatform = /Android/i.test(platformUserAgent);
 const isAndroidWebView = isAndroidPlatform && /\bwv\b|Version\/[\d.]+/i.test(platformUserAgent);
 const isAndroidTvPlatform = isAndroidPlatform && /(TV|AFT|BRAVIA|GoogleTV|SmartTV|HbbTV)/i.test(platformUserAgent);
+let androidHostThemeMode = (document.documentElement.dataset.androidTheme || "").toLowerCase();
 const touchPointerMediaQuery = window.matchMedia ? window.matchMedia("(hover: none), (pointer: coarse)") : null;
 touchPointerMediaQuery?.addEventListener?.("change", syncPlatformBodyClasses);
 const HALTE_CODE_REGEX = /^[1-5]\d{5}$/;
@@ -702,30 +766,22 @@ function showInfoModal() {
       `).join("")}
     </div>
   `;
-  infoModalEl.hidden = false;
-  document.body.classList.add("pdf-modal-open");
+  openOverlayModal(infoModalEl, { focusTarget: infoModalCloseBtn });
 }
 
 function hideInfoModal() {
-  if (!infoModalEl) return;
-  infoModalEl.hidden = true;
-  document.body.classList.remove("pdf-modal-open");
+  closeOverlayModal(infoModalEl);
 }
 
 function showHalteSearchModal() {
   if (!halteSearchModalEl) return;
-  setFavoritesPanel(false);
   window.requestAnimationFrame(() => {
-    halteSearchModalEl.hidden = false;
-    document.body.classList.add("pdf-modal-open");
-    window.setTimeout(() => haltecodeInputEl?.focus(), 20);
+    openOverlayModal(halteSearchModalEl, { focusTarget: haltecodeInputEl });
   });
 }
 
 function hideHalteSearchModal() {
-  if (!halteSearchModalEl) return;
-  halteSearchModalEl.hidden = true;
-  document.body.classList.remove("pdf-modal-open");
+  closeOverlayModal(halteSearchModalEl);
 }
 
 function showReviewModal() {
@@ -740,14 +796,11 @@ function showReviewModal() {
     return;
   }
 
-  reviewModalEl.hidden = false;
-  document.body.classList.add("pdf-modal-open");
+  openOverlayModal(reviewModalEl, { focusTarget: reviewModalCloseBtn });
 }
 
 function hideReviewModal() {
-  if (!reviewModalEl) return;
-  reviewModalEl.hidden = true;
-  document.body.classList.remove("pdf-modal-open");
+  closeOverlayModal(reviewModalEl);
 }
 
 function renderTermsModalContent() {
@@ -783,14 +836,11 @@ function renderTermsModalContent() {
 function showTermsModal() {
   if (!termsModalEl) return;
   renderTermsModalContent();
-  termsModalEl.hidden = false;
-  document.body.classList.add("pdf-modal-open");
+  openOverlayModal(termsModalEl, { focusTarget: termsModalCloseBtn });
 }
 
 function hideTermsModal() {
-  if (!termsModalEl) return;
-  termsModalEl.hidden = true;
-  document.body.classList.remove("pdf-modal-open");
+  closeOverlayModal(termsModalEl);
 }
 
 function updateUrlState() {
@@ -934,16 +984,12 @@ function showPdfModal(vehicleId) {
     const owner = getVehicleField(bus, "Eigenaar") || "-";
     pdfModalSummaryEl.textContent = `${getVehicleDisplayId(bus) || bus.Voertuignummer} · ${bus.Type || getLabel("unknownType", "Onbekend type")} · ${owner}`;
   }
-  if (!pdfModalEl) return;
-  pdfModalEl.hidden = false;
-  document.body.classList.add("pdf-modal-open");
+  openOverlayModal(pdfModalEl, { focusTarget: pdfModalCloseBtn });
 }
 
 function hidePdfModal() {
   pdfModalVehicleId = "";
-  if (!pdfModalEl) return;
-  pdfModalEl.hidden = true;
-  document.body.classList.remove("pdf-modal-open");
+  closeOverlayModal(pdfModalEl);
 }
 
 function showCompareModal() {
@@ -951,12 +997,10 @@ function showCompareModal() {
   compareEditTarget = "compare";
   compareVehicleInputEl.value = "";
   setVehicleInputResolvedId(compareVehicleInputEl, "");
-  compareModalEl.hidden = false;
-  document.body.classList.add("pdf-modal-open");
+  openOverlayModal(compareModalEl, { focusTarget: compareVehicleInputEl });
   bindVehicleSuggestions(compareVehicleInputEl, () => {
     compareModalConfirmBtn?.click();
   });
-  window.setTimeout(() => compareVehicleInputEl?.focus(), 20);
 }
 
 function showComparePicker(target = "compare") {
@@ -965,8 +1009,7 @@ function showComparePicker(target = "compare") {
   const initialVehicleId = compareEditTarget === "base" ? currentVehicleId : (compareVehicleId || "");
   compareVehicleInputEl.value = getVehicleDisplayId(initialVehicleId);
   setVehicleInputResolvedId(compareVehicleInputEl, initialVehicleId);
-  compareModalEl.hidden = false;
-  document.body.classList.add("pdf-modal-open");
+  openOverlayModal(compareModalEl, { focusTarget: compareVehicleInputEl });
   bindVehicleSuggestions(compareVehicleInputEl, () => {
     compareModalConfirmBtn?.click();
   });
@@ -977,9 +1020,7 @@ function showComparePicker(target = "compare") {
 }
 
 function hideCompareModal() {
-  if (!compareModalEl) return;
-  compareModalEl.hidden = true;
-  document.body.classList.remove("pdf-modal-open");
+  closeOverlayModal(compareModalEl);
 }
 
 function clearComparison() {
@@ -1231,16 +1272,15 @@ function showDashboardSetupModal() {
   dashboardSetupDraftResolvedIds = Array.from({ length: DASHBOARD_MAX_VEHICLES }, (_, index) => dashboardVehicleIds[index] || "");
   setDashboardSetupError("");
   renderDashboardSetupInputs();
-  dashboardSetupModalEl.hidden = false;
-  document.body.classList.add("pdf-modal-open");
+  openOverlayModal(dashboardSetupModalEl, {
+    focusTarget: dashboardSetupGridEl?.querySelector("input") || dashboardSetupCloseBtn,
+    closeMenu: false
+  });
   document.body.classList.add("dashboard-setup-open");
-  window.setTimeout(() => dashboardSetupGridEl?.querySelector("input")?.focus(), 20);
 }
 
 function hideDashboardSetupModal() {
-  if (!dashboardSetupModalEl) return;
-  dashboardSetupModalEl.hidden = true;
-  document.body.classList.remove("pdf-modal-open");
+  closeOverlayModal(dashboardSetupModalEl);
   document.body.classList.remove("dashboard-setup-open");
   dashboardSetupValidation = [];
   dashboardSetupDraftValues = [];
@@ -2295,14 +2335,11 @@ function renderWeatherModal(weatherData, latitude, longitude) {
 function showWeatherModal() {
   if (!weatherModalEl || !lastWeatherData || !lastWeatherCoordinates) return;
   renderWeatherModal(lastWeatherData, lastWeatherCoordinates.latitude, lastWeatherCoordinates.longitude);
-  weatherModalEl.hidden = false;
-  document.body.classList.add("pdf-modal-open");
+  openOverlayModal(weatherModalEl, { focusTarget: weatherModalCloseBtn });
 }
 
 function hideWeatherModal() {
-  if (!weatherModalEl) return;
-  weatherModalEl.hidden = true;
-  document.body.classList.remove("pdf-modal-open");
+  closeOverlayModal(weatherModalEl);
 }
 
 function renderWeatherBlock(weatherData, latitude, longitude) {
@@ -2326,11 +2363,11 @@ function renderWeatherBlock(weatherData, latitude, longitude) {
         <div class="weather-copy">
           <div class="weather-headline-row">
             <strong class="weather-title">${escapeHtml(presentation.label)}</strong>
-            <span class="weather-temperature weather-temperature--inline">${escapeHtml(temperature)}</span>
           </div>
           <span class="weather-source">${escapeHtml(getLabel("weatherSource", "Tik voor meer weerinfo"))}</span>
           <span class="weather-source weather-source-meta">${escapeHtml(getWeatherSourceText())}</span>
         </div>
+        <span class="weather-temperature weather-temperature--inline" aria-hidden="true">${escapeHtml(temperature)}</span>
         <span class="weather-card-chevron" aria-hidden="true">${getWeatherIconMarkup("arrow", "weather-svg--arrow")}</span>
       </div>
     </button>
@@ -2418,6 +2455,9 @@ function applyTheme(theme) {
 function getResolvedThemeMode() {
   if (settings.theme === "dark") return "dark";
   if (settings.theme === "light") return "light";
+  if (isAndroidWebView && (androidHostThemeMode === "dark" || androidHostThemeMode === "light")) {
+    return androidHostThemeMode;
+  }
   return prefersDarkScheme.matches ? "dark" : "light";
 }
 
@@ -2932,15 +2972,11 @@ function setFavoritesPanel(open) {
 }
 
 function showFunnyModal() {
-  if (!funnyModalEl) return;
-  funnyModalEl.hidden = false;
-  document.body.classList.add("funny-open");
+  openOverlayModal(funnyModalEl, { focusTarget: funnyModalCloseBtn });
 }
 
 function hideFunnyModal() {
-  if (!funnyModalEl) return;
-  funnyModalEl.hidden = true;
-  document.body.classList.remove("funny-open");
+  closeOverlayModal(funnyModalEl);
 }
 
 function triggerDirectDownload(url, fileName) {
@@ -5099,3 +5135,12 @@ if (prefersColorScheme?.addEventListener) {
     }
   });
 }
+
+window.addEventListener("bb-android-theme-change", (event) => {
+  const detailTheme = event?.detail?.theme;
+  androidHostThemeMode = typeof detailTheme === "string" ? detailTheme.toLowerCase() : "";
+  if (settings.theme === "auto") {
+    applyTheme("auto");
+    updateSystemUiThemeColor();
+  }
+});

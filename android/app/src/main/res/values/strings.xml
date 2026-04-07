@@ -13,4 +13,10 @@
     <string name="download_started">Download gestart...</string>
     <string name="download_failed">Download mislukt</string>
     <string name="cancel">Annuleren</string>
+    <string name="update_available_title">Update Beschikbaar</string>
+    <string name="update_available_text">Er is een nieuwe versie van de Busbibliotheek app beschikbaar.</string>
+    <string name="update_required_title">Update Verplicht</string>
+    <string name="update_required_text">Je app is meer dan 3 maanden verouderd en moet geüpdatet worden om verder te kunnen gaan.</string>
+    <string name="update_now">Update Nu</string>
+    <string name="later">Later</string>
 </resources>

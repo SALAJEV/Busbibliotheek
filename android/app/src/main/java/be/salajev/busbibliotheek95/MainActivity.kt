@@ -44,6 +44,9 @@ import androidx.core.content.ContextCompat
 import androidx.core.graphics.toColorInt
 import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import be.salajev.busbibliotheek95.ui.theme.Busbibliotheek95Theme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
@@ -110,7 +113,7 @@ class MainActivity : ComponentActivity() {
                     launcher.launch(permissionsToRequest)
                 }
 
-                val siteColor = if (isDarkTheme) Color(0xFF121212) else Color(0xFFFFFFFF)
+                val siteColor = if (isDarkTheme) Color(0xFF07111F) else Color(0xFFF3F6FB)
                 
                 SideEffect {
                     val window = (context as Activity).window
@@ -147,7 +150,8 @@ class MainActivity : ComponentActivity() {
                                 WebViewScreen(
                                     url = startUrl,
                                     modifier = Modifier.fillMaxSize(),
-                                    siteColor = siteColor
+                                    siteColor = siteColor,
+                                    isDarkTheme = isDarkTheme
                                 )
                                 
                                 if (updateStatus is UpdateStatus.Available) {
@@ -263,28 +267,28 @@ sealed class UpdateStatus {
 fun UpdateDialog(isCritical: Boolean, onUpdate: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = { if (!isCritical) onDismiss() },
-        title = { Text(text = if (isCritical) "Update Verplicht" else "Update Beschikbaar") },
+        title = { Text(text = if (isCritical) stringResource(R.string.update_required_title) else stringResource(R.string.update_available_title)) },
         text = { 
             Text(text = if (isCritical) 
-                "Je app is meer dan 3 maanden verouderd en moet geüpdatet worden om verder te kunnen gaan." 
-                else "Er is een nieuwe versie van de Busbibliotheek app beschikbaar.") 
+                stringResource(R.string.update_required_text)
+                else stringResource(R.string.update_available_text)) 
         },
         confirmButton = { 
-            Button(onClick = onUpdate) { Text(text = "Update Nu") } 
+            Button(onClick = onUpdate) { Text(text = stringResource(R.string.update_now)) } 
         },
         dismissButton = {
             if (!isCritical) {
-                TextButton(onClick = onDismiss) { Text(text = "Later") }
+                TextButton(onClick = onDismiss) { Text(text = stringResource(R.string.later)) }
             }
         }
     )
 }
 
 @Composable
-fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color) {
+fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color, isDarkTheme: Boolean) {
     var webViewInstance: WebView? by remember { mutableStateOf(null) }
-    val isDarkTheme = isSystemInDarkTheme()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val leavingAppMessage = stringResource(id = R.string.leaving_app)
     
     var progress by remember { mutableFloatStateOf(0f) }
@@ -296,6 +300,20 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color) 
     ) { uri: Uri? ->
         filePathCallback?.onReceiveValue(uri?.let { arrayOf(it) })
         filePathCallback = null
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> webViewInstance?.onResume()
+                Lifecycle.Event.ON_PAUSE -> webViewInstance?.onPause()
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     BackHandler {
@@ -317,6 +335,9 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color) 
             factory = { ctx ->
                 WebView(ctx).apply {
                     setBackgroundColor(siteColor.toArgb())
+                    isFocusable = true
+                    isFocusableInTouchMode = true
+                    requestFocus(View.FOCUS_DOWN)
                     isVerticalScrollBarEnabled = false
                     isHorizontalScrollBarEnabled = false
                     overScrollMode = View.OVER_SCROLL_NEVER
@@ -328,6 +349,8 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color) 
                         @Suppress("SetJavaScriptEnabled")
                         javaScriptEnabled = true
                         domStorageEnabled = true
+                        @Suppress("DEPRECATION")
+                        databaseEnabled = true
                         cacheMode = WebSettings.LOAD_DEFAULT
                         loadWithOverviewMode = true
                         useWideViewPort = true
@@ -510,6 +533,9 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color) 
                                     ".install-app-button, #install-banner { display: none !important; }';" +
                                     "document.head.appendChild(style);" +
                                     "})()")
+                            view?.post {
+                                applyWebAppTheme(view, isDarkTheme)
+                            }
                         }
                         override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
                             // Handled by observeConnectivity in Scaffold
@@ -520,7 +546,10 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color) 
                 }
             },
             modifier = Modifier.fillMaxSize(),
-            update = { view -> updateDarkMode(view, isDarkTheme) }
+            update = { view ->
+                updateDarkMode(view, isDarkTheme)
+                applyWebAppTheme(view, isDarkTheme)
+            }
         )
 
         if (progress < 1.0f) {
@@ -536,9 +565,21 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color) 
 
 private fun updateDarkMode(webView: WebView, isDarkTheme: Boolean) {
     if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
-        WebSettingsCompat.setAlgorithmicDarkeningAllowed(webView.settings, isDarkTheme)
+        WebSettingsCompat.setAlgorithmicDarkeningAllowed(webView.settings, false)
     }
-    webView.setBackgroundColor(if (isDarkTheme) "#121212".toColorInt() else android.graphics.Color.WHITE)
+    webView.setBackgroundColor(if (isDarkTheme) "#07111F".toColorInt() else "#F3F6FB".toColorInt())
+}
+
+private fun applyWebAppTheme(webView: WebView, isDarkTheme: Boolean) {
+    val theme = if (isDarkTheme) "dark" else "light"
+    val script = """
+        (function() {
+          document.documentElement.dataset.androidTheme = '$theme';
+          document.documentElement.classList.add('android-host-app');
+          window.dispatchEvent(new CustomEvent('bb-android-theme-change', { detail: { theme: '$theme' } }));
+        })();
+    """.trimIndent()
+    webView.evaluateJavascript(script, null)
 }
 
 private fun getAppVersion(context: Context): String {
