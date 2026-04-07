@@ -21,7 +21,6 @@ import android.provider.Settings
 import android.view.View
 import android.webkit.*
 import android.widget.Toast
-import be.salajev.busbibliotheek95.R
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -177,10 +176,7 @@ class MainActivity : ComponentActivity() {
             override fun onLost(network: Network) { trySend(false) }
             override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
                 val hasInternet = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-                        (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                            @Suppress("InlinedApi")
-                            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-                        } else true)
+                        capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
                 trySend(hasInternet)
             }
         }
@@ -244,17 +240,10 @@ class MainActivity : ComponentActivity() {
 
     private fun isNetworkAvailable(context: Context): Boolean {
         val connectivityManager = ContextCompat.getSystemService(context, ConnectivityManager::class.java) ?: return false
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val network = connectivityManager.activeNetwork ?: return false
-            val activeNetwork = connectivityManager.getNetworkCapabilities(network) ?: return false
-            return activeNetwork.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-                    activeNetwork.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-        } else {
-            @Suppress("DEPRECATION")
-            val networkInfo = connectivityManager.activeNetworkInfo
-            @Suppress("DEPRECATION")
-            return networkInfo != null && networkInfo.isConnected
-        }
+        val network = connectivityManager.activeNetwork ?: return false
+        val activeNetwork = connectivityManager.getNetworkCapabilities(network) ?: return false
+        return activeNetwork.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                activeNetwork.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 }
 
@@ -268,18 +257,18 @@ sealed class UpdateStatus {
 fun UpdateDialog(isCritical: Boolean, onUpdate: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = { if (!isCritical) onDismiss() },
-        title = { Text(text = if (isCritical) stringResource(be.salajev.busbibliotheek95.R.string.update_required_title) else stringResource(be.salajev.busbibliotheek95.R.string.update_available_title)) },
+        title = { Text(text = if (isCritical) stringResource(R.string.update_required_title) else stringResource(R.string.update_available_title)) },
         text = { 
             Text(text = if (isCritical) 
-                stringResource(be.salajev.busbibliotheek95.R.string.update_required_text)
-                else stringResource(be.salajev.busbibliotheek95.R.string.update_available_text)) 
+                stringResource(R.string.update_required_text)
+                else stringResource(R.string.update_available_text)) 
         },
         confirmButton = { 
-            Button(onClick = onUpdate) { Text(text = stringResource(be.salajev.busbibliotheek95.R.string.update_now)) } 
+            Button(onClick = onUpdate) { Text(text = stringResource(R.string.update_now)) } 
         },
         dismissButton = {
             if (!isCritical) {
-                TextButton(onClick = onDismiss) { Text(text = stringResource(be.salajev.busbibliotheek95.R.string.later)) }
+                TextButton(onClick = onDismiss) { Text(text = stringResource(R.string.later)) }
             }
         }
     )
@@ -290,7 +279,7 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color, 
     var webViewInstance: WebView? by remember { mutableStateOf(null) }
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val leavingAppMessage = stringResource(id = be.salajev.busbibliotheek95.R.string.leaving_app)
+    val leavingAppMessage = stringResource(id = R.string.leaving_app)
     
     var progress by remember { mutableFloatStateOf(0f) }
     var lastBackPressTime by remember { mutableLongStateOf(0L) }
@@ -326,7 +315,7 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color, 
                 (context as Activity).finish()
             } else {
                 lastBackPressTime = currentTime
-                Toast.makeText(context, context.getString(be.salajev.busbibliotheek95.R.string.exit_toast), Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.exit_toast), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -407,13 +396,13 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color, 
                                         outputStream?.write(bytes)
                                     }
                                     (context as Activity).runOnUiThread {
-                                        Toast.makeText(context, context.getString(be.salajev.busbibliotheek95.R.string.download_started), Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, context.getString(R.string.download_started), Toast.LENGTH_SHORT).show()
                                     }
                                 } ?: throw Exception("Failed to create MediaStore entry")
                                 
                             } catch (e: Exception) {
                                 (context as Activity).runOnUiThread {
-                                    Toast.makeText(context, context.getString(be.salajev.busbibliotheek95.R.string.download_failed), Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, context.getString(R.string.download_failed), Toast.LENGTH_SHORT).show()
                                 }
                             }
                         }
@@ -475,9 +464,9 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color, 
                         }
                         val fileName = URLUtil.guessFileName(downloadUrl, contentDisposition, mimetype)
                         android.app.AlertDialog.Builder(context)
-                            .setTitle(context.getString(be.salajev.busbibliotheek95.R.string.download_title))
-                            .setMessage(context.getString(be.salajev.busbibliotheek95.R.string.download_message, fileName))
-                            .setPositiveButton(context.getString(be.salajev.busbibliotheek95.R.string.download_button)) { _, _ ->
+                            .setTitle(context.getString(R.string.download_title))
+                            .setMessage(context.getString(R.string.download_message, fileName))
+                            .setPositiveButton(context.getString(R.string.download_button)) { _, _ ->
                                 try {
                                     val request = DownloadManager.Request(downloadUrl.toUri())
                                     request.setMimeType(mimetype)
@@ -487,12 +476,12 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color, 
                                     request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                                     request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
                                     ContextCompat.getSystemService(context, DownloadManager::class.java)?.enqueue(request)
-                                    Toast.makeText(context, context.getString(be.salajev.busbibliotheek95.R.string.download_started), Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, context.getString(R.string.download_started), Toast.LENGTH_SHORT).show()
                                 } catch (_: Exception) {
                                     context.startActivity(Intent(Intent.ACTION_VIEW, downloadUrl.toUri()))
                                 }
                             }
-                            .setNegativeButton(context.getString(be.salajev.busbibliotheek95.R.string.cancel), null)
+                            .setNegativeButton(context.getString(R.string.cancel), null)
                             .show()
                     }
 
@@ -598,9 +587,9 @@ private fun getAppVersion(context: Context): String {
 fun NoInternetDialog(onRetry: () -> Unit, onOpenSettings: () -> Unit) {
     AlertDialog(
         onDismissRequest = { },
-        title = { Text(text = stringResource(id = be.salajev.busbibliotheek95.R.string.no_internet_title)) },
-        text = { Text(text = stringResource(id = be.salajev.busbibliotheek95.R.string.no_internet_text)) },
-        confirmButton = { Button(onClick = onRetry) { Text(text = stringResource(id = be.salajev.busbibliotheek95.R.string.retry)) } },
-        dismissButton = { TextButton(onClick = onOpenSettings) { Text(text = stringResource(id = be.salajev.busbibliotheek95.R.string.settings)) } }
+        title = { Text(text = stringResource(id = R.string.no_internet_title)) },
+        text = { Text(text = stringResource(id = R.string.no_internet_text)) },
+        confirmButton = { Button(onClick = onRetry) { Text(text = stringResource(id = R.string.retry)) } },
+        dismissButton = { TextButton(onClick = onOpenSettings) { Text(text = stringResource(id = R.string.settings)) } }
     )
 }

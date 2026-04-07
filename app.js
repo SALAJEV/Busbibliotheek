@@ -343,6 +343,7 @@ let vehiclesSourceUpdatedAt = "";
 let vehiclePhotoLookupToken = 0;
 let vehiclePhotoDescriptions = null;
 let vehiclePhotoDescriptionsPromise = null;
+const photoCaptureDateCache = new Map();
 let vehiclePlateFieldKey = "";
 let oldVehicleNumbersFieldKey = "";
 let oldLicensePlatesFieldKey = "";
@@ -352,7 +353,7 @@ const INACTIVITY_CHECK_MS = 15000;
 let lastUserInteractionAt = Date.now();
 let realtimePausedByInactivity = false;
 let deeplinkHandled = false;
-const APP_VERSION = "2026.04.07-17";
+const APP_VERSION = "2026.04.07-18";
 const dataLoadTimestamps = {
   realtime: 0
 };
@@ -1763,6 +1764,110 @@ function formatPhotoMetaDate(rawValue) {
   return formatDateForUi(rawValue, { day: "numeric", month: "long", year: "numeric" });
 }
 
+function readExifTextValue(view, offset) {
+  if (!Number.isFinite(offset) || offset < 0 || offset >= view.byteLength) return "";
+  let end = offset;
+  while (end < view.byteLength && view.getUint8(end) !== 0) end += 1;
+  const bytes = new Uint8Array(view.buffer, view.byteOffset + offset, end - offset);
+  return new TextDecoder("ascii").decode(bytes).trim();
+}
+
+function parseExifDateFromArrayBuffer(buffer) {
+  try {
+    const view = new DataView(buffer);
+    if (view.byteLength < 4 || view.getUint16(0, false) !== 0xFFD8) return "";
+    let offset = 2;
+
+    const readIfd = (viewRef, tiffOffset, dirOffset, littleEndian) => {
+      const absoluteDirOffset = tiffOffset + dirOffset;
+      if (absoluteDirOffset + 2 > viewRef.byteLength) return { date: "", exifPointer: 0 };
+      const entryCount = viewRef.getUint16(absoluteDirOffset, littleEndian);
+      let exifPointer = 0;
+
+      for (let index = 0; index < entryCount; index += 1) {
+        const entryOffset = absoluteDirOffset + 2 + index * 12;
+        if (entryOffset + 12 > viewRef.byteLength) break;
+        const tag = viewRef.getUint16(entryOffset, littleEndian);
+        const type = viewRef.getUint16(entryOffset + 2, littleEndian);
+        const count = viewRef.getUint32(entryOffset + 4, littleEndian);
+        const valueOffset = viewRef.getUint32(entryOffset + 8, littleEndian);
+        if (tag === 0x8769) exifPointer = valueOffset;
+        if (type !== 2 || !count) continue;
+        const textOffset = count <= 4 ? entryOffset + 8 : tiffOffset + valueOffset;
+        if (tag === 0x0132 || tag === 0x9003 || tag === 0x9004) {
+          const rawValue = readExifTextValue(viewRef, textOffset);
+          const normalizedValue = rawValue.replace(/^(\d{4}):(\d{2}):(\d{2})/, "$1-$2-$3");
+          const formatted = formatPhotoMetaDate(normalizedValue);
+          if (formatted) return { date: formatted, exifPointer };
+        }
+      }
+
+      return { date: "", exifPointer };
+    };
+
+    while (offset + 4 <= view.byteLength) {
+      if (view.getUint8(offset) !== 0xFF) break;
+      const marker = view.getUint8(offset + 1);
+      if (marker === 0xDA || marker === 0xD9) break;
+      const segmentLength = view.getUint16(offset + 2, false);
+      if (segmentLength < 2 || offset + 2 + segmentLength > view.byteLength) break;
+
+      if (marker === 0xE1 && segmentLength >= 10) {
+        const exifHeader = String.fromCharCode(
+          view.getUint8(offset + 4),
+          view.getUint8(offset + 5),
+          view.getUint8(offset + 6),
+          view.getUint8(offset + 7),
+          view.getUint8(offset + 8),
+          view.getUint8(offset + 9)
+        );
+
+        if (exifHeader === "Exif\u0000\u0000") {
+          const tiffOffset = offset + 10;
+          const byteOrder = view.getUint16(tiffOffset, false);
+          const littleEndian = byteOrder === 0x4949;
+          if (!littleEndian && byteOrder !== 0x4D4D) return "";
+          const ifd0Offset = view.getUint32(tiffOffset + 4, littleEndian);
+          const ifd0Result = readIfd(view, tiffOffset, ifd0Offset, littleEndian);
+          if (ifd0Result.date) return ifd0Result.date;
+          if (ifd0Result.exifPointer) {
+            const exifResult = readIfd(view, tiffOffset, ifd0Result.exifPointer, littleEndian);
+            if (exifResult.date) return exifResult.date;
+          }
+        }
+      }
+
+      offset += 2 + segmentLength;
+    }
+  } catch (_) {
+    return "";
+  }
+  return "";
+}
+
+async function getPhotoCaptureDate(src) {
+  const cacheKey = buildVehiclePhotoRequestUrl(src);
+  if (!cacheKey) return "";
+  const cached = photoCaptureDateCache.get(cacheKey);
+  if (typeof cached === "string") return cached;
+  if (cached) return cached;
+
+  const pending = fetch(cacheKey, { cache: "force-cache" })
+    .then((response) => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.arrayBuffer();
+    })
+    .then((buffer) => parseExifDateFromArrayBuffer(buffer))
+    .catch(() => "")
+    .then((value) => {
+      photoCaptureDateCache.set(cacheKey, value || "");
+      return value || "";
+    });
+
+  photoCaptureDateCache.set(cacheKey, pending);
+  return pending;
+}
+
 function getPhotoDescriptionsLookup() {
   if (!vehiclePhotoDescriptions || typeof vehiclePhotoDescriptions !== "object") return {};
   return vehiclePhotoDescriptions;
@@ -1910,7 +2015,23 @@ async function resolveVehiclePhotoEntries(vehicleId) {
   const resolvedEntries = [];
   for (const entry of candidates) {
     const resolved = await probePhotoEntry(entry);
-    if (resolved) resolvedEntries.push(resolved);
+    if (!resolved) continue;
+    if (!cleanText(resolved.metaFields?.date)) {
+      const captureDate = await getPhotoCaptureDate(resolved.src);
+      if (captureDate) {
+        resolved.metaFields = {
+          ...(resolved.metaFields || {}),
+          date: captureDate
+        };
+        resolved.meta = [
+          resolved.metaFields.maker,
+          resolved.metaFields.place,
+          resolved.metaFields.date,
+          resolved.metaFields.credit
+        ].filter((value) => cleanText(value)).join(" • ");
+      }
+    }
+    resolvedEntries.push(resolved);
   }
   return resolvedEntries;
 }
