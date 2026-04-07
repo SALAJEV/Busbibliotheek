@@ -629,8 +629,16 @@ p {
   align-items: start;
   gap: 0.75rem 1rem;
   margin-bottom: 0.7rem;
-  padding: 0.2rem 0 0.45rem;
-  position: relative;
+  padding: 0.4rem 0.35rem 0.7rem;
+  position: sticky;
+  top: 0;
+  z-index: 140;
+  border-radius: calc(var(--radius-lg) + 2px);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg) 94%, transparent), color-mix(in srgb, var(--surface-strong) 96%, transparent));
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(calc(var(--blur) + 8px));
+  -webkit-backdrop-filter: blur(calc(var(--blur) + 8px));
 }
 
 .header-actions {
@@ -687,7 +695,6 @@ p {
 }
 
 .favorites-top {
-  position: relative;
   display: flex;
   margin-left: 0;
 }
@@ -711,64 +718,18 @@ p {
   background: var(--button-secondary-bg-active);
 }
 
-.floating-panel {
-  display: grid;
-  position: fixed;
-  top: 1rem;
-  right: 1rem;
-  z-index: 1710;
-  width: min(430px, calc(100vw - 1.5rem));
-  max-height: calc(100vh - 2rem);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 1rem;
-  border-radius: calc(var(--panel-radius) + 2px);
-  border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--stroke-strong));
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 96%, transparent), color-mix(in srgb, var(--surface) 98%, transparent)),
-    radial-gradient(circle at top right, color-mix(in srgb, var(--accent-soft) 72%, transparent), transparent 56%);
-  box-shadow: var(--shadow-strong);
-  backdrop-filter: blur(calc(var(--blur) + 6px));
-  -webkit-backdrop-filter: blur(calc(var(--blur) + 6px));
-  opacity: 0;
-  transform: translateY(-14px) scale(0.97);
-  pointer-events: none;
-  transition: opacity 0.26s ease, transform 0.26s ease;
-}
-
-.favorites-panel {
-  width: min(440px, calc(100vw - 1.5rem));
-}
-
 .favorites-panel[hidden],
-.settings-panel[hidden] {
+.settings-panel[hidden],
+.menu-overlay[hidden] {
   display: none !important;
-}
-
-.panel-backdrop {
-  z-index: 1700;
-}
-
-.favorites-backdrop {
-  z-index: 1540;
-}
-
-body.more-open .favorites-backdrop {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-body.more-open .favorites-panel {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-  pointer-events: auto;
 }
 
 body.more-open {
   overflow: hidden;
 }
 
-body.platform-android-webview .floating-panel,
+body.platform-android-webview .menu-sheet,
+body.platform-android-webview .menu-overlay-scrim,
 body.platform-android-webview .settings-backdrop,
 body.platform-android-webview .pdf-modal,
 body.platform-android-webview .funny-modal,
@@ -777,22 +738,12 @@ body.platform-android-webview .offline-overlay {
   -webkit-backdrop-filter: none !important;
 }
 
-body.platform-android-webview .floating-panel {
-  z-index: 3200;
-  transform: none;
-  transition: opacity 0.18s ease;
+body.platform-android-webview .menu-overlay {
+  background: rgba(2, 8, 23, 0.76);
+}
+
+body.platform-android-webview .menu-sheet {
   background: color-mix(in srgb, var(--surface-strong) 99%, white 1%);
-}
-
-body.platform-android-webview .panel-backdrop,
-body.platform-android-webview .settings-backdrop,
-body.platform-android-webview .favorites-backdrop {
-  z-index: 3100;
-}
-
-body.platform-android-webview.more-open .favorites-panel,
-body.platform-android-webview.settings-open .settings-panel {
-  transform: none;
 }
 
 body.platform-android,
@@ -826,7 +777,7 @@ body.platform-android-tv #installBtn {
 }
 
 @supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
-  .panel-backdrop,
+  .menu-overlay,
   .settings-backdrop,
   .pdf-modal,
   .funny-modal,
@@ -834,12 +785,58 @@ body.platform-android-tv #installBtn {
     background: rgba(2, 8, 23, 0.68);
   }
 
-  .floating-panel,
+  .menu-sheet,
   .pdf-modal-card,
   .funny-modal-card,
   .offline-shell {
     background: var(--surface-strong);
   }
+}
+
+.menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1740;
+  display: grid;
+  align-items: flex-start;
+  justify-items: end;
+  padding:
+    max(0.9rem, env(safe-area-inset-top))
+    max(0.9rem, env(safe-area-inset-right))
+    max(0.9rem, env(safe-area-inset-bottom))
+    max(0.9rem, env(safe-area-inset-left));
+}
+
+.menu-overlay-scrim {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--overlay-bg) 92%, transparent);
+  backdrop-filter: blur(calc(var(--overlay-blur) - 1px));
+  -webkit-backdrop-filter: blur(calc(var(--overlay-blur) - 1px));
+}
+
+.menu-sheet {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 0.62rem;
+  width: min(440px, calc(100vw - 1.8rem));
+  max-height: min(calc(var(--app-height) - 1.8rem), calc(100dvh - 1.8rem));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1rem;
+  border-radius: calc(var(--panel-radius) + 2px);
+  border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--stroke-strong));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 96%, transparent), color-mix(in srgb, var(--surface) 98%, transparent)),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--accent-soft) 72%, transparent), transparent 56%);
+  box-shadow: var(--shadow-strong);
+  backdrop-filter: blur(calc(var(--blur) + 6px));
+  -webkit-backdrop-filter: blur(calc(var(--blur) + 6px));
+}
+
+.menu-close-btn {
+  flex: 0 0 auto;
 }
 
 .favorites-panel h3 {
@@ -1694,6 +1691,8 @@ body.dashboard-open #favoritesBackdrop {
 .dashboard-panel-content {
   display: grid;
   gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
 }
 
 body.dashboard-open {
@@ -1766,6 +1765,7 @@ body.dashboard-open {
   max-width: 1400px;
   margin-inline: auto;
   width: 100%;
+  order: 0;
 }
 
 .dashboard-map-wrap.hidden {
@@ -1773,7 +1773,7 @@ body.dashboard-open {
 }
 
 .dashboard-map {
-  height: min(52vh, 560px);
+  height: min(44vh, 460px);
   border-radius: 22px;
   overflow: hidden;
   border: 1px solid var(--stroke-strong);
@@ -1787,6 +1787,7 @@ body.dashboard-open {
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
+  order: 1;
 }
 
 .dashboard-card {
@@ -1984,10 +1985,11 @@ body.platform-android-tv .dashboard-setup-card .pdf-modal-actions > button {
 }
 
 body.platform-android-tv .dashboard-panel-content {
-  grid-template-columns: minmax(360px, 34vw) minmax(0, 1fr);
-  align-items: stretch;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
   min-height: 0;
   height: 100%;
+  gap: 1rem;
 }
 
 body.platform-android-tv .dashboard-map-wrap,
@@ -2001,21 +2003,17 @@ body.platform-android-tv .dashboard-map-wrap {
   margin-bottom: 0;
 }
 
-body.platform-android-tv .dashboard-map-wrap.hidden + .dashboard-grid {
-  grid-column: 1 / -1;
-}
-
 body.platform-android-tv .dashboard-map {
-  height: 100%;
-  min-height: 0;
+  height: min(42vh, 420px);
+  min-height: 320px;
 }
 
 body.platform-android-tv .dashboard-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-auto-rows: minmax(0, 1fr);
+  grid-auto-rows: minmax(130px, auto);
   gap: 0.8rem;
-  align-content: stretch;
-  overflow: hidden;
+  align-content: start;
+  overflow: auto;
 }
 
 body.platform-android-tv .dashboard-card {
@@ -2321,6 +2319,9 @@ body.platform-android-tv .inline-suggestion-list {
 }
 
 .weather-temperature--inline {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
   font-size: 1.45rem;
   letter-spacing: -0.02em;
 }
@@ -2878,12 +2879,83 @@ tr + tr td {
 }
 
 .vehicle-photo-caption {
-  margin: -0.15rem 0 0;
+  margin: 0.12rem 0 0;
   color: var(--text);
   font-size: 0.95rem;
   font-weight: 700;
   line-height: 1.45;
   letter-spacing: 0;
+  padding: 0.78rem 0.9rem;
+  border-radius: calc(var(--panel-radius-sm) + 1px);
+  border: 1px solid color-mix(in srgb, var(--accent) 10%, var(--stroke-soft));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-alt) 94%, transparent), color-mix(in srgb, var(--surface) 96%, transparent));
+}
+
+.vehicle-photo-meta {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.vehicle-photo-meta[hidden] {
+  display: none !important;
+}
+
+.vehicle-photo-meta-card {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: calc(var(--panel-radius-sm) + 1px);
+  border: 1px solid color-mix(in srgb, var(--accent) 10%, var(--stroke-soft));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-alt) 94%, transparent), color-mix(in srgb, var(--surface) 96%, transparent));
+}
+
+.vehicle-photo-meta-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.72rem;
+  align-items: center;
+}
+
+.vehicle-photo-meta-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-soft) 38%, var(--surface-strong));
+  color: var(--accent);
+}
+
+.vehicle-photo-meta-icon svg {
+  width: 1rem;
+  height: 1rem;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.vehicle-photo-meta-copy {
+  min-width: 0;
+  display: grid;
+  gap: 0.08rem;
+}
+
+.vehicle-photo-meta-label {
+  color: var(--muted);
+  font-size: 0.77rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.vehicle-photo-meta-value {
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1.4;
+  font-weight: 700;
 }
 
 .meta-row {
@@ -3635,7 +3707,7 @@ button:active,
 footer {
   margin-top: auto;
   padding:
-    3.2rem
+    4.4rem
     0.45rem
     max(0.9rem, env(safe-area-inset-bottom));
   border-top: 1px solid var(--stroke);
@@ -4032,21 +4104,21 @@ footer h3 {
     font-size: 0.9rem;
   }
 
-  .favorites-backdrop {
-    z-index: 1685;
+  .menu-overlay {
+    align-items: end;
+    justify-items: stretch;
+    padding:
+      max(0.5rem, env(safe-area-inset-top))
+      max(0.5rem, env(safe-area-inset-right))
+      max(0.5rem, env(safe-area-inset-bottom))
+      max(0.5rem, env(safe-area-inset-left));
   }
 
-  .settings-backdrop,
-  .panel-backdrop {
-    z-index: 1680;
-  }
-
-  body.platform-android .favorites-panel,
-  body.platform-android .settings-panel {
-    top: max(0.6rem, env(safe-area-inset-top) + 0.28rem);
-    right: 0.6rem;
-    left: 0.6rem;
-    max-height: calc(100dvh - env(safe-area-inset-top) - 1.2rem);
+  .menu-sheet {
+    width: 100%;
+    max-height: min(calc(var(--app-height) - 1rem), calc(100dvh - 1rem));
+    border-radius: calc(var(--panel-radius) + 4px) calc(var(--panel-radius) + 4px) calc(var(--panel-radius-sm) + 4px) calc(var(--panel-radius-sm) + 4px);
+    padding: 0.96rem 0.92rem 1rem;
   }
 
   .more-panel {

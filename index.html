@@ -17,7 +17,7 @@
 <link rel="manifest" href="manifest.json">
 <title>Busbibliotheek</title>
 
-<link rel="stylesheet" href="style.css?v=20260407-1">
+<link rel="stylesheet" href="style.css?v=20260407-6">
 </head>
 <body>
 <div id="splash" role="img" aria-label="Busbibliotheek laden">
@@ -39,80 +39,6 @@
       <button id="installBtn" title="App installeren op thuisscherm">Installeer App</button>
       <div class="favorites-top">
         <button id="favoritesToggleBtn" class="icon-btn more-toggle-btn" type="button" title="Menu" aria-label="Menu" aria-controls="favoritesPanel" aria-expanded="false"><span class="more-toggle-icon" aria-hidden="true">&#8942;</span><span id="menuToggleText">Menu</span></button>
-        <div id="favoritesPanel" class="favorites-panel more-panel floating-panel" hidden aria-hidden="true" inert>
-          <div class="more-panel-header">
-            <div>
-              <h3 id="morePanelTitle">Meer</h3>
-              <p id="morePanelSubtitle" class="more-panel-subtitle">Snelle functies en extra tools.</p>
-            </div>
-          </div>
-          <section class="more-panel-section">
-            <div class="more-panel-section-head">
-              <h4 id="favoritesTitle">Favorieten</h4>
-            </div>
-            <div id="favoritesList" class="chip-row"></div>
-          </section>
-          <section class="more-panel-section">
-            <div class="more-panel-section-head">
-              <h4 id="moreFunctionsTitle">Extra functies</h4>
-            </div>
-            <div class="more-action-grid">
-              <button id="dashboardToggleBtn" class="btn" type="button" title="Stalk modus">Stalk modus</button>
-              <button id="halteSearchToggleBtn" class="btn more-secondary-btn" type="button" title="Halte zoeken" aria-label="Halte zoeken">Halte zoeken</button>
-            </div>
-          </section>
-          <section class="more-panel-section">
-            <div class="more-panel-section-head">
-              <h4 id="settingsTitle">Instellingen</h4>
-            </div>
-            <div class="settings-grid">
-              <div>
-                <label for="intervalSelect" id="intervalLabel">Update-interval</label>
-                <select id="intervalSelect">
-                  <option value="10000" selected id="intervalOpt10">10 seconden</option>
-                  <option value="15000" id="intervalOpt15">15 seconden</option>
-                  <option value="30000" id="intervalOpt30">30 seconden</option>
-                </select>
-              </div>
-              <div>
-                <label for="themeSelect" id="themeLabel">Thema</label>
-                <select id="themeSelect">
-                  <option value="auto" id="themeAutoOpt">Automatisch</option>
-                  <option value="light" id="themeLightOpt">Licht</option>
-                  <option value="dark" id="themeDarkOpt">Donker</option>
-                </select>
-              </div>
-              <div>
-                <label for="colorThemeSelect" id="colorThemeLabel">Kleurthema</label>
-                <select id="colorThemeSelect">
-                  <option value="classic" id="colorClassicOpt" selected>Standaard</option>
-                  <option value="yellow" id="colorYellowOpt">Geel</option>
-                  <option value="green" id="colorGreenOpt">Groen</option>
-                  <option value="blue" id="colorBlueOpt">Blauw</option>
-                  <option value="orange" id="colorOrangeOpt">Oranje</option>
-                  <option value="red" id="colorRedOpt">Rood</option>
-                  <option value="purple" id="colorPurpleOpt">Paars</option>
-                </select>
-              </div>
-              <div>
-                <label for="languageSelect" id="languageLabel">Taal</label>
-                <select id="languageSelect">
-                  <option value="nl">Nederlands</option>
-                  <option value="fr">Fran&ccedil;ais</option>
-                  <option value="en">English</option>
-                  <option value="de">Deutsch</option>
-                  <option value="pl">Polski</option>
-                  <option value="es">Espa&ntilde;ol</option>
-                  <option value="ru">&#1056;&#1091;&#1089;&#1089;&#1082;&#1080;&#1081;</option>
-                </select>
-              </div>
-            </div>
-            <div class="settings-actions">
-              <button id="settingsInfoBtn" class="btn more-secondary-btn" type="button">Info</button>
-            </div>
-            <p id="feedStatus" class="settings-feed-status" hidden></p>
-          </section>
-        </div>
       </div>
     </div>
   </div>
@@ -190,7 +116,7 @@
         </div>
         <div class="vehicle-photo-info">
           <p id="vehiclePhotoCounter" class="vehicle-photo-counter" hidden></p>
-          <p id="vehiclePhotoMeta" class="vehicle-photo-meta" hidden></p>
+          <div id="vehiclePhotoMeta" class="vehicle-photo-meta" hidden aria-hidden="true"></div>
         </div>
         <p id="vehiclePhotoCaption" class="vehicle-photo-caption"></p>
       </div>
@@ -220,7 +146,84 @@
 
 </div>
 
-<div id="favoritesBackdrop" class="settings-backdrop favorites-backdrop panel-backdrop"></div>
+<div id="favoritesBackdrop" class="menu-overlay" hidden aria-hidden="true">
+  <div class="menu-overlay-scrim" data-menu-close="true"></div>
+  <div id="favoritesPanel" class="favorites-panel more-panel menu-sheet" role="dialog" aria-modal="true" aria-labelledby="morePanelTitle" aria-hidden="true" inert>
+    <div class="more-panel-header">
+      <div>
+        <h3 id="morePanelTitle">Meer</h3>
+        <p id="morePanelSubtitle" class="more-panel-subtitle">Snelle functies en extra tools.</p>
+      </div>
+      <button id="favoritesPanelCloseBtn" class="settings-close-btn menu-close-btn" type="button" aria-label="Menu sluiten">&times;</button>
+    </div>
+    <section class="more-panel-section">
+      <div class="more-panel-section-head">
+        <h4 id="favoritesTitle">Favorieten</h4>
+      </div>
+      <div id="favoritesList" class="chip-row"></div>
+    </section>
+    <section class="more-panel-section">
+      <div class="more-panel-section-head">
+        <h4 id="moreFunctionsTitle">Extra functies</h4>
+      </div>
+      <div class="more-action-grid">
+        <button id="dashboardToggleBtn" class="btn" type="button" title="Stalk modus">Stalk modus</button>
+        <button id="halteSearchToggleBtn" class="btn more-secondary-btn" type="button" title="Halte zoeken" aria-label="Halte zoeken">Halte zoeken</button>
+      </div>
+    </section>
+    <section class="more-panel-section">
+      <div class="more-panel-section-head">
+        <h4 id="settingsTitle">Instellingen</h4>
+      </div>
+      <div class="settings-grid">
+        <div>
+          <label for="intervalSelect" id="intervalLabel">Update-interval</label>
+          <select id="intervalSelect">
+            <option value="10000" selected id="intervalOpt10">10 seconden</option>
+            <option value="15000" id="intervalOpt15">15 seconden</option>
+            <option value="30000" id="intervalOpt30">30 seconden</option>
+          </select>
+        </div>
+        <div>
+          <label for="themeSelect" id="themeLabel">Thema</label>
+          <select id="themeSelect">
+            <option value="auto" id="themeAutoOpt">Automatisch</option>
+            <option value="light" id="themeLightOpt">Licht</option>
+            <option value="dark" id="themeDarkOpt">Donker</option>
+          </select>
+        </div>
+        <div>
+          <label for="colorThemeSelect" id="colorThemeLabel">Kleurthema</label>
+          <select id="colorThemeSelect">
+            <option value="classic" id="colorClassicOpt" selected>Standaard</option>
+            <option value="yellow" id="colorYellowOpt">Geel</option>
+            <option value="green" id="colorGreenOpt">Groen</option>
+            <option value="blue" id="colorBlueOpt">Blauw</option>
+            <option value="orange" id="colorOrangeOpt">Oranje</option>
+            <option value="red" id="colorRedOpt">Rood</option>
+            <option value="purple" id="colorPurpleOpt">Paars</option>
+          </select>
+        </div>
+        <div>
+          <label for="languageSelect" id="languageLabel">Taal</label>
+          <select id="languageSelect">
+            <option value="nl">Nederlands</option>
+            <option value="fr">Fran&ccedil;ais</option>
+            <option value="en">English</option>
+            <option value="de">Deutsch</option>
+            <option value="pl">Polski</option>
+            <option value="es">Espa&ntilde;ol</option>
+            <option value="ru">&#1056;&#1091;&#1089;&#1089;&#1082;&#1080;&#1081;</option>
+          </select>
+        </div>
+      </div>
+      <div class="settings-actions">
+        <button id="settingsInfoBtn" class="btn more-secondary-btn" type="button">Info</button>
+      </div>
+      <p id="feedStatus" class="settings-feed-status" hidden></p>
+    </section>
+  </div>
+</div>
 <div id="pageLoadingOverlay" class="page-loading-overlay" hidden aria-hidden="true">
   <div class="page-loading-shell">
     <span class="page-loading-spinner" aria-hidden="true"></span>
@@ -364,7 +367,6 @@
         <iframe id="reviewFormFrame" class="review-form-frame" src="https://docs.google.com/forms/d/e/1FAIpQLSeuWQPblp0uBjQ2W2EKwd3LH_qVITWjQcS2EQhHQcbubS7KRw/viewform?embedded=true" width="640" height="2843" frameborder="0" marginheight="0" marginwidth="0" title="Busbibliotheek reviewformulier">Laden…</iframe>
       </div>
       <div class="review-mobile-fallback">
-        <p id="reviewMobileText">Op smartphone opent het formulier beter rechtstreeks in je browser.</p>
         <a id="reviewMobileLink" class="btn" href="https://forms.gle/3uKCBA779JwVjN8d7" target="_blank" rel="noopener noreferrer">Open reviewformulier</a>
       </div>
     </div>
@@ -407,6 +409,6 @@
 </div>
 
 <script src="translations.js?v=20260218-1"></script>
-<script src="app.js?v=20260407-2" defer></script>
+<script src="app.js?v=20260407-9" defer></script>
 </body>
 </html>

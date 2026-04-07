@@ -32,6 +32,7 @@ const settingsInfoBtn = document.getElementById("settingsInfoBtn");
 const favoritesBackdropEl = document.getElementById("favoritesBackdrop");
 const favoritesToggleBtn = document.getElementById("favoritesToggleBtn");
 const favoritesPanelEl = document.getElementById("favoritesPanel");
+const favoritesPanelCloseBtn = document.getElementById("favoritesPanelCloseBtn");
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
@@ -69,6 +70,7 @@ const NETWORK_CHECK_URL = `${window.location.origin}/manifest.json?network-check
 const NETWORK_CHECK_TIMEOUT_MS = 5000;
 const NETWORK_CHECK_INTERVAL_MS = 15000;
 const NETWORK_CHECK_CACHE_MS = 10000;
+const WEATHER_CACHE_MS = 5 * 60 * 1000;
 const FAVORITES_KEY = "bb_favorites_v1";
 const SETTINGS_KEY = "bb_settings_v1";
 const DASHBOARD_MAX_VEHICLES = 9;
@@ -229,7 +231,6 @@ const reviewModalTitleEl = document.getElementById("reviewModalTitle");
 const reviewModalSummaryEl = document.getElementById("reviewModalSummary");
 const reviewModalCloseBtn = document.getElementById("reviewModalCloseBtn");
 const reviewModalDoneBtn = document.getElementById("reviewModalDoneBtn");
-const reviewMobileTextEl = document.getElementById("reviewMobileText");
 const reviewMobileLinkEl = document.getElementById("reviewMobileLink");
 const termsModalEl = document.getElementById("termsModal");
 const termsModalTitleEl = document.getElementById("termsModalTitle");
@@ -341,7 +342,9 @@ let currentVehiclePhotoIndex = 0;
 let favorites = [];
 let settingsOpen = false;
 let favoritesPanelOpen = false;
+let favoritesPanelRestoreFocusEl = null;
 let feedEndDateValue = "";
+let vehiclesSourceUpdatedAt = "";
 let vehiclePhotoLookupToken = 0;
 let vehiclePhotoDescriptions = null;
 let vehiclePhotoDescriptionsPromise = null;
@@ -354,7 +357,7 @@ const INACTIVITY_CHECK_MS = 15000;
 let lastUserInteractionAt = Date.now();
 let realtimePausedByInactivity = false;
 let deeplinkHandled = false;
-const APP_VERSION = "2026.04.07-2";
+const APP_VERSION = "2026.04.07-9";
 const dataLoadTimestamps = {
   vehicles: 0,
   trips: 0,
@@ -381,6 +384,7 @@ let weatherRequestToken = 0;
 let lastWeatherCacheKey = "";
 let lastWeatherData = null;
 let lastWeatherCoordinates = null;
+let lastWeatherFetchedAt = 0;
 let activeVehicleSuggestionInput = null;
 let favoriteDragState = null;
 let favoriteDragSuppressUntil = 0;
@@ -679,15 +683,23 @@ function formatInfoTimestamp(timestamp) {
   });
 }
 
+function parseVehiclesSourceUpdatedAt(text = "") {
+  const firstLine = text.split(/\r?\n/, 1)[0]?.trim() || "";
+  if (!firstLine.startsWith("#")) return "";
+  const rawDate = firstLine.slice(1).trim();
+  if (!rawDate) return "";
+  return formatDateForUi(rawDate, {
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  });
+}
+
 function showInfoModal() {
   if (!infoModalEl || !infoModalBodyEl) return;
   const rows = [
     [getLabel("infoWebsiteVersion", "Websiteversie"), APP_VERSION],
-    [getLabel("infoVehicles", "Voertuigen (vehicles.txt)"), formatInfoTimestamp(dataLoadTimestamps.vehicles)],
-    [getLabel("infoTrips", "Ritten (trips.txt)"), formatInfoTimestamp(dataLoadTimestamps.trips)],
-    [getLabel("infoRoutes", "Lijnen (routes.txt)"), formatInfoTimestamp(dataLoadTimestamps.routes)],
-    [getLabel("infoStops", "Haltes (stops.txt)"), formatInfoTimestamp(dataLoadTimestamps.stops)],
-    [getLabel("infoFeed", "Feed-info"), formatInfoTimestamp(dataLoadTimestamps.feedInfo)],
+    [getLabel("infoVehicles", "Voertuiginformatie"), vehiclesSourceUpdatedAt || getLabel("notLoadedYet", "Nog niet geladen")],
     [getLabel("infoRealtimeApi", "Realtime API"), formatInfoTimestamp(dataLoadTimestamps.realtime)]
   ];
   infoModalBodyEl.innerHTML = `
@@ -1280,8 +1292,8 @@ async function initDashboardMap() {
 function buildDashboardMapTooltip(snapshot) {
   return `
     <div class="dashboard-map-tooltip-card">
-      <span class="line-badge" style="--line-badge-bg:${snapshot.routeColor};--line-badge-fg:${snapshot.routeTextColor};">${escapeHtml(snapshot.routeShort)}</span>
       <strong>${escapeHtml(snapshot.displayVehicleId || snapshot.vehicleId)}</strong>
+      <span class="line-badge" style="--line-badge-bg:${snapshot.routeColor};--line-badge-fg:${snapshot.routeTextColor};">${escapeHtml(snapshot.routeShort)}</span>
       <span>${escapeHtml(snapshot.destinationText || "-")}</span>
     </div>
   `;
@@ -1437,10 +1449,11 @@ function getRoutePresentationFromRealtime(id, entities, bus) {
   };
 }
 
-async function refreshDashboardPanel() {
+async function refreshDashboardPanel(options = {}) {
+  const { showLoading = true } = options;
   const requestToken = ++dashboardRequestToken;
   if (!dashboardPanelEl || !dashboardGridEl || !dashboardVehicleIds.length) return;
-  setDashboardLoading(true);
+  if (showLoading) setDashboardLoading(true);
   try {
     const hasInternet = await verifyInternetConnection();
     if (requestToken !== dashboardRequestToken) return;
@@ -1525,7 +1538,7 @@ async function refreshDashboardPanel() {
       .replace("{live}", String(liveCount))
       .replace("{total}", String(dashboardVehicleIds.length));
   } finally {
-    if (requestToken === dashboardRequestToken) {
+    if (showLoading && requestToken === dashboardRequestToken) {
       setDashboardLoading(false);
     }
   }
@@ -1542,12 +1555,13 @@ async function openDashboardPanel() {
   dashboardPanelEl.hidden = false;
   dashboardPanelEl.setAttribute("aria-hidden", "false");
   document.body.classList.add("dashboard-open");
+  if (dashboardCloseBtn) dashboardCloseBtn.hidden = isAndroidTvPlatform;
   await initDashboardMap();
-  await refreshDashboardPanel();
+  await refreshDashboardPanel({ showLoading: true });
   window.setTimeout(() => dashboardEditBtn?.focus(), 30);
   stopDashboardRefresh();
   dashboardRefreshHandle = window.setInterval(() => {
-    refreshDashboardPanel().catch((error) => console.warn("Dashboard refresh mislukt", error));
+    refreshDashboardPanel({ showLoading: false }).catch((error) => console.warn("Dashboard refresh mislukt", error));
   }, updateIntervalMs);
 }
 
@@ -1823,6 +1837,7 @@ function normalizePhotoEntry(entry, fallbackVehicleId, index = 0) {
       src: entry,
       caption: "",
       meta: "",
+      metaFields: {},
       alt: "",
       sortOrder: index
     };
@@ -1843,6 +1858,12 @@ function normalizePhotoEntry(entry, fallbackVehicleId, index = 0) {
     src,
     caption: descriptionText,
     meta: metaParts.join(" • "),
+    metaFields: {
+      maker: makerText,
+      place: placeText,
+      date: dateText,
+      credit: creditText
+    },
     alt: (entry.alt || "").toString().trim(),
     sortOrder: Number.isFinite(Number(entry.order)) ? Number(entry.order) : index
   };
@@ -1892,6 +1913,7 @@ function getFallbackPhotoEntries(vehicleId) {
           src: `media/${encodeURIComponent(`${alias}${suffix}`)}.${extension}`,
           caption: "",
           meta: "",
+          metaFields: {},
           alt: "",
           sortOrder: fallbackEntries.length
         });
@@ -1936,8 +1958,45 @@ function buildVehiclePhotoCopy(entry, vehicleId) {
   return {
     alt: entry?.alt || fillTemplate(altTemplate, visibleVehicleId),
     caption: entry?.caption || "",
-    meta: entry?.meta || ""
+    meta: entry?.meta || "",
+    metaFields: entry?.metaFields || {}
   };
+}
+
+function getPhotoMetaIconMarkup(iconKey) {
+  const icons = {
+    maker: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12.2a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Z"></path><path d="M4.8 19.2a7.2 7.2 0 0 1 14.4 0"></path></svg>',
+    place: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s6-5.7 6-10a6 6 0 1 0-12 0c0 4.3 6 10 6 10Z"></path><circle cx="12" cy="10" r="2.2"></circle></svg>',
+    date: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.8v2.4M17 3.8v2.4"></path><rect x="4.5" y="6.2" width="15" height="13.3" rx="2"></rect><path d="M4.5 10.2h15"></path></svg>',
+    credit: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.5 14 8.6l4.5.7-3.2 3.1.8 4.4-4.1-2.2-4.1 2.2.8-4.4-3.2-3.1 4.5-.7Z"></path></svg>'
+  };
+  return icons[iconKey] || icons.maker;
+}
+
+function buildVehiclePhotoMetaMarkup(copy) {
+  const metaFields = copy?.metaFields || {};
+  const metaItems = [
+    ["maker", getLabel("photoAuthor", "Auteur"), metaFields.maker],
+    ["place", getLabel("photoPlace", "Plaats"), metaFields.place],
+    ["date", getLabel("photoDate", "Datum"), metaFields.date],
+    ["credit", getLabel("photoCredit", "Credits"), metaFields.credit]
+  ].filter(([, , value]) => cleanText(value));
+
+  if (!metaItems.length) return "";
+
+  return `
+    <div class="vehicle-photo-meta-card">
+      ${metaItems.map(([iconKey, label, value]) => `
+        <div class="vehicle-photo-meta-item">
+          <span class="vehicle-photo-meta-icon" aria-hidden="true">${getPhotoMetaIconMarkup(iconKey)}</span>
+          <div class="vehicle-photo-meta-copy">
+            <span class="vehicle-photo-meta-label">${escapeHtml(label)}</span>
+            <strong class="vehicle-photo-meta-value">${escapeHtml(value)}</strong>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
 }
 
 function updateVehiclePhotoNavigation() {
@@ -1977,8 +2036,10 @@ function renderActiveVehiclePhoto() {
   vehiclePhotoCaptionEl.textContent = copy.caption;
   vehiclePhotoCaptionEl.hidden = !copy.caption;
   if (vehiclePhotoMetaEl) {
-    vehiclePhotoMetaEl.textContent = copy.meta;
-    vehiclePhotoMetaEl.hidden = !copy.meta;
+    const metaMarkup = buildVehiclePhotoMetaMarkup(copy);
+    vehiclePhotoMetaEl.innerHTML = metaMarkup;
+    vehiclePhotoMetaEl.hidden = !metaMarkup;
+    vehiclePhotoMetaEl.setAttribute("aria-hidden", String(!metaMarkup));
   }
   updateVehiclePhotoNavigation();
 }
@@ -2170,10 +2231,36 @@ function resetWeatherBlock() {
   lastWeatherCacheKey = "";
   lastWeatherData = null;
   lastWeatherCoordinates = null;
+  lastWeatherFetchedAt = 0;
   if (!weatherBlockEl) return;
   weatherBlockEl.hidden = true;
   weatherBlockEl.setAttribute("aria-hidden", "true");
   weatherBlockEl.innerHTML = "";
+}
+
+function getWeatherCurrentSnapshot(weatherData) {
+  if (!weatherData || typeof weatherData !== "object") return null;
+
+  const current = weatherData.current && typeof weatherData.current === "object"
+    ? weatherData.current
+    : null;
+  if (current) return current;
+
+  const legacyCurrent = weatherData.current_weather && typeof weatherData.current_weather === "object"
+    ? weatherData.current_weather
+    : null;
+  if (!legacyCurrent) return null;
+
+  return {
+    temperature_2m: typeof legacyCurrent.temperature === "number" ? legacyCurrent.temperature : null,
+    apparent_temperature: typeof legacyCurrent.apparent_temperature === "number" ? legacyCurrent.apparent_temperature : null,
+    is_day: legacyCurrent.is_day,
+    precipitation: typeof legacyCurrent.precipitation === "number" ? legacyCurrent.precipitation : null,
+    weather_code: legacyCurrent.weather_code ?? legacyCurrent.weathercode ?? null,
+    wind_speed_10m: typeof legacyCurrent.wind_speed === "number"
+      ? legacyCurrent.wind_speed
+      : (typeof legacyCurrent.windspeed === "number" ? legacyCurrent.windspeed : null)
+  };
 }
 
 function getWeatherPresentation(weatherCode, isDay = 1) {
@@ -2246,8 +2333,9 @@ function getWeatherSourceText() {
 }
 
 function renderWeatherModal(weatherData, latitude, longitude) {
-  if (!weatherModalBodyEl || !weatherData?.current) return;
-  const current = weatherData.current;
+  if (!weatherModalBodyEl) return;
+  const current = getWeatherCurrentSnapshot(weatherData);
+  if (!current) return;
   const presentation = getWeatherPresentation(current.weather_code, current.is_day);
   const rows = [
     ["status", getLabel("weatherNow", "Toestand"), presentation.label],
@@ -2295,12 +2383,16 @@ function hideWeatherModal() {
 }
 
 function renderWeatherBlock(weatherData, latitude, longitude) {
-  if (!weatherBlockEl || !weatherData?.current) {
+  if (!weatherBlockEl) {
     resetWeatherBlock();
     return;
   }
 
-  const current = weatherData.current;
+  const current = getWeatherCurrentSnapshot(weatherData);
+  if (!current) {
+    resetWeatherBlock();
+    return;
+  }
   const presentation = getWeatherPresentation(current.weather_code, current.is_day);
   const temperature = typeof current.temperature_2m === "number" ? `${Math.round(current.temperature_2m)}°C` : "-";
 
@@ -2332,7 +2424,12 @@ async function updateWeatherForCoordinates(latitude, longitude) {
   }
 
   const cacheKey = `${latitude.toFixed(2)},${longitude.toFixed(2)}`;
-  if (cacheKey === lastWeatherCacheKey && lastWeatherData) {
+  const cacheStillFresh =
+    cacheKey === lastWeatherCacheKey &&
+    lastWeatherData &&
+    Date.now() - lastWeatherFetchedAt < WEATHER_CACHE_MS;
+
+  if (cacheStillFresh) {
     renderWeatherBlock(lastWeatherData, latitude, longitude);
     return;
   }
@@ -2346,6 +2443,7 @@ async function updateWeatherForCoordinates(latitude, longitude) {
     lastWeatherCacheKey = cacheKey;
     lastWeatherData = weatherData;
     lastWeatherCoordinates = { latitude, longitude };
+    lastWeatherFetchedAt = Date.now();
     renderWeatherBlock(weatherData, latitude, longitude);
   } catch (error) {
     if (requestToken !== weatherRequestToken) return;
@@ -2486,7 +2584,10 @@ function applyTranslations() {
     halteSearchToggleBtn.setAttribute("aria-label", getLabel("haltSearch", "Halte zoeken"));
   }
   if (dashboardEditBtn) dashboardEditBtn.textContent = getLabel("dashboardEdit", "Aanpassen");
-  if (dashboardCloseBtn) dashboardCloseBtn.setAttribute("aria-label", getLabel("dashboardClose", "Stalk modus sluiten"));
+  if (dashboardCloseBtn) {
+    dashboardCloseBtn.setAttribute("aria-label", getLabel("dashboardClose", "Stalk modus sluiten"));
+    dashboardCloseBtn.hidden = isAndroidTvPlatform;
+  }
   if (dashboardMapEl) dashboardMapEl.setAttribute("aria-label", getLabel("dashboardMapAria", "Kaart met live voertuigen"));
   staticCardTitleEl.textContent = t("staticCard");
   realtimeCardTitleEl.textContent = t("realtimeCard");
@@ -2555,7 +2656,6 @@ function applyTranslations() {
   if (reviewModalSummaryEl) reviewModalSummaryEl.textContent = getLabel("reviewSummary", "Laat weten wat beter kan of wat je goed vindt aan Busbibliotheek.");
   if (reviewModalCloseBtn) reviewModalCloseBtn.setAttribute("aria-label", getLabel("close", "Sluiten"));
   if (reviewModalDoneBtn) reviewModalDoneBtn.textContent = getLabel("close", "Sluiten");
-  if (reviewMobileTextEl) reviewMobileTextEl.textContent = getLabel("reviewMobileText", "Op smartphone opent het formulier beter rechtstreeks in je browser.");
   if (reviewMobileLinkEl) reviewMobileLinkEl.textContent = getLabel("reviewMobileOpen", "Open reviewformulier");
   if (termsModalTitleEl) termsModalTitleEl.textContent = getLabel("footerTerms", "Gebruiksvoorwaarden");
   if (termsModalSummaryEl) termsModalSummaryEl.textContent = getLabel("termsSummary", "Korte standaardvoorwaarden voor het gebruik van Busbibliotheek.");
@@ -2901,13 +3001,38 @@ function setSettingsPanel(open) {
 function setFavoritesPanel(open) {
   const shouldOpen = !!open;
   if (shouldOpen && settingsOpen) setSettingsPanel(false);
+  if (!favoritesBackdropEl || !favoritesPanelEl || !favoritesToggleBtn) {
+    favoritesPanelOpen = false;
+    document.body.classList.remove("more-open");
+    return;
+  }
+  if (shouldOpen === favoritesPanelOpen) return;
   favoritesPanelOpen = shouldOpen;
-  favoritesPanelEl.hidden = !favoritesPanelOpen;
+  if (favoritesPanelOpen) {
+    favoritesPanelRestoreFocusEl = document.activeElement instanceof HTMLElement ? document.activeElement : favoritesToggleBtn;
+    favoritesBackdropEl.hidden = false;
+    favoritesBackdropEl.setAttribute("aria-hidden", "false");
+  } else {
+    favoritesBackdropEl.setAttribute("aria-hidden", "true");
+    favoritesBackdropEl.hidden = true;
+  }
   favoritesPanelEl.setAttribute("aria-hidden", String(!favoritesPanelOpen));
   if ("inert" in favoritesPanelEl) favoritesPanelEl.inert = !favoritesPanelOpen;
   favoritesToggleBtn.setAttribute("aria-expanded", String(favoritesPanelOpen));
   favoritesToggleBtn.classList.toggle("active", favoritesPanelOpen);
   document.body.classList.toggle("more-open", favoritesPanelOpen);
+  if (favoritesPanelOpen) {
+    window.requestAnimationFrame(() => {
+      const firstFocusable = favoritesPanelEl.querySelector("button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])");
+      if (firstFocusable instanceof HTMLElement) firstFocusable.focus({ preventScroll: true });
+    });
+    return;
+  }
+  const restoreTarget = favoritesPanelRestoreFocusEl;
+  favoritesPanelRestoreFocusEl = null;
+  if (restoreTarget instanceof HTMLElement) {
+    window.requestAnimationFrame(() => restoreTarget.focus({ preventScroll: true }));
+  }
 }
 
 function showFunnyModal() {
@@ -3282,6 +3407,7 @@ favoritesToggleBtn.addEventListener("click", (event) => {
 favoritesPanelEl.addEventListener("click", (event) => {
   event.stopPropagation();
 });
+favoritesPanelCloseBtn?.addEventListener("click", () => setFavoritesPanel(false));
 favoritesListEl?.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
@@ -3321,7 +3447,13 @@ haltecodeInputEl?.addEventListener("keydown", (event) => {
 haltecodeInputEl?.addEventListener("input", () => {
   void updateHalteSuggestions();
 });
-favoritesBackdropEl?.addEventListener("click", () => setFavoritesPanel(false));
+favoritesBackdropEl?.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  if (target === favoritesBackdropEl || target.closest("[data-menu-close='true']")) {
+    setFavoritesPanel(false);
+  }
+});
 vasteDataEl.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
@@ -3579,6 +3711,9 @@ document.addEventListener("keydown", (event) => {
     setSettingsPanel(false);
     return;
   }
+  if (isTvSuggestionNavigationActive()) {
+    return;
+  }
   if (isAndroidTvPlatform && (event.key === "ArrowRight" || event.key === "ArrowDown") && (!dashboardSetupModalEl?.hidden || !dashboardPanelEl?.hidden)) {
     event.preventDefault();
     moveDashboardFocus(1);
@@ -3668,21 +3803,65 @@ function getRouteKeyFromTripId(tripId) {
   if (!normalized) return "";
   return cleanText(normalized.split("_")[0]);
 }
+
+function getTripIdParts(tripId) {
+  return cleanText(tripId)
+    .split(/[^a-zA-Z0-9]+/)
+    .map((part) => cleanText(part))
+    .filter(Boolean);
+}
+
+function getTripIdMatchScore(candidateTripId, requestedTripId) {
+  const candidate = cleanText(candidateTripId);
+  const requested = cleanText(requestedTripId);
+  if (!candidate || !requested) return Number.POSITIVE_INFINITY;
+  if (candidate === requested) return 0;
+
+  const candidateParts = getTripIdParts(candidate);
+  const requestedParts = getTripIdParts(requested);
+  const candidateTail = candidateParts.at(-1) || "";
+  const requestedTail = requestedParts.at(-1) || "";
+  if (candidateTail && requestedTail && candidateTail === requestedTail) {
+    return 1 + Math.abs(candidate.length - requested.length);
+  }
+
+  if (candidate.endsWith(requested) || requested.endsWith(candidate)) {
+    return 100 + Math.abs(candidate.length - requested.length);
+  }
+
+  return Number.POSITIVE_INFINITY;
+}
+
+function normalizeHeadsignLookup(value) {
+  return cleanText(value).toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function getHeadsignMatchScore(candidateHeadsign, requestedHeadsign) {
+  const candidate = normalizeHeadsignLookup(candidateHeadsign);
+  const requested = normalizeHeadsignLookup(requestedHeadsign);
+  if (!candidate || !requested) return Number.POSITIVE_INFINITY;
+  if (candidate === requested) return 0;
+  if (candidate.startsWith(requested) || requested.startsWith(candidate)) return 1;
+  if (candidate.includes(requested) || requested.includes(candidate)) return 2;
+  return Number.POSITIVE_INFINITY;
+}
+
 function findTripDataByTripId(tripId) {
   const normalizedTripId = cleanText(tripId);
   if (!normalizedTripId) return null;
   const exact = tripsById.get(normalizedTripId);
   if (exact) return exact;
 
-  return trips.find((trip) => {
-    const currentTripId = normalize(trip.trip_id);
-    return currentTripId && (
-      currentTripId.endsWith(normalizedTripId) ||
-      normalizedTripId.endsWith(currentTripId) ||
-      currentTripId.includes(normalizedTripId) ||
-      normalizedTripId.includes(currentTripId)
-    );
-  }) || null;
+  let bestTrip = null;
+  let bestScore = Number.POSITIVE_INFINITY;
+  for (const trip of trips) {
+    const score = getTripIdMatchScore(trip.trip_id, normalizedTripId);
+    if (score < bestScore) {
+      bestScore = score;
+      bestTrip = trip;
+    }
+  }
+  return Number.isFinite(bestScore) ? bestTrip : null;
 }
 function addTripToLookup(map, key, trip) {
   if (!key) return;
@@ -3705,22 +3884,29 @@ function findTripData(routeId, tripId, headsign) {
   const byTripId = findTripDataByTripId(tripId);
   if (byTripId) return byTripId;
 
-  const normalizedHeadsign = cleanText(headsign).toLowerCase();
-  if (!normalizedHeadsign) return null;
-
   const candidates = getTripsForRoute(routeId, tripId);
   if (!candidates.length) return null;
 
-  const exact = candidates.find((trip) => cleanText(trip.trip_headsign).toLowerCase() === normalizedHeadsign);
-  if (exact) return exact;
+  const normalizedHeadsign = normalizeHeadsignLookup(headsign);
+  if (normalizedHeadsign) {
+    let bestTrip = null;
+    let bestScore = Number.POSITIVE_INFINITY;
+    candidates.forEach((trip) => {
+      const score = getHeadsignMatchScore(trip.trip_headsign, normalizedHeadsign);
+      if (score < bestScore) {
+        bestScore = score;
+        bestTrip = trip;
+      }
+    });
+    if (Number.isFinite(bestScore)) return bestTrip;
+  }
 
-  return candidates.find((trip) => {
-    const currentHeadsign = cleanText(trip.trip_headsign).toLowerCase();
-    return currentHeadsign && (
-      currentHeadsign.includes(normalizedHeadsign) ||
-      normalizedHeadsign.includes(currentHeadsign)
-    );
-  }) || null;
+  const uniqueHeadsigns = [...new Set(candidates.map((trip) => cleanText(trip.trip_headsign)).filter(Boolean))];
+  if (uniqueHeadsigns.length === 1) {
+    return candidates.find((trip) => cleanText(trip.trip_headsign) === uniqueHeadsigns[0]) || null;
+  }
+
+  return null;
 }
 function findRouteDataByRouteId(routeId, tripId = "") {
   const normalizedRouteId = cleanText(routeId);
@@ -4061,7 +4247,7 @@ function renderSuggestionList(listEl, inputEl, onSelect) {
     li.className = "vehicle-suggestion-item";
     li.dataset.id = actualVehicleId;
     li.dataset.index = String(listEl.children.length);
-    li.tabIndex = -1;
+    li.tabIndex = isAndroidTvPlatform ? 0 : -1;
     li.setAttribute("role", "option");
     li.setAttribute("aria-selected", "false");
     li.innerHTML = `
@@ -4076,6 +4262,43 @@ function renderSuggestionList(listEl, inputEl, onSelect) {
       inputEl.value = visibleVehicleId;
       hideSuggestionList(listEl);
       onSelect(actualVehicleId);
+    });
+    li.addEventListener("focus", () => {
+      const index = Number(li.dataset.index || -1);
+      if (index >= 0) setSuggestionActiveItem(listEl, index);
+    });
+    li.addEventListener("keydown", (event) => {
+      const index = Number(li.dataset.index || -1);
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        const nextItem = li.nextElementSibling instanceof HTMLElement
+          ? li.nextElementSibling
+          : listEl.querySelector("li");
+        const nextIndex = Number(nextItem?.getAttribute("data-index") || index + 1);
+        setSuggestionActiveItem(listEl, nextIndex);
+        nextItem?.focus();
+        return;
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        const prevItem = li.previousElementSibling instanceof HTMLElement
+          ? li.previousElementSibling
+          : listEl.querySelector("li:last-child");
+        const prevIndex = Number(prevItem?.getAttribute("data-index") || index - 1);
+        setSuggestionActiveItem(listEl, prevIndex);
+        prevItem?.focus();
+        return;
+      }
+      if (event.key === "Enter" || event.key === " " || event.key === "OK" || event.key === "Select") {
+        event.preventDefault();
+        li.click();
+        return;
+      }
+      if (event.key === "Escape" || event.key === "BrowserBack" || event.key === "GoBack") {
+        event.preventDefault();
+        inputEl.focus();
+        hideSuggestionList(listEl);
+      }
     });
     listEl.appendChild(li);
   });
@@ -4147,12 +4370,16 @@ function bindVehicleSuggestions(inputEl, onSelect) {
     const currentIndex = Number(listEl.dataset.activeIndex || -1);
     if (event.key === "ArrowDown") {
       event.preventDefault();
-      setSuggestionActiveItem(listEl, currentIndex < 0 ? 0 : currentIndex + 1);
+      const nextIndex = currentIndex < 0 ? 0 : currentIndex + 1;
+      setSuggestionActiveItem(listEl, nextIndex);
+      if (isAndroidTvPlatform) items[((nextIndex % items.length) + items.length) % items.length]?.focus();
       return;
     }
     if (event.key === "ArrowUp") {
       event.preventDefault();
-      setSuggestionActiveItem(listEl, currentIndex < 0 ? items.length - 1 : currentIndex - 1);
+      const nextIndex = currentIndex < 0 ? items.length - 1 : currentIndex - 1;
+      setSuggestionActiveItem(listEl, nextIndex);
+      if (isAndroidTvPlatform) items[((nextIndex % items.length) + items.length) % items.length]?.focus();
       return;
     }
     if (event.key === "Enter" && currentIndex >= 0) {
@@ -4167,6 +4394,15 @@ function bindVehicleSuggestions(inputEl, onSelect) {
   inputEl.addEventListener("blur", () => {
     window.setTimeout(() => {
       if (activeVehicleSuggestionInput === inputEl) activeVehicleSuggestionInput = null;
+      if (document.activeElement instanceof Element && listEl.contains(document.activeElement)) return;
+      hideSuggestionList(listEl);
+    }, 120);
+  });
+  listEl.addEventListener("focusout", () => {
+    window.setTimeout(() => {
+      const active = document.activeElement;
+      if (active === inputEl) return;
+      if (active instanceof Element && listEl.contains(active)) return;
       hideSuggestionList(listEl);
     }, 120);
   });
@@ -4178,6 +4414,7 @@ async function laadVoertuigen() {
   voertuigenLoadPromise = (async () => {
     const res = await fetchWithTimeout(`${BASE_URL}/vehicles.txt`, { cache: "no-store" });
     const text = await res.text();
+    vehiclesSourceUpdatedAt = parseVehiclesSourceUpdatedAt(text);
     const regels = text
       .split(/\r?\n/)
       .map((regel) => regel.trim())
@@ -4330,6 +4567,17 @@ function getDashboardFocusables() {
   if (!focusScope) return [];
   return Array.from(focusScope.querySelectorAll('button:not([hidden]):not([disabled]), input:not([hidden]):not([disabled]), [tabindex="0"]'))
     .filter((element) => element instanceof HTMLElement && !element.hasAttribute("hidden"));
+}
+
+function isTvSuggestionNavigationActive() {
+  if (!isAndroidTvPlatform) return false;
+  const activeElement = document.activeElement;
+  if (!(activeElement instanceof Element)) return false;
+  if (activeElement.matches(".inline-suggestion-list li, #suggestielijst li")) return true;
+  if (!activeElement.matches("input")) return false;
+  const shell = activeElement.closest(".suggestion-input-shell") || activeElement.parentElement;
+  const listEl = shell?.querySelector(".inline-suggestion-list") || (activeElement.id === "voertuignummer" ? suggestieLijst : null);
+  return !!listEl && !listEl.hidden && listEl.querySelectorAll("li").length > 0;
 }
 
 function moveDashboardFocus(step) {
@@ -4647,11 +4895,23 @@ function getTripUpdateForVehicle(entities, vehicleId, tripId = "") {
   if (byVehicleId) return getEntityTripUpdatePayload(byVehicleId);
 
   if (normalizedTripId) {
-    const byTripId = entities.find((entity) => {
+    const matchingTripUpdates = entities.filter((entity) => {
       const descriptor = extractTripDescriptor(getEntityTripUpdatePayload(entity));
       return descriptor.tripId === normalizedTripId;
     });
-    if (byTripId) return getEntityTripUpdatePayload(byTripId);
+    if (matchingTripUpdates.length === 1) {
+      return getEntityTripUpdatePayload(matchingTripUpdates[0]);
+    }
+
+    const withoutVehicleDescriptor = matchingTripUpdates.find((entity) => {
+      const tripUpdate = getEntityTripUpdatePayload(entity);
+      const descriptor =
+        tripUpdate?.vehicle ||
+        tripUpdate?.vehicleDescriptor ||
+        tripUpdate?.vehicle_descriptor;
+      return !getVehicleDescriptorId(descriptor);
+    });
+    if (withoutVehicleDescriptor) return getEntityTripUpdatePayload(withoutVehicleDescriptor);
   }
 
   return null;
@@ -4694,24 +4954,46 @@ function getCurrentStopIdFromTripUpdate(tripUpdate) {
   if (!Array.isArray(updates) || updates.length === 0) return "";
 
   const now = Math.floor(Date.now() / 1000);
-  let best = null;
-
-  updates.forEach((stop, index) => {
+  const graceWindowSeconds = 120;
+  const normalizedUpdates = updates.map((stop, index) => {
     const stopId = cleanText(stop?.stopId || stop?.stop_id || stop?.assignedStopId || stop?.assigned_stop_id || "");
-    if (!stopId) return;
+    const arrivalTime =
+      typeof stop?.arrival?.time === "number" ? stop.arrival.time :
+      (typeof stop?.arrival?.timestamp === "number" ? stop.arrival.timestamp : null);
+    const departureTime =
+      typeof stop?.departure?.time === "number" ? stop.departure.time :
+      (typeof stop?.departure?.timestamp === "number" ? stop.departure.timestamp : null);
+    const eventTime =
+      typeof departureTime === "number" ? departureTime :
+      (typeof arrivalTime === "number" ? arrivalTime : null);
+    return {
+      stopId,
+      arrivalTime,
+      departureTime,
+      eventTime,
+      index
+    };
+  }).filter((stop) => stop.stopId);
 
-    const candidates = [stop.departure?.time, stop.arrival?.time, stop.departure?.timestamp, stop.arrival?.timestamp]
-      .filter((t) => typeof t === "number");
-    const score = candidates.length
-      ? Math.min(...candidates.map((t) => Math.abs(t - now)))
-      : Number.MAX_SAFE_INTEGER;
+  if (!normalizedUpdates.length) return "";
 
-    if (!best || score < best.score || (score === best.score && index < best.index)) {
-      best = { stopId, score, index };
-    }
-  });
+  const upcomingStop = normalizedUpdates
+    .filter((stop) => typeof stop.eventTime === "number" && stop.eventTime >= now - graceWindowSeconds)
+    .sort((a, b) => {
+      if (a.eventTime !== b.eventTime) return a.eventTime - b.eventTime;
+      return a.index - b.index;
+    })[0];
+  if (upcomingStop) return upcomingStop.stopId;
 
-  return best?.stopId || "";
+  const latestPastStop = normalizedUpdates
+    .filter((stop) => typeof stop.eventTime === "number")
+    .sort((a, b) => {
+      if (a.eventTime !== b.eventTime) return b.eventTime - a.eventTime;
+      return b.index - a.index;
+    })[0];
+  if (latestPastStop) return latestPastStop.stopId;
+
+  return normalizedUpdates[0]?.stopId || "";
 }
 
 function getStopByStopId(stopId) {

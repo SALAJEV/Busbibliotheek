@@ -1,12 +1,17 @@
 package be.salajev.busbibliotheek95
 
 import android.Manifest
-import android.app.Activity
+import android.content.ContentValues
+import android.provider.MediaStore
+import java.io.OutputStream
 import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.ConnectivityManager
+import android.net.Network
 import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -21,6 +26,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -33,12 +39,27 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.toColorInt
+import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
-import androidx.webkit.WebSettingsCompat
-import androidx.webkit.WebViewFeature
 import be.salajev.busbibliotheek95.ui.theme.Busbibliotheek95Theme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+import androidx.webkit.WebSettingsCompat
+import androidx.webkit.WebViewFeature
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,16 +68,38 @@ class MainActivity : ComponentActivity() {
         setContent {
             Busbibliotheek95Theme {
                 val context = LocalContext.current
-                var isNetworkAvailable by remember { mutableStateOf(isNetworkAvailable(context)) }
+                val isNetworkAvailable by observeConnectivity(context).collectAsState(initial = isNetworkAvailable(context))
                 val isDarkTheme = isSystemInDarkTheme()
                 
-                val permissionsToRequest = mutableListOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                ).apply {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        add(Manifest.permission.POST_NOTIFICATIONS)
+                val startUrl = remember {
+                    val intentData = (context as Activity).intent?.dataString
+                    if (intentData != null && intentData.contains("busbibliotheek95.pages.dev")) {
+                        intentData
+                    } else {
+                        "https://busbibliotheek95.pages.dev/"
                     }
+                }
+                
+                var updateStatus by remember { mutableStateOf<UpdateStatus>(UpdateStatus.None) }
+                val currentVersion = remember { getAppVersion(context) }
+
+                LaunchedEffect(isNetworkAvailable) {
+                    if (isNetworkAvailable) {
+                        checkUpdate(currentVersion) { status ->
+                            updateStatus = status
+                        }
+                    }
+                }
+
+                val permissionsToRequest = remember {
+                    mutableListOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    ).apply {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            add(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    }.toTypedArray()
                 }
 
                 val launcher = rememberLauncherForActivityResult(
@@ -64,17 +107,16 @@ class MainActivity : ComponentActivity() {
                 ) { _ -> }
 
                 LaunchedEffect(Unit) {
-                    launcher.launch(permissionsToRequest.toTypedArray())
+                    launcher.launch(permissionsToRequest)
                 }
 
                 val siteColor = if (isDarkTheme) Color(0xFF121212) else Color(0xFFFFFFFF)
                 
-                remember(isDarkTheme) {
+                SideEffect {
                     val window = (context as Activity).window
-                    @Suppress("DEPRECATION")
-                    window.statusBarColor = siteColor.toArgb()
                     WindowCompat.getInsetsController(window, window.decorView).apply {
                         isAppearanceLightStatusBars = !isDarkTheme
+                        isAppearanceLightNavigationBars = !isDarkTheme
                     }
                 }
 
@@ -82,43 +124,158 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     containerColor = siteColor
                 ) { innerPadding ->
-                    if (isNetworkAvailable) {
-                        WebViewScreen(
-                            url = "https://busbibliotheek95.pages.dev/",
-                            modifier = Modifier.padding(innerPadding),
-                            siteColor = siteColor,
-                            onNetworkError = { isNetworkAvailable = false }
-                        )
-                    } else {
-                        NoInternetDialog(
-                            onRetry = { isNetworkAvailable = isNetworkAvailable(context) },
-                            onOpenSettings = { startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) }
-                        )
+                    when {
+                        !isNetworkAvailable -> {
+                            NoInternetDialog(
+                                onRetry = { /* Flow will auto-update */ },
+                                onOpenSettings = { startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) }
+                            )
+                        }
+                        updateStatus is UpdateStatus.Critical -> {
+                            UpdateDialog(
+                                isCritical = true,
+                                onUpdate = { openUpdateLink(context) },
+                                onDismiss = { /* No dismiss for critical */ }
+                            )
+                        }
+                        else -> {
+                            Box(modifier = Modifier.padding(innerPadding)) {
+                                WebViewScreen(
+                                    url = startUrl,
+                                    modifier = Modifier.fillMaxSize(),
+                                    siteColor = siteColor
+                                )
+                                
+                                if (updateStatus is UpdateStatus.Available) {
+                                    UpdateDialog(
+                                        isCritical = false,
+                                        onUpdate = { openUpdateLink(context) },
+                                        onDismiss = { updateStatus = UpdateStatus.None }
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
     }
 
-    private fun isNetworkAvailable(context: Context): Boolean {
+    private fun observeConnectivity(context: Context): Flow<Boolean> = callbackFlow {
         val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) { trySend(true) }
+            override fun onLost(network: Network) { trySend(false) }
+            override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
+                val hasInternet = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                        capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                trySend(hasInternet)
+            }
+        }
+        
+        val request = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+        connectivityManager.registerNetworkCallback(request, callback)
+        
+        awaitClose { connectivityManager.unregisterNetworkCallback(callback) }
+    }.distinctUntilChanged()
+
+    private suspend fun checkUpdate(currentVersion: String, onResult: (UpdateStatus) -> Unit) {
+        withContext(Dispatchers.IO) {
+            try {
+                val url = URL("https://pub-611b5bc156eb455ba86d9bcece9aea1c.r2.dev/app_version.json")
+                val connection = url.openConnection() as HttpURLConnection
+                val text = connection.inputStream.bufferedReader().use { it.readText() }
+                val json = JSONObject(text)
+                val remoteVersion = json.getString("version")
+                val releaseDateStr = json.getString("release_date")
+                
+                if (isVersionNewer(remoteVersion, currentVersion)) {
+                    val releaseDate = LocalDate.parse(releaseDateStr, DateTimeFormatter.ISO_LOCAL_DATE)
+                    val monthsDiff = ChronoUnit.MONTHS.between(releaseDate, LocalDate.now())
+                    
+                    withContext(Dispatchers.Main) {
+                        if (monthsDiff >= 3) {
+                            onResult(UpdateStatus.Critical)
+                        } else {
+                            onResult(UpdateStatus.Available)
+                        }
+                    }
+                }
+            } catch (_: Exception) { }
+        }
+    }
+
+    private fun isVersionNewer(remote: String, local: String): Boolean {
+        val remoteParts = remote.split(".").mapNotNull { it.toIntOrNull() }
+        val localParts = local.split(".").mapNotNull { it.toIntOrNull() }
+        val length = maxOf(remoteParts.size, localParts.size)
+        for (i in 0 until length) {
+            val r = remoteParts.getOrElse(i) { 0 }
+            val l = localParts.getOrElse(i) { 0 }
+            if (r > l) return true
+            if (r < l) return false
+        }
+        return false
+    }
+
+    private fun openUpdateLink(context: Context) {
+        val url = "https://busbibliotheek95.pages.dev/android/app/release/app-release.apk"
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, url.toUri())
+            context.startActivity(intent)
+        } catch (_: Exception) {
+            Toast.makeText(context, "Update mislukt: Verwijder de app en installeer deze opnieuw via de officiële website van Busspotter 95", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun isNetworkAvailable(context: Context): Boolean {
+        val connectivityManager = ContextCompat.getSystemService(context, ConnectivityManager::class.java) ?: return false
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val network = connectivityManager.activeNetwork ?: return false
             val activeNetwork = connectivityManager.getNetworkCapabilities(network) ?: return false
-            return activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
-                    activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
-                    activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+            return activeNetwork.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                    activeNetwork.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
         } else {
             @Suppress("DEPRECATION")
             val networkInfo = connectivityManager.activeNetworkInfo
+            @Suppress("DEPRECATION")
             return networkInfo != null && networkInfo.isConnected
         }
     }
 }
 
+sealed class UpdateStatus {
+    object None : UpdateStatus()
+    object Available : UpdateStatus()
+    object Critical : UpdateStatus()
+}
+
 @Composable
-fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color, onNetworkError: () -> Unit) {
-    var webView: WebView? by remember { mutableStateOf(null) }
+fun UpdateDialog(isCritical: Boolean, onUpdate: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = { if (!isCritical) onDismiss() },
+        title = { Text(text = if (isCritical) "Update Verplicht" else "Update Beschikbaar") },
+        text = { 
+            Text(text = if (isCritical) 
+                "Je app is meer dan 3 maanden verouderd en moet geüpdatet worden om verder te kunnen gaan." 
+                else "Er is een nieuwe versie van de Busbibliotheek app beschikbaar.") 
+        },
+        confirmButton = { 
+            Button(onClick = onUpdate) { Text(text = "Update Nu") } 
+        },
+        dismissButton = {
+            if (!isCritical) {
+                TextButton(onClick = onDismiss) { Text(text = "Later") }
+            }
+        }
+    )
+}
+
+@Composable
+fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color) {
+    var webViewInstance: WebView? by remember { mutableStateOf(null) }
     val isDarkTheme = isSystemInDarkTheme()
     val context = LocalContext.current
     val leavingAppMessage = stringResource(id = R.string.leaving_app)
@@ -135,8 +292,8 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color, 
     }
 
     BackHandler {
-        if (webView?.canGoBack() == true) {
-            webView?.goBack()
+        if (webViewInstance?.canGoBack() == true) {
+            webViewInstance?.goBack()
         } else {
             val currentTime = System.currentTimeMillis()
             if (currentTime - lastBackPressTime < 2000) {
@@ -164,10 +321,7 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color, 
                         @Suppress("SetJavaScriptEnabled")
                         javaScriptEnabled = true
                         domStorageEnabled = true
-                        
-                        // Cache optimalisatie: Gebruik alleen wat echt nodig is
                         cacheMode = WebSettings.LOAD_DEFAULT
-                        
                         loadWithOverviewMode = true
                         useWideViewPort = true
                         setSupportZoom(false)
@@ -176,34 +330,49 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color, 
                         textZoom = 100
                         mediaPlaybackRequiresUserGesture = false
                         setGeolocationEnabled(true)
+                        allowFileAccess = true
+                        allowContentAccess = true
+                        javaScriptCanOpenWindowsAutomatically = true
+                        mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+                        setSupportMultipleWindows(true)
                         
-                        val locale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                            ctx.resources.configuration.locales[0]
-                        } else {
-                            @Suppress("DEPRECATION")
-                            ctx.resources.configuration.locale
+                        if (WebViewFeature.isFeatureSupported(WebViewFeature.SAFE_BROWSING_ENABLE)) {
+                            WebSettingsCompat.setSafeBrowsingEnabled(this, true)
                         }
-                        userAgentString = "$userAgentString Language/${locale?.language}"
+                        
+                        val originalUA = userAgentString
+                        val appVersion = getAppVersion(context)
+                        userAgentString = "$originalUA BusbibliotheekApp/$appVersion"
                     }
                     
                     addJavascriptInterface(object {
+                        @Suppress("unused")
                         @JavascriptInterface
                         fun processDownload(base64Data: String, contentType: String) {
                             try {
                                 val pureBase64 = base64Data.substringAfter("base64,")
-                                val pdfAsBytes = android.util.Base64.decode(pureBase64, android.util.Base64.DEFAULT)
-                                val fileName = "Busfiche_${System.currentTimeMillis()}.pdf"
-                                val path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                                val file = File(path, fileName)
-                                FileOutputStream(file).use { it.write(pdfAsBytes) }
+                                val bytes = android.util.Base64.decode(pureBase64, android.util.Base64.DEFAULT)
+                                val fileName = "Busfiche_${System.currentTimeMillis()}.${if (contentType.contains("pdf")) "pdf" else "bin"}"
                                 
-                                val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-                                @Suppress("DEPRECATION")
-                                dm.addCompletedDownload(fileName, fileName, true, contentType, file.absolutePath, pdfAsBytes.size.toLong(), true)
-                                
-                                (context as Activity).runOnUiThread {
-                                    Toast.makeText(context, context.getString(R.string.download_started), Toast.LENGTH_SHORT).show()
+                                val resolver = context.contentResolver
+                                val contentValues = ContentValues().apply {
+                                    put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                                    put(MediaStore.MediaColumns.MIME_TYPE, contentType)
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                                    }
                                 }
+                                
+                                val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+                                uri?.let {
+                                    resolver.openOutputStream(it).use { outputStream ->
+                                        outputStream?.write(bytes)
+                                    }
+                                    (context as Activity).runOnUiThread {
+                                        Toast.makeText(context, context.getString(R.string.download_started), Toast.LENGTH_SHORT).show()
+                                    }
+                                } ?: throw Exception("Failed to create MediaStore entry")
+                                
                             } catch (e: Exception) {
                                 (context as Activity).runOnUiThread {
                                     Toast.makeText(context, context.getString(R.string.download_failed), Toast.LENGTH_SHORT).show()
@@ -221,15 +390,30 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color, 
                         override fun onProgressChanged(view: WebView?, newProgress: Int) {
                             progress = newProgress / 100f
                         }
-
                         override fun onGeolocationPermissionsShowPrompt(origin: String?, callback: GeolocationPermissions.Callback?) {
                             callback?.invoke(origin, true, false)
                         }
-
+                        override fun onPermissionRequest(request: PermissionRequest?) {
+                            (context as Activity).runOnUiThread { request?.grant(request.resources) }
+                        }
                         override fun onShowFileChooser(webView: WebView?, filePathCallbackIn: ValueCallback<Array<Uri>>?, fileChooserParams: FileChooserParams?): Boolean {
                             filePathCallback?.onReceiveValue(null)
                             filePathCallback = filePathCallbackIn
                             fileChooserLauncher.launch("*/*")
+                            return true
+                        }
+                        override fun onCreateWindow(view: WebView?, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message?): Boolean {
+                            val newWebView = WebView(context)
+                            newWebView.webViewClient = object : WebViewClient() {
+                                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                                    val uri = request?.url ?: return false
+                                    CustomTabsIntent.Builder().build().launchUrl(context, uri)
+                                    return true
+                                }
+                            }
+                            val transport = resultMsg?.obj as? WebView.WebViewTransport
+                            transport?.webView = newWebView
+                            resultMsg?.sendToTarget()
                             return true
                         }
                     }
@@ -251,27 +435,23 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color, 
                                     "})()")
                             return@setDownloadListener
                         }
-
                         val fileName = URLUtil.guessFileName(downloadUrl, contentDisposition, mimetype)
                         android.app.AlertDialog.Builder(context)
                             .setTitle(context.getString(R.string.download_title))
                             .setMessage(context.getString(R.string.download_message, fileName))
                             .setPositiveButton(context.getString(R.string.download_button)) { _, _ ->
                                 try {
-                                    val request = DownloadManager.Request(Uri.parse(downloadUrl))
+                                    val request = DownloadManager.Request(downloadUrl.toUri())
                                     request.setMimeType(mimetype)
-                                    val cookies = CookieManager.getInstance().getCookie(downloadUrl)
-                                    request.addRequestHeader("cookie", cookies)
+                                    request.addRequestHeader("cookie", CookieManager.getInstance().getCookie(downloadUrl))
                                     request.addRequestHeader("User-Agent", userAgent)
                                     request.setTitle(fileName)
                                     request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                                     request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
-                                    val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-                                    dm.enqueue(request)
+                                    ContextCompat.getSystemService(context, DownloadManager::class.java)?.enqueue(request)
                                     Toast.makeText(context, context.getString(R.string.download_started), Toast.LENGTH_SHORT).show()
-                                } catch (e: Exception) {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(downloadUrl))
-                                    context.startActivity(intent)
+                                } catch (_: Exception) {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, downloadUrl.toUri()))
                                 }
                             }
                             .setNegativeButton(context.getString(R.string.cancel), null)
@@ -286,54 +466,47 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color, 
                             val mainDomain = "busbibliotheek95.pages.dev"
                             
                             if (urlString.startsWith("tel:") || urlString.startsWith("mailto:") || urlString.startsWith("whatsapp:")) {
-                                try {
-                                    context.startActivity(Intent(Intent.ACTION_VIEW, uri))
-                                    return true
-                                } catch (e: Exception) { return false }
+                                try { context.startActivity(Intent(Intent.ACTION_VIEW, uri)); return true } catch (_: Exception) { return false }
                             }
-
-                            // De Lijn specifieke links (app of website)
                             if (host.contains("delijn.be") || urlString.contains("delijn://")) {
                                 try {
                                     val intent = Intent(Intent.ACTION_VIEW, uri)
                                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                     context.startActivity(intent)
                                     return true
-                                } catch (e: Exception) {
-                                    // Als de app niet bestaat, open in browser (behalve als het een app-schema is)
-                                    if (urlString.startsWith("delijn://")) return true 
-                                }
+                                } catch (_: Exception) { if (urlString.startsWith("delijn://")) return true }
                             }
-                            
                             if (host.isNotEmpty() && !host.endsWith(mainDomain)) {
                                 Toast.makeText(context, leavingAppMessage, Toast.LENGTH_SHORT).show()
-                                try { context.startActivity(Intent(Intent.ACTION_VIEW, uri)) } catch (e: Exception) {}
+                                try {
+                                    CustomTabsIntent.Builder().setShowTitle(true).setShareState(CustomTabsIntent.SHARE_STATE_ON).build().launchUrl(context, uri)
+                                } catch (_: Exception) {
+                                    try { context.startActivity(Intent(Intent.ACTION_VIEW, uri)) } catch (_: Exception) {}
+                                }
                                 return true
                             }
                             return false
                         }
-
                         override fun onPageFinished(view: WebView?, url: String?) {
                             super.onPageFinished(view, url)
                             view?.loadUrl("javascript:(function() { " +
                                     "var style = document.createElement('style');" +
-                                    "style.innerHTML = '*{ -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; outline: none; }';" +
+                                    "style.innerHTML = '*{ -webkit-tap-highlight-color: transparent; outline: none; } " +
+                                    "body { -webkit-user-select: auto; } " +
+                                    ".install-app-button, #install-banner { display: none !important; }';" +
                                     "document.head.appendChild(style);" +
                                     "})()")
                         }
-
                         override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
-                            if (request?.isForMainFrame == true) onNetworkError()
+                            // Handled by observeConnectivity in Scaffold
                         }
                     }
                     loadUrl(url)
-                    webView = this
+                    webViewInstance = this
                 }
             },
             modifier = Modifier.fillMaxSize(),
-            update = { view -> 
-                updateDarkMode(view, isDarkTheme)
-            }
+            update = { view -> updateDarkMode(view, isDarkTheme) }
         )
 
         if (progress < 1.0f) {
@@ -349,15 +522,20 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color, 
 
 private fun updateDarkMode(webView: WebView, isDarkTheme: Boolean) {
     if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
-        WebSettingsCompat.setAlgorithmicDarkeningAllowed(webView.settings, false)
+        WebSettingsCompat.setAlgorithmicDarkeningAllowed(webView.settings, isDarkTheme)
     }
-    if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
-        WebSettingsCompat.setForceDark(webView.settings, WebSettingsCompat.FORCE_DARK_OFF)
-    }
-    
-    val color = if (isDarkTheme) android.graphics.Color.parseColor("#121212") else android.graphics.Color.WHITE
-    webView.setBackgroundColor(color)
-    
+    webView.setBackgroundColor(if (isDarkTheme) "#121212".toColorInt() else android.graphics.Color.WHITE)
+}
+
+private fun getAppVersion(context: Context): String {
+    return try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.packageManager.getPackageInfo(context.packageName, PackageManager.PackageInfoFlags.of(0)).versionName
+        } else {
+            @Suppress("DEPRECATION")
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName
+        } ?: "1.67"
+    } catch (_: Exception) { "1.67" }
 }
 
 @Composable
