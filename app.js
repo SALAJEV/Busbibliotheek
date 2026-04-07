@@ -24,10 +24,6 @@ const installBtn = document.getElementById('installBtn');
 const dashboardToggleBtn = document.getElementById("dashboardToggleBtn");
 const halteSearchToggleBtn = document.getElementById("halteSearchToggleBtn");
 const iosInstallHintEl = document.getElementById("iosInstallHint");
-const settingsPanelEl = document.getElementById("settingsPanel");
-const settingsBackdropEl = document.getElementById("settingsBackdrop");
-const settingsToggleBtn = document.getElementById("settingsToggleBtn");
-const settingsCloseBtn = document.getElementById("settingsCloseBtn");
 const settingsInfoBtn = document.getElementById("settingsInfoBtn");
 const favoritesBackdropEl = document.getElementById("favoritesBackdrop");
 const favoritesToggleBtn = document.getElementById("favoritesToggleBtn");
@@ -340,7 +336,6 @@ let currentPhotoVehicleId = "";
 let currentVehiclePhotoEntries = [];
 let currentVehiclePhotoIndex = 0;
 let favorites = [];
-let settingsOpen = false;
 let favoritesPanelOpen = false;
 let favoritesPanelRestoreFocusEl = null;
 let feedEndDateValue = "";
@@ -357,13 +352,8 @@ const INACTIVITY_CHECK_MS = 15000;
 let lastUserInteractionAt = Date.now();
 let realtimePausedByInactivity = false;
 let deeplinkHandled = false;
-const APP_VERSION = "2026.04.07-9";
+const APP_VERSION = "2026.04.07-10";
 const dataLoadTimestamps = {
-  vehicles: 0,
-  trips: 0,
-  routes: 0,
-  stops: 0,
-  feedInfo: 0,
   realtime: 0
 };
 if (currentYearEl) currentYearEl.textContent = String(new Date().getFullYear());
@@ -1551,7 +1541,6 @@ async function openDashboardPanel() {
     return;
   }
   setFavoritesPanel(false);
-  setSettingsPanel(false);
   dashboardPanelEl.hidden = false;
   dashboardPanelEl.setAttribute("aria-hidden", "false");
   document.body.classList.add("dashboard-open");
@@ -1574,13 +1563,6 @@ function hexToRgb(hexValue) {
     Number.parseInt(normalized.slice(2, 4), 16),
     Number.parseInt(normalized.slice(4, 6), 16)
   ];
-}
-
-function inferImageFormat(dataUrl) {
-  if (!dataUrl) return "PNG";
-  if (dataUrl.startsWith("data:image/jpeg") || dataUrl.startsWith("data:image/jpg")) return "JPEG";
-  if (dataUrl.startsWith("data:image/webp")) return "WEBP";
-  return "PNG";
 }
 
 function fileToDataUrl(file) {
@@ -2546,11 +2528,6 @@ function applyTranslations() {
   if (morePanelTitleEl) morePanelTitleEl.textContent = moreLabel;
   if (morePanelSubtitleEl) morePanelSubtitleEl.textContent = getLabel("moreSubtitle", "Snelle functies en extra tools.");
   if (moreFunctionsTitleEl) moreFunctionsTitleEl.textContent = getLabel("moreFunctions", "Extra functies");
-  if (settingsToggleBtn) {
-    settingsToggleBtn.title = t("settings");
-    settingsToggleBtn.setAttribute("aria-label", t("settings"));
-    settingsToggleBtn.textContent = t("settings");
-  }
   iosInstallHintEl.textContent = t("iosHint");
   searchBtn.title = t("search");
   searchBtn.setAttribute("aria-label", t("search"));
@@ -2615,10 +2592,6 @@ function applyTranslations() {
   closeBtnEl.title = getLabel("back", "Terug");
   closeBtnEl.setAttribute("aria-label", getLabel("back", "Terug"));
   if (closeBtnTextEl) closeBtnTextEl.textContent = getLabel("back", "Terug");
-  if (settingsCloseBtn) {
-    settingsCloseBtn.setAttribute("title", getLabel("settingsClose", "Sluit instellingen"));
-    settingsCloseBtn.setAttribute("aria-label", getLabel("settingsClose", "Sluit instellingen"));
-  }
   if (offlinePillEl) offlinePillEl.textContent = getLabel("offlinePill", "Offline");
   if (offlineTitleEl) offlineTitleEl.textContent = getLabel("offlineTitle", "Geen internetverbinding");
   if (offlineTextPrimaryEl) offlineTextPrimaryEl.textContent = getLabel("offlineTextPrimary", "Busbibliotheek kon geen werkende internetverbinding bevestigen.");
@@ -2973,7 +2946,6 @@ async function loadFeedStatus() {
     if (index < 0) throw new Error("feed_end_date niet gevonden");
 
     feedEndDateValue = (values[index] || "").trim();
-    dataLoadTimestamps.feedInfo = Date.now();
   } catch (e) {
     console.warn("feed_info laden mislukt", e);
     feedEndDateValue = "";
@@ -2982,25 +2954,8 @@ async function loadFeedStatus() {
   updateFeedStatusText();
 }
 
-function setSettingsPanel(open) {
-  if (!settingsPanelEl || !settingsToggleBtn) {
-    settingsOpen = false;
-    document.body.classList.remove("settings-open");
-    return;
-  }
-  if (open) setFavoritesPanel(false);
-  settingsOpen = !!open;
-  document.body.classList.toggle("settings-open", settingsOpen);
-  settingsPanelEl.hidden = !settingsOpen;
-  settingsPanelEl.setAttribute("aria-hidden", String(!settingsOpen));
-  if ("inert" in settingsPanelEl) settingsPanelEl.inert = !settingsOpen;
-  settingsToggleBtn.setAttribute("aria-expanded", String(settingsOpen));
-  settingsToggleBtn.classList.toggle("active", settingsOpen);
-}
-
 function setFavoritesPanel(open) {
   const shouldOpen = !!open;
-  if (shouldOpen && settingsOpen) setSettingsPanel(false);
   if (!favoritesBackdropEl || !favoritesPanelEl || !favoritesToggleBtn) {
     favoritesPanelOpen = false;
     document.body.classList.remove("more-open");
@@ -3346,7 +3301,6 @@ function initAppPreferences() {
   applyColorTheme(settings.colorTheme);
   applyTranslations();
   syncStalkModeAvailability();
-  setSettingsPanel(false);
   setFavoritesPanel(false);
   hideVehiclePhotoCard();
   renderFavorites();
@@ -3370,7 +3324,6 @@ searchBtn.addEventListener("click", zoekAlles);
 closeBtnEl?.addEventListener("click", terug);
 appTitleBtnEl?.addEventListener("click", () => {
   setFavoritesPanel(false);
-  setSettingsPanel(false);
   hideDashboardSetupModal();
   closeDashboardPanel();
   hidePdfModal();
@@ -3656,15 +3609,9 @@ halteSearchModalEl?.addEventListener("click", (event) => {
 offlineRetryBtn?.addEventListener("click", () => {
   verifyInternetConnection(true).catch(() => {});
 });
-settingsToggleBtn?.addEventListener("click", () => {
-  setFavoritesPanel(false);
-  setSettingsPanel(!settingsOpen);
-});
 settingsInfoBtn?.addEventListener("click", () => {
   showInfoModal();
 });
-settingsCloseBtn?.addEventListener("click", () => setSettingsPanel(false));
-settingsBackdropEl?.addEventListener("click", () => setSettingsPanel(false));
 document.addEventListener("keydown", (event) => {
   const isBackKey = event.key === "Escape" || event.key === "GoBack" || event.key === "BrowserBack";
   if (isBackKey && !halteSearchModalEl?.hidden) {
@@ -3705,10 +3652,6 @@ document.addEventListener("keydown", (event) => {
   }
   if (isBackKey && favoritesPanelOpen) {
     setFavoritesPanel(false);
-    return;
-  }
-  if (isBackKey && settingsOpen) {
-    setSettingsPanel(false);
     return;
   }
   if (isTvSuggestionNavigationActive()) {
@@ -4429,7 +4372,6 @@ async function laadVoertuigen() {
       .filter((regel) => regel.trim())
       .map((regel) => mapVehicleRecord(headers, parseCSVLine(regel, ";")));
     rebuildVehicleIndexes();
-    dataLoadTimestamps.vehicles = Date.now();
     renderFavorites();
   })();
   try {
@@ -4466,7 +4408,6 @@ async function laadTrips() {
     const routeKey = getRouteKey(routeId);
     addTripToLookup(tripsByRouteKey, routeKey, trip);
   });
-  dataLoadTimestamps.trips = Date.now();
   })();
   try {
     await tripsLoadPromise;
@@ -4499,7 +4440,6 @@ async function laadRoutes() {
     const routeKey = getRouteKey(routeId);
     if (routeKey && !routesByKey.has(routeKey)) routesByKey.set(routeKey, route);
   });
-  dataLoadTimestamps.routes = Date.now();
   })();
   try {
     await routesLoadPromise;
@@ -4531,7 +4471,6 @@ async function laadStops() {
     if (stopId) stopsById.set(stopId, stop);
     if (stopCode) stopsById.set(stopCode, stop);
   });
-  dataLoadTimestamps.stops = Date.now();
   })();
   try {
     await stopsLoadPromise;
@@ -4601,13 +4540,6 @@ if (window.location.search.includes("bus=") || isAndroidTvPlatform) {
   warmUpVehiclesAndDeepLinks();
 } else {
   scheduleNonCriticalTask(warmUpVehiclesAndDeepLinks, 1400);
-}
-
-function toonSuggesties() {
-  renderSuggestionList(suggestieLijst, voertuigInput, () => {
-    voertuigInput.blur();
-    zoekAlles();
-  });
 }
 
 async function zoekAlles() {

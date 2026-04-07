@@ -679,11 +679,6 @@ p {
   border-color: color-mix(in srgb, var(--accent) 52%, var(--stroke-strong));
 }
 
-#settingsToggleBtn.active {
-  background: var(--surface-alt);
-  border-color: color-mix(in srgb, var(--accent) 52%, var(--stroke-strong));
-}
-
 #dashboardToggleBtn[hidden] {
   display: none !important;
 }
@@ -719,7 +714,6 @@ p {
 }
 
 .favorites-panel[hidden],
-.settings-panel[hidden],
 .menu-overlay[hidden] {
   display: none !important;
 }
@@ -730,7 +724,6 @@ body.more-open {
 
 body.platform-android-webview .menu-sheet,
 body.platform-android-webview .menu-overlay-scrim,
-body.platform-android-webview .settings-backdrop,
 body.platform-android-webview .pdf-modal,
 body.platform-android-webview .funny-modal,
 body.platform-android-webview .offline-overlay {
@@ -778,7 +771,6 @@ body.platform-android-tv #installBtn {
 
 @supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
   .menu-overlay,
-  .settings-backdrop,
   .pdf-modal,
   .funny-modal,
   .offline-overlay {
@@ -1440,43 +1432,6 @@ button:disabled,
   line-height: 1.45;
 }
 
-/* ===============================
-   SETTINGS PANEL
-================================ */
-
-.settings-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1700;
-  background: var(--overlay-bg);
-  backdrop-filter: blur(calc(var(--overlay-blur) - 4px));
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.24s ease;
-}
-
-.settings-panel {
-  width: min(430px, calc(100vw - 1.5rem));
-}
-
-.settings-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.8rem;
-  margin-bottom: 0.8rem;
-  padding-bottom: 0.8rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--accent-soft) 46%, var(--stroke-soft));
-}
-
-.settings-panel-header h3 {
-  margin: 0;
-  font-family: "Source Sans 3", "Segoe UI", Arial, sans-serif;
-  font-size: 1rem;
-  color: var(--text);
-  letter-spacing: 0;
-}
-
 .settings-close-btn {
   margin-top: 0;
   width: var(--button-height);
@@ -1493,22 +1448,6 @@ button:disabled,
   box-shadow: var(--button-secondary-shadow);
 }
 
-body.settings-open .settings-backdrop {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-body.settings-open {
-  overflow: hidden;
-}
-
-body.settings-open .settings-panel {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-  pointer-events: auto;
-}
-
-body.platform-android .settings-panel,
 body.platform-android .favorites-panel {
   border-width: 1px;
   box-shadow: 0 20px 44px rgba(15, 23, 42, 0.22);
@@ -4069,7 +4008,6 @@ footer h3 {
     box-shadow: var(--shadow-strong);
   }
 
-  .settings-panel,
   .favorites-panel {
     z-index: 1725;
     isolation: isolate;
@@ -4271,16 +4209,6 @@ footer h3 {
     min-width: 48px;
     padding: 0;
     border-radius: calc(var(--radius-md) - 2px);
-  }
-
-  .settings-panel {
-    top: 0.72rem;
-    right: 0.6rem;
-    left: 0.6rem;
-    width: auto;
-    max-height: calc(100vh - 1.2rem);
-    padding: 0.94rem 0.9rem 0.98rem;
-    border-radius: calc(var(--panel-radius-sm) + 2px);
   }
 
   #map {

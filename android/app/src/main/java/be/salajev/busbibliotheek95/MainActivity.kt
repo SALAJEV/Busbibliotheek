@@ -1,10 +1,9 @@
 package be.salajev.busbibliotheek95
 
 import android.Manifest
-import android.content.ContentValues
-import android.provider.MediaStore
-import java.io.OutputStream
+import android.app.Activity
 import android.app.DownloadManager
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -16,6 +15,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.provider.MediaStore
 import android.provider.Settings
 import android.view.View
 import android.webkit.*
@@ -53,6 +53,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.time.LocalDate
