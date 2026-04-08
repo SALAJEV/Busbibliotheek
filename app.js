@@ -227,6 +227,7 @@ const appTitleBtnEl = document.getElementById("appTitleBtn");
 const appTitleEl = document.getElementById("appTitle");
 const appSubtitleEl = document.getElementById("appSubtitle");
 const appContextLineEl = document.getElementById("appContextLine");
+const splashTitleEl = document.getElementById("splashTitle");
 const splashCreditEl = document.getElementById("splashCredit");
 const menuToggleTextEl = document.getElementById("menuToggleText");
 const morePanelSubtitleEl = document.getElementById("morePanelSubtitle");
@@ -1987,6 +1988,12 @@ function buildPhotoGpsMapLink(latitude, longitude) {
   return `https://www.google.com/maps?q=${encodeURIComponent(`${latitude},${longitude}`)}`;
 }
 
+function buildInstagramProfileLink(handle) {
+  const trimmedHandle = (handle || "").toString().trim();
+  if (!trimmedHandle || !trimmedHandle.startsWith("@")) return "";
+  return `https://www.instagram.com/${encodeURIComponent(trimmedHandle)}`;
+}
+
 function parseExifMetadataFromArrayBuffer(buffer) {
   try {
     const view = new DataView(buffer);
@@ -2209,6 +2216,7 @@ function normalizePhotoEntry(entry, fallbackVehicleId, index = 0) {
     : `media/${rawSrc}`;
   const dateText = formatPhotoMetaDate(entry.date || entry.datum || "");
   const makerText = (entry.maker || entry.fotograaf || entry.author || "").toString().trim();
+  const makerLink = (entry.makerLink || entry.fotograafLink || entry.authorLink || "").toString().trim() || buildInstagramProfileLink(makerText);
   const placeText = (entry.place || entry.plaats || entry.location || "").toString().trim();
   const creditText = (entry.credit || entry.credits || "").toString().trim();
   const descriptionText = (entry.description || entry.caption || entry.beschrijving || entry.title || "").toString().trim();
@@ -2219,6 +2227,7 @@ function normalizePhotoEntry(entry, fallbackVehicleId, index = 0) {
     meta: metaParts.join(" • "),
     metaFields: {
       maker: makerText,
+      makerLink,
       place: placeText,
       placeLink: (entry.placeLink || entry.placeUrl || entry.locationUrl || "").toString().trim(),
       date: dateText,
@@ -2362,7 +2371,7 @@ function getPhotoMetaIconMarkup(iconKey) {
 function buildVehiclePhotoMetaMarkup(copy) {
   const metaFields = copy?.metaFields || {};
   const metaItems = [
-    ["maker", getLabel("photoAuthor", "Auteur"), metaFields.maker, ""],
+    ["maker", getLabel("photoPhotographer", "Fotograaf"), metaFields.maker, metaFields.makerLink],
     ["place", getLabel("photoPlace", "Plaats"), metaFields.place, metaFields.placeLink],
     ["date", getLabel("photoDate", "Datum"), metaFields.date, ""],
     ["credit", getLabel("photoCredit", "Credits"), metaFields.credit, ""]
@@ -2922,9 +2931,10 @@ function applyTranslations() {
   if (metaDescriptionEl) metaDescriptionEl.setAttribute("content", getLabel("metaDescription", "Busbibliotheek voor bussen van De Lijn: zoek een voertuig en volg het live."));
   splash?.setAttribute("aria-label", getLabel("splashAria", "Busbibliotheek laden"));
   appTitleEl.textContent = getLabel("appTitle", "Busbibliotheek");
+  if (splashTitleEl) splashTitleEl.textContent = getLabel("appTitle", "Busbibliotheek");
   appSubtitleEl.textContent = t("subtitle");
   appContextLineEl.textContent = t("appContextLine");
-  if (splashCreditEl) splashCreditEl.textContent = getLabel("madeBy", "Made by Busspotter 95");
+  if (splashCreditEl) splashCreditEl.textContent = getLabel("madeBy", "Made by @delijn_busspotter");
   installBtn.textContent = t("install");
   const moreLabel = getLabel("more", "Meer");
   const menuLabel = getLabel("menu", "Menu");
