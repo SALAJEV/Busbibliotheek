@@ -111,7 +111,7 @@
       </div>
       <div class="dashboard-panel-actions">
         <button id="dashboardEditBtn" class="btn" type="button">Aanpassen</button>
-        <button id="dashboardCloseBtn" class="btn dashboard-close-btn" type="button" aria-label="Stalk modus sluiten">Sluiten</button>
+        <button id="dashboardCloseBtn" class="settings-close-btn dashboard-close-btn" type="button" aria-label="Stalk modus sluiten"></button>
       </div>
     </div>
     <div id="dashboardLoadingState" class="dashboard-loading-state" hidden aria-hidden="true">
@@ -351,6 +351,34 @@
         <p id="dashboardSetupSummary" class="pdf-modal-summary">Vul tot negen voertuigen in. Alleen bussen met realtime verschijnen live.</p>
       </div>
       <button id="dashboardSetupCloseBtn" class="settings-close-btn" type="button" aria-label="Sluiten">&times;</button>
+    </div>
+    <div id="dashboardTvSettings" class="dashboard-tv-settings" hidden>
+      <div class="dashboard-tv-settings-head">
+        <h4 id="dashboardTvSettingsTitle">Weergave op tv</h4>
+        <p id="dashboardTvSettingsSummary" class="dashboard-tv-settings-summary">Pas het uitzicht aan zonder naar het gewone instellingenmenu te gaan.</p>
+      </div>
+      <div class="dashboard-tv-settings-grid">
+        <label class="dashboard-tv-setting" for="dashboardThemeSelect">
+          <span id="dashboardThemeLabel">Thema</span>
+          <select id="dashboardThemeSelect">
+            <option value="auto" id="dashboardThemeAutoOpt">Automatisch</option>
+            <option value="light" id="dashboardThemeLightOpt">Licht</option>
+            <option value="dark" id="dashboardThemeDarkOpt">Donker</option>
+          </select>
+        </label>
+        <label class="dashboard-tv-setting" for="dashboardColorThemeSelect">
+          <span id="dashboardColorThemeLabel">Kleurthema</span>
+          <select id="dashboardColorThemeSelect">
+            <option value="classic" id="dashboardColorClassicOpt">Standaard</option>
+            <option value="blue" id="dashboardColorBlueOpt">Blauw</option>
+            <option value="green" id="dashboardColorGreenOpt">Groen</option>
+            <option value="yellow" id="dashboardColorYellowOpt">Geel</option>
+            <option value="orange" id="dashboardColorOrangeOpt">Oranje</option>
+            <option value="red" id="dashboardColorRedOpt">Rood</option>
+            <option value="purple" id="dashboardColorPurpleOpt">Paars</option>
+          </select>
+        </label>
+      </div>
     </div>
     <div id="dashboardSetupGrid" class="dashboard-setup-grid"></div>
     <p id="dashboardSetupError" class="dashboard-setup-error" hidden></p>

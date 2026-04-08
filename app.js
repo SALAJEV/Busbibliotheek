@@ -287,6 +287,23 @@ const dashboardEditBtn = document.getElementById("dashboardEditBtn");
 const dashboardCloseBtn = document.getElementById("dashboardCloseBtn");
 const dashboardSetupModalEl = document.getElementById("dashboardSetupModal");
 const dashboardSetupTitleEl = document.getElementById("dashboardSetupTitle");
+const dashboardTvSettingsEl = document.getElementById("dashboardTvSettings");
+const dashboardTvSettingsTitleEl = document.getElementById("dashboardTvSettingsTitle");
+const dashboardTvSettingsSummaryEl = document.getElementById("dashboardTvSettingsSummary");
+const dashboardThemeLabelEl = document.getElementById("dashboardThemeLabel");
+const dashboardThemeSelectEl = document.getElementById("dashboardThemeSelect");
+const dashboardThemeAutoOptEl = document.getElementById("dashboardThemeAutoOpt");
+const dashboardThemeLightOptEl = document.getElementById("dashboardThemeLightOpt");
+const dashboardThemeDarkOptEl = document.getElementById("dashboardThemeDarkOpt");
+const dashboardColorThemeLabelEl = document.getElementById("dashboardColorThemeLabel");
+const dashboardColorThemeSelectEl = document.getElementById("dashboardColorThemeSelect");
+const dashboardColorClassicOptEl = document.getElementById("dashboardColorClassicOpt");
+const dashboardColorBlueOptEl = document.getElementById("dashboardColorBlueOpt");
+const dashboardColorGreenOptEl = document.getElementById("dashboardColorGreenOpt");
+const dashboardColorYellowOptEl = document.getElementById("dashboardColorYellowOpt");
+const dashboardColorOrangeOptEl = document.getElementById("dashboardColorOrangeOpt");
+const dashboardColorRedOptEl = document.getElementById("dashboardColorRedOpt");
+const dashboardColorPurpleOptEl = document.getElementById("dashboardColorPurpleOpt");
 const dashboardSetupGridEl = document.getElementById("dashboardSetupGrid");
 const dashboardSetupSummaryEl = document.getElementById("dashboardSetupSummary");
 const dashboardSetupErrorEl = document.getElementById("dashboardSetupError");
@@ -344,6 +361,7 @@ let vehiclePhotoLookupToken = 0;
 let vehiclePhotoDescriptions = null;
 let vehiclePhotoDescriptionsPromise = null;
 const photoCaptureDateCache = new Map();
+const photoExifMetadataCache = new Map();
 let vehiclePlateFieldKey = "";
 let oldVehicleNumbersFieldKey = "";
 let oldLicensePlatesFieldKey = "";
@@ -1398,10 +1416,18 @@ function showDashboardSetupModal() {
   dashboardSetupValidation = [];
   dashboardSetupDraftValues = Array.from({ length: DASHBOARD_MAX_VEHICLES }, (_, index) => getVisibleVehicleId(dashboardVehicleIds[index] || ""));
   dashboardSetupDraftResolvedIds = Array.from({ length: DASHBOARD_MAX_VEHICLES }, (_, index) => dashboardVehicleIds[index] || "");
+  if (dashboardTvSettingsEl) dashboardTvSettingsEl.hidden = !isAndroidTvPlatform;
+  if (dashboardThemeSelectEl) dashboardThemeSelectEl.value = settings.theme;
+  if (dashboardColorThemeSelectEl) dashboardColorThemeSelectEl.value = settings.colorTheme;
   setDashboardSetupError("");
   renderDashboardSetupInputs();
   openOverlayModal(dashboardSetupModalEl, {
-    focusTarget: dashboardSetupGridEl?.querySelector("input") || dashboardSetupCloseBtn,
+    focusTarget:
+      (isAndroidTvPlatform
+        ? dashboardThemeSelectEl
+        : null) ||
+      dashboardSetupGridEl?.querySelector("input") ||
+      dashboardSetupCloseBtn,
     closeMenu: false
   });
   document.body.classList.add("dashboard-setup-open");
@@ -1681,10 +1707,9 @@ async function refreshDashboardPanel(options = {}) {
         <article class="dashboard-card is-live" tabindex="0">
           <div class="dashboard-card-top">
             <strong>${escapeHtml(displayVehicleId)}</strong>
-            <span class="line-badge" style="--line-badge-bg:${snapshot.routeColor};--line-badge-fg:${snapshot.routeTextColor};">${escapeHtml(snapshot.routeShort)}</span>
           </div>
           <p class="dashboard-type">${escapeHtml(bus.Type || "")}</p>
-          <p class="dashboard-destination">${escapeHtml(snapshot.destinationText)}</p>
+          <p class="dashboard-destination"><span class="line-badge" style="--line-badge-bg:${snapshot.routeColor};--line-badge-fg:${snapshot.routeTextColor};">${escapeHtml(snapshot.routeShort)}</span><span class="dashboard-destination-text">${escapeHtml(snapshot.destinationText)}</span></p>
           <p class="dashboard-meta">${escapeHtml(getLabel("dashboardStopPrefix", "Halte:"))} ${escapeHtml(snapshot.currentStopName)}</p>
           <p class="dashboard-meta">${escapeHtml(snapshot.delayMessage)}</p>
         </article>
@@ -1903,17 +1928,37 @@ function readExifTextValue(view, offset) {
   return new TextDecoder("ascii").decode(bytes).trim();
 }
 
-function parseExifDateFromArrayBuffer(buffer) {
+function readExifRationalValue(view, offset, littleEndian) {
+  if (!Number.isFinite(offset) || offset < 0 || offset + 8 > view.byteLength) return NaN;
+  const numerator = view.getUint32(offset, littleEndian);
+  const denominator = view.getUint32(offset + 4, littleEndian);
+  if (!denominator) return NaN;
+  return numerator / denominator;
+}
+
+function formatPhotoGpsCoordinate(latitude, longitude) {
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return "";
+  return `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+}
+
+function buildPhotoGpsMapLink(latitude, longitude) {
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return "";
+  return `https://www.google.com/maps?q=${encodeURIComponent(`${latitude},${longitude}`)}`;
+}
+
+function parseExifMetadataFromArrayBuffer(buffer) {
   try {
     const view = new DataView(buffer);
-    if (view.byteLength < 4 || view.getUint16(0, false) !== 0xFFD8) return "";
+    if (view.byteLength < 4 || view.getUint16(0, false) !== 0xFFD8) return { date: "", latitude: NaN, longitude: NaN };
     let offset = 2;
 
     const readIfd = (viewRef, tiffOffset, dirOffset, littleEndian) => {
       const absoluteDirOffset = tiffOffset + dirOffset;
-      if (absoluteDirOffset + 2 > viewRef.byteLength) return { date: "", exifPointer: 0 };
+      if (absoluteDirOffset + 2 > viewRef.byteLength) return { date: "", exifPointer: 0, gpsPointer: 0 };
       const entryCount = viewRef.getUint16(absoluteDirOffset, littleEndian);
       let exifPointer = 0;
+      let gpsPointer = 0;
+      let date = "";
 
       for (let index = 0; index < entryCount; index += 1) {
         const entryOffset = absoluteDirOffset + 2 + index * 12;
@@ -1923,17 +1968,64 @@ function parseExifDateFromArrayBuffer(buffer) {
         const count = viewRef.getUint32(entryOffset + 4, littleEndian);
         const valueOffset = viewRef.getUint32(entryOffset + 8, littleEndian);
         if (tag === 0x8769) exifPointer = valueOffset;
+        if (tag === 0x8825) gpsPointer = valueOffset;
         if (type !== 2 || !count) continue;
         const textOffset = count <= 4 ? entryOffset + 8 : tiffOffset + valueOffset;
         if (tag === 0x0132 || tag === 0x9003 || tag === 0x9004) {
           const rawValue = readExifTextValue(viewRef, textOffset);
           const normalizedValue = rawValue.replace(/^(\d{4}):(\d{2}):(\d{2})/, "$1-$2-$3");
           const formatted = formatPhotoMetaDate(normalizedValue);
-          if (formatted) return { date: formatted, exifPointer };
+          if (formatted && !date) date = formatted;
         }
       }
 
-      return { date: "", exifPointer };
+      return { date, exifPointer, gpsPointer };
+    };
+
+    const readGpsIfd = (viewRef, tiffOffset, dirOffset, littleEndian) => {
+      const absoluteDirOffset = tiffOffset + dirOffset;
+      if (absoluteDirOffset + 2 > viewRef.byteLength) return { latitude: NaN, longitude: NaN };
+      const entryCount = viewRef.getUint16(absoluteDirOffset, littleEndian);
+      let latitudeRef = "";
+      let longitudeRef = "";
+      let latitudeOffset = 0;
+      let longitudeOffset = 0;
+
+      for (let index = 0; index < entryCount; index += 1) {
+        const entryOffset = absoluteDirOffset + 2 + index * 12;
+        if (entryOffset + 12 > viewRef.byteLength) break;
+        const tag = viewRef.getUint16(entryOffset, littleEndian);
+        const type = viewRef.getUint16(entryOffset + 2, littleEndian);
+        const count = viewRef.getUint32(entryOffset + 4, littleEndian);
+        const valueOffset = viewRef.getUint32(entryOffset + 8, littleEndian);
+        if (tag === 0x0001 && type === 2 && count) {
+          latitudeRef = readExifTextValue(viewRef, count <= 4 ? entryOffset + 8 : tiffOffset + valueOffset).toUpperCase();
+        } else if (tag === 0x0002 && count >= 3) {
+          latitudeOffset = tiffOffset + valueOffset;
+        } else if (tag === 0x0003 && type === 2 && count) {
+          longitudeRef = readExifTextValue(viewRef, count <= 4 ? entryOffset + 8 : tiffOffset + valueOffset).toUpperCase();
+        } else if (tag === 0x0004 && count >= 3) {
+          longitudeOffset = tiffOffset + valueOffset;
+        }
+      }
+
+      const latitudeParts = latitudeOffset
+        ? [0, 1, 2].map((partIndex) => readExifRationalValue(viewRef, latitudeOffset + partIndex * 8, littleEndian))
+        : [];
+      const longitudeParts = longitudeOffset
+        ? [0, 1, 2].map((partIndex) => readExifRationalValue(viewRef, longitudeOffset + partIndex * 8, littleEndian))
+        : [];
+
+      const toDecimal = (parts, ref) => {
+        if (parts.length !== 3 || parts.some((part) => !Number.isFinite(part))) return NaN;
+        const sign = ref === "S" || ref === "W" ? -1 : 1;
+        return sign * (parts[0] + parts[1] / 60 + parts[2] / 3600);
+      };
+
+      return {
+        latitude: toDecimal(latitudeParts, latitudeRef),
+        longitude: toDecimal(longitudeParts, longitudeRef)
+      };
     };
 
     while (offset + 4 <= view.byteLength) {
@@ -1957,23 +2049,54 @@ function parseExifDateFromArrayBuffer(buffer) {
           const tiffOffset = offset + 10;
           const byteOrder = view.getUint16(tiffOffset, false);
           const littleEndian = byteOrder === 0x4949;
-          if (!littleEndian && byteOrder !== 0x4D4D) return "";
+          if (!littleEndian && byteOrder !== 0x4D4D) return { date: "", latitude: NaN, longitude: NaN };
           const ifd0Offset = view.getUint32(tiffOffset + 4, littleEndian);
           const ifd0Result = readIfd(view, tiffOffset, ifd0Offset, littleEndian);
-          if (ifd0Result.date) return ifd0Result.date;
+          let date = ifd0Result.date || "";
           if (ifd0Result.exifPointer) {
             const exifResult = readIfd(view, tiffOffset, ifd0Result.exifPointer, littleEndian);
-            if (exifResult.date) return exifResult.date;
+            if (!date && exifResult.date) date = exifResult.date;
           }
+          let latitude = NaN;
+          let longitude = NaN;
+          if (ifd0Result.gpsPointer) {
+            const gpsResult = readGpsIfd(view, tiffOffset, ifd0Result.gpsPointer, littleEndian);
+            latitude = gpsResult.latitude;
+            longitude = gpsResult.longitude;
+          }
+          return { date, latitude, longitude };
         }
       }
 
       offset += 2 + segmentLength;
     }
   } catch (_) {
-    return "";
+    return { date: "", latitude: NaN, longitude: NaN };
   }
-  return "";
+  return { date: "", latitude: NaN, longitude: NaN };
+}
+
+async function getPhotoExifMetadata(src) {
+  const cacheKey = buildVehiclePhotoRequestUrl(src);
+  if (!cacheKey) return { date: "", latitude: NaN, longitude: NaN };
+  const cached = photoExifMetadataCache.get(cacheKey);
+  if (cached && typeof cached === "object" && !(cached instanceof Promise)) return cached;
+  if (cached) return cached;
+
+  const pending = fetch(cacheKey, { cache: "force-cache" })
+    .then((response) => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.arrayBuffer();
+    })
+    .then((buffer) => parseExifMetadataFromArrayBuffer(buffer))
+    .catch(() => ({ date: "", latitude: NaN, longitude: NaN }))
+    .then((value) => {
+      photoExifMetadataCache.set(cacheKey, value || { date: "", latitude: NaN, longitude: NaN });
+      return value || { date: "", latitude: NaN, longitude: NaN };
+    });
+
+  photoExifMetadataCache.set(cacheKey, pending);
+  return pending;
 }
 
 async function getPhotoCaptureDate(src) {
@@ -1983,12 +2106,8 @@ async function getPhotoCaptureDate(src) {
   if (typeof cached === "string") return cached;
   if (cached) return cached;
 
-  const pending = fetch(cacheKey, { cache: "force-cache" })
-    .then((response) => {
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return response.arrayBuffer();
-    })
-    .then((buffer) => parseExifDateFromArrayBuffer(buffer))
+  const pending = getPhotoExifMetadata(src)
+    .then((metadata) => metadata?.date || "")
     .catch(() => "")
     .then((value) => {
       photoCaptureDateCache.set(cacheKey, value || "");
@@ -2060,6 +2179,7 @@ function normalizePhotoEntry(entry, fallbackVehicleId, index = 0) {
     metaFields: {
       maker: makerText,
       place: placeText,
+      placeLink: (entry.placeLink || entry.placeUrl || entry.locationUrl || "").toString().trim(),
       date: dateText,
       credit: creditText
     },
@@ -2147,21 +2267,31 @@ async function resolveVehiclePhotoEntries(vehicleId) {
   for (const entry of candidates) {
     const resolved = await probePhotoEntry(entry);
     if (!resolved) continue;
-    if (!cleanText(resolved.metaFields?.date)) {
-      const captureDate = await getPhotoCaptureDate(resolved.src);
-      if (captureDate) {
-        resolved.metaFields = {
-          ...(resolved.metaFields || {}),
-          date: captureDate
-        };
-        resolved.meta = [
-          resolved.metaFields.maker,
-          resolved.metaFields.place,
-          resolved.metaFields.date,
-          resolved.metaFields.credit
-        ].filter((value) => cleanText(value)).join(" • ");
+    const exifMetadata = await getPhotoExifMetadata(resolved.src);
+    const hasExifGps =
+      Number.isFinite(exifMetadata?.latitude) &&
+      Number.isFinite(exifMetadata?.longitude);
+    const nextMetaFields = {
+      ...(resolved.metaFields || {})
+    };
+    if (!cleanText(nextMetaFields.date) && cleanText(exifMetadata?.date)) {
+      nextMetaFields.date = exifMetadata.date;
+    }
+    if (hasExifGps) {
+      if (!cleanText(nextMetaFields.place)) {
+        nextMetaFields.place = formatPhotoGpsCoordinate(exifMetadata.latitude, exifMetadata.longitude);
+      }
+      if (!cleanText(nextMetaFields.placeLink)) {
+        nextMetaFields.placeLink = buildPhotoGpsMapLink(exifMetadata.latitude, exifMetadata.longitude);
       }
     }
+    resolved.metaFields = nextMetaFields;
+    resolved.meta = [
+      resolved.metaFields.maker,
+      resolved.metaFields.place,
+      resolved.metaFields.date,
+      resolved.metaFields.credit
+    ].filter((value) => cleanText(value)).join(" • ");
     resolvedEntries.push(resolved);
   }
   return resolvedEntries;
@@ -2191,22 +2321,24 @@ function getPhotoMetaIconMarkup(iconKey) {
 function buildVehiclePhotoMetaMarkup(copy) {
   const metaFields = copy?.metaFields || {};
   const metaItems = [
-    ["maker", getLabel("photoAuthor", "Auteur"), metaFields.maker],
-    ["place", getLabel("photoPlace", "Plaats"), metaFields.place],
-    ["date", getLabel("photoDate", "Datum"), metaFields.date],
-    ["credit", getLabel("photoCredit", "Credits"), metaFields.credit]
+    ["maker", getLabel("photoAuthor", "Auteur"), metaFields.maker, ""],
+    ["place", getLabel("photoPlace", "Plaats"), metaFields.place, metaFields.placeLink],
+    ["date", getLabel("photoDate", "Datum"), metaFields.date, ""],
+    ["credit", getLabel("photoCredit", "Credits"), metaFields.credit, ""]
   ].filter(([, , value]) => cleanText(value));
 
   if (!metaItems.length) return "";
 
   return `
     <div class="vehicle-photo-meta-card">
-      ${metaItems.map(([iconKey, label, value]) => `
+      ${metaItems.map(([iconKey, label, value, link]) => `
         <div class="vehicle-photo-meta-item">
           <span class="vehicle-photo-meta-icon" aria-hidden="true">${getPhotoMetaIconMarkup(iconKey)}</span>
           <div class="vehicle-photo-meta-copy">
             <span class="vehicle-photo-meta-label">${escapeHtml(label)}</span>
-            <strong class="vehicle-photo-meta-value">${escapeHtml(value)}</strong>
+            ${cleanText(link)
+              ? `<a class="vehicle-photo-meta-value vehicle-photo-meta-link" href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(value)}</a>`
+              : `<strong class="vehicle-photo-meta-value">${escapeHtml(value)}</strong>`}
           </div>
         </div>
       `).join("")}
@@ -2796,6 +2928,7 @@ function applyTranslations() {
   if (dashboardEditBtn) dashboardEditBtn.textContent = getLabel("dashboardEdit", "Aanpassen");
   if (dashboardCloseBtn) {
     dashboardCloseBtn.setAttribute("aria-label", getLabel("dashboardClose", "Stalk modus sluiten"));
+    dashboardCloseBtn.title = getLabel("close", "Sluiten");
     dashboardCloseBtn.hidden = isAndroidTvPlatform;
   }
   if (dashboardMapEl) dashboardMapEl.setAttribute("aria-label", getLabel("dashboardMapAria", "Kaart met live voertuigen"));
@@ -2849,6 +2982,20 @@ function applyTranslations() {
   compareModalConfirmBtn.textContent = getLabel("compareConfirm", "Vergelijken");
   if (dashboardSetupTitleEl) dashboardSetupTitleEl.textContent = getLabel("dashboardSetupTitle", "Stalk modus instellen");
   if (dashboardSetupSummaryEl) dashboardSetupSummaryEl.textContent = getLabel("dashboardSetupSummary", "Vul tot negen voertuigen in. Alleen bussen met realtime verschijnen live.");
+  if (dashboardTvSettingsTitleEl) dashboardTvSettingsTitleEl.textContent = getLabel("dashboardTvSettingsTitle", "Weergave op tv");
+  if (dashboardTvSettingsSummaryEl) dashboardTvSettingsSummaryEl.textContent = getLabel("dashboardTvSettingsSummary", "Pas het uitzicht aan zonder naar het gewone instellingenmenu te gaan.");
+  if (dashboardThemeLabelEl) dashboardThemeLabelEl.textContent = t("theme");
+  if (dashboardThemeAutoOptEl) dashboardThemeAutoOptEl.textContent = t("themeAuto");
+  if (dashboardThemeLightOptEl) dashboardThemeLightOptEl.textContent = t("themeLight");
+  if (dashboardThemeDarkOptEl) dashboardThemeDarkOptEl.textContent = t("themeDark");
+  if (dashboardColorThemeLabelEl) dashboardColorThemeLabelEl.textContent = t("colorTheme");
+  if (dashboardColorClassicOptEl) dashboardColorClassicOptEl.textContent = t("colorClassic");
+  if (dashboardColorBlueOptEl) dashboardColorBlueOptEl.textContent = t("colorBlue");
+  if (dashboardColorGreenOptEl) dashboardColorGreenOptEl.textContent = t("colorGreen");
+  if (dashboardColorYellowOptEl) dashboardColorYellowOptEl.textContent = t("colorYellow");
+  if (dashboardColorOrangeOptEl) dashboardColorOrangeOptEl.textContent = getLabel("colorOrange", "Oranje");
+  if (dashboardColorRedOptEl) dashboardColorRedOptEl.textContent = t("colorRed");
+  if (dashboardColorPurpleOptEl) dashboardColorPurpleOptEl.textContent = t("colorPurple");
   dashboardSetupCloseBtn.setAttribute("aria-label", getLabel("close", "Sluiten"));
   dashboardSetupCancelBtn.textContent = getLabel("cancel", "Annuleren");
   dashboardSetupConfirmBtn.textContent = getLabel("dashboardSetupConfirm", "Stalk modus openen");
@@ -3682,9 +3829,24 @@ themeSelect.addEventListener("change", () => {
   settings.theme = themeSelect.value;
   saveSettings();
   applyTheme(settings.theme);
+  if (dashboardThemeSelectEl) dashboardThemeSelectEl.value = settings.theme;
 });
 colorThemeSelect.addEventListener("change", () => {
   settings.colorTheme = normalizeColorTheme(colorThemeSelect.value);
+  colorThemeSelect.value = settings.colorTheme;
+  saveSettings();
+  applyColorTheme(settings.colorTheme);
+  if (dashboardColorThemeSelectEl) dashboardColorThemeSelectEl.value = settings.colorTheme;
+});
+dashboardThemeSelectEl?.addEventListener("change", () => {
+  settings.theme = dashboardThemeSelectEl.value;
+  themeSelect.value = settings.theme;
+  saveSettings();
+  applyTheme(settings.theme);
+});
+dashboardColorThemeSelectEl?.addEventListener("change", () => {
+  settings.colorTheme = normalizeColorTheme(dashboardColorThemeSelectEl.value);
+  dashboardColorThemeSelectEl.value = settings.colorTheme;
   colorThemeSelect.value = settings.colorTheme;
   saveSettings();
   applyColorTheme(settings.colorTheme);
@@ -4747,7 +4909,7 @@ async function maybeAutoStartDashboardForAndroidTv() {
 function getDashboardFocusables() {
   const focusScope = !dashboardSetupModalEl?.hidden ? dashboardSetupModalEl : !dashboardPanelEl?.hidden ? dashboardPanelEl : null;
   if (!focusScope) return [];
-  return Array.from(focusScope.querySelectorAll('button:not([hidden]):not([disabled]), input:not([hidden]):not([disabled]), [tabindex="0"]'))
+  return Array.from(focusScope.querySelectorAll('button:not([hidden]):not([disabled]), input:not([hidden]):not([disabled]), select:not([hidden]):not([disabled]), [tabindex="0"]'))
     .filter((element) => element instanceof HTMLElement && !element.hasAttribute("hidden"));
 }
 
