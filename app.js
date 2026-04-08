@@ -3737,6 +3737,7 @@ function initAppPreferences() {
   window.settings = settings;
   initializeRouteHistory();
   syncPlatformBodyClasses();
+  syncHeaderActionPlacement();
   initAndroidViewportSupport();
   loadFavorites();
   settings.intervalMs = normalizeUpdateIntervalMs(settings.intervalMs);
@@ -4982,6 +4983,8 @@ async function laadStops() {
 }
 
 initAppPreferences();
+
+window.addEventListener("resize", syncHeaderActionPlacement);
 
 async function maybeAutoStartDashboardForAndroidTv() {
   if (!isAndroidTvPlatform || dashboardAutoStarted || window.location.search.includes("bus=")) return;

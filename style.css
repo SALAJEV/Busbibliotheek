@@ -883,12 +883,18 @@ p {
 }
 
 .more-toggle-icon {
-  display: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.95rem;
+  min-width: 0.95rem;
+  font-size: 1.2rem;
+  line-height: 1;
+  transform: translateY(-0.02em);
 }
 
 .more-toggle-btn::before {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='5' r='2' fill='black'/%3E%3Ccircle cx='12' cy='12' r='2' fill='black'/%3E%3Ccircle cx='12' cy='19' r='2' fill='black'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='5' r='2' fill='black'/%3E%3Ccircle cx='12' cy='12' r='2' fill='black'/%3E%3Ccircle cx='12' cy='19' r='2' fill='black'/%3E%3C/svg%3E");
+  content: none;
 }
 
 .more-toggle-btn.active {
@@ -1411,6 +1417,22 @@ button:disabled,
   border-radius: 20px;
 }
 
+.menu-inline-search .search-row {
+  align-items: center;
+}
+
+.menu-inline-search .search-row .favorites-top {
+  flex: 0 0 auto;
+  align-self: center;
+}
+
+.menu-inline-search .search-row .more-toggle-btn {
+  height: 52px;
+  min-height: 52px;
+  padding-inline: 0.88rem 0.94rem;
+  border-radius: 18px;
+}
+
 #searchBtn:hover {
   background: var(--button-bg-hover);
   border-color: color-mix(in srgb, var(--accent) 70%, white 8%);
@@ -1677,6 +1699,9 @@ button:disabled,
 }
 
 .settings-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin-top: 0;
   width: var(--button-height);
   height: var(--button-height);
@@ -1688,11 +1713,14 @@ button:disabled,
   background: var(--button-secondary-bg);
   color: var(--text);
   box-shadow: var(--button-secondary-shadow);
+  font-size: 1.65rem;
+  line-height: 1;
+  font-weight: 500;
+  text-align: center;
 }
 
 .settings-close-btn::before {
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4 6.4 5Z'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4 6.4 5Z'/%3E%3C/svg%3E");
+  content: none;
 }
 
 body.platform-android .favorites-panel {
@@ -4549,6 +4577,43 @@ footer h3 {
     font-size: 0.9rem;
   }
 
+  .menu-inline-search .header-actions {
+    display: block;
+  }
+
+  .menu-inline-search .header-actions #installBtn {
+    width: 100%;
+    margin-top: 0.72rem;
+  }
+
+  .menu-inline-search .search-row {
+    gap: 0.38rem;
+    padding-right: 0.22rem;
+  }
+
+  .menu-inline-search .search-row #searchBtn,
+  .menu-inline-search .search-row .more-toggle-btn {
+    flex: 0 0 auto;
+    margin-top: 0;
+  }
+
+  .menu-inline-search .search-row .more-toggle-btn {
+    min-width: 44px;
+    height: 50px;
+    min-height: 50px;
+    padding-inline: 0.78rem 0.82rem;
+  }
+
+  .menu-inline-search .search-row .more-toggle-btn #menuToggleText {
+    display: none;
+  }
+
+  .menu-inline-search .search-row .more-toggle-icon {
+    width: auto;
+    min-width: 0;
+    font-size: 1.22rem;
+  }
+
   .menu-overlay {
     align-items: center;
     justify-items: center;
@@ -4765,6 +4830,17 @@ footer h3 {
 
   .more-toggle-btn {
     padding-inline: 0.72rem 0.78rem;
+  }
+
+  .menu-inline-search .search-row {
+    gap: 0.32rem;
+    padding: 0.18rem;
+  }
+
+  .menu-inline-search .search-row .more-toggle-btn {
+    width: 46px;
+    min-width: 46px;
+    padding-inline: 0;
   }
 
   .title-home-btn {

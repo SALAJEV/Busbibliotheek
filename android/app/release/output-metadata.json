@@ -4,7 +4,7 @@
     "type": "APK",
     "kind": "Directory"
   },
-  "applicationId": "be.salajev.busbibliotheek95",
+  "applicationId": "be.salajev.busbibliotheek",
   "variantName": "release",
   "elements": [
     {
@@ -33,5 +33,5 @@
       ]
     }
   ],
-  "minSdkVersionForDexing": 21
+  "minSdkVersionForDexing": 23
 }
