@@ -117,6 +117,16 @@ function isTouchPlatform() {
   return Boolean(touchPointerMediaQuery?.matches || window.navigator.maxTouchPoints > 0);
 }
 
+function supportsEnhancedDialogs() {
+  try {
+    if (isAndroidWebView) return false;
+    if (!window.CSS || typeof window.CSS.supports !== "function") return false;
+    return window.CSS.supports("position", "fixed");
+  } catch (_) {
+    return false;
+  }
+}
+
 function syncPlatformBodyClasses() {
   if (!document.body) return;
   const isStandalone = isStandaloneDisplayMode();
@@ -126,6 +136,7 @@ function syncPlatformBodyClasses() {
   document.body.classList.toggle("platform-android-tv", isAndroidTvPlatform);
   document.body.classList.toggle("platform-standalone", isStandalone);
   document.body.classList.toggle("platform-android-standalone", isAndroidPlatform && isStandalone);
+  document.body.classList.toggle("dialog-fallback", !supportsEnhancedDialogs());
 }
 
 function syncInstallButtonVisibility() {
@@ -4529,6 +4540,11 @@ function hideSuggestionList(listEl) {
   if (!listEl) return;
   listEl.innerHTML = "";
   listEl.hidden = true;
+  if (listEl.dataset.floating === "1") {
+    listEl.style.removeProperty("top");
+    listEl.style.removeProperty("left");
+    listEl.style.removeProperty("width");
+  }
 }
 
 function scheduleNonCriticalTask(callback, timeout = 800) {
@@ -4704,13 +4720,25 @@ function setSuggestionActiveItem(listEl, nextIndex) {
 function ensureInlineSuggestionList(inputEl) {
   if (!inputEl) return null;
   const shellEl = inputEl.closest(".suggestion-input-shell") || inputEl.parentElement;
+  const shouldFloat = !!inputEl.closest(".pdf-modal");
   let listEl = shellEl?.querySelector(".inline-suggestion-list");
   if (listEl) return listEl;
   listEl = document.createElement("ul");
-  listEl.className = "inline-suggestion-list";
+  listEl.className = shouldFloat ? "inline-suggestion-list floating-suggestion-list" : "inline-suggestion-list";
+  listEl.dataset.floating = shouldFloat ? "1" : "0";
   listEl.hidden = true;
-  shellEl?.appendChild(listEl);
+  (shouldFloat ? document.body : shellEl)?.appendChild(listEl);
   return listEl;
+}
+
+function positionSuggestionList(listEl, inputEl) {
+  if (!listEl || !inputEl || listEl.dataset.floating !== "1") return;
+  const rect = inputEl.getBoundingClientRect();
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || rect.width;
+  const left = Math.max(12, Math.min(rect.left, viewportWidth - rect.width - 12));
+  listEl.style.top = `${Math.round(rect.bottom + 6)}px`;
+  listEl.style.left = `${Math.round(left)}px`;
+  listEl.style.width = `${Math.round(Math.min(rect.width, viewportWidth - 24))}px`;
 }
 
 function bindVehicleSuggestions(inputEl, onSelect) {
@@ -4735,6 +4763,7 @@ function bindVehicleSuggestions(inputEl, onSelect) {
     }
     activeVehicleSuggestionInput = inputEl;
     renderSuggestionList(listEl, inputEl, onSelect);
+    positionSuggestionList(listEl, inputEl);
   };
 
   inputEl.addEventListener("input", render);
@@ -4781,6 +4810,12 @@ function bindVehicleSuggestions(inputEl, onSelect) {
       hideSuggestionList(listEl);
     }, 120);
   });
+  const syncFloatingListPosition = () => {
+    if (listEl.hidden) return;
+    positionSuggestionList(listEl, inputEl);
+  };
+  window.addEventListener("resize", syncFloatingListPosition);
+  window.addEventListener("scroll", syncFloatingListPosition, true);
 }
 
 async function laadVoertuigen() {

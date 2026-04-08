@@ -971,12 +971,33 @@ body.platform-android-tv #installBtn {
   z-index: 1740;
   display: grid;
   align-items: flex-start;
-  justify-items: end;
+  justify-items: center;
   padding:
     max(0.9rem, env(safe-area-inset-top))
     max(0.9rem, env(safe-area-inset-right))
     max(0.9rem, env(safe-area-inset-bottom))
     max(0.9rem, env(safe-area-inset-left));
+}
+
+body.dialog-fallback .menu-overlay,
+body.dialog-fallback .pdf-modal,
+body.dialog-fallback .funny-modal {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.dialog-fallback .menu-overlay {
+  align-items: center;
+  justify-items: center;
+  padding: 0.6rem;
+}
+
+body.dialog-fallback .menu-sheet,
+body.dialog-fallback .pdf-modal-card,
+body.dialog-fallback .funny-modal-card {
+  width: min(100%, 560px);
+  max-height: calc(100dvh - 1.2rem);
+  box-shadow: 0 16px 42px rgba(15, 23, 42, 0.18);
 }
 
 .menu-overlay-scrim {
@@ -1449,6 +1470,16 @@ button:disabled,
   z-index: 30;
 }
 
+.floating-suggestion-list {
+  position: fixed;
+  right: auto;
+  top: 0;
+  left: 0;
+  z-index: 1905;
+  max-height: min(240px, 36vh);
+  box-shadow: 0 20px 42px rgba(15, 23, 42, 0.18);
+}
+
 .inline-suggestion-list[hidden] {
   display: none !important;
 }
@@ -1771,6 +1802,11 @@ body.funny-open {
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
   padding-right: 0.1rem;
+}
+
+.compare-modal-card .pdf-modal-body {
+  overflow: visible;
+  padding-right: 0;
 }
 
 .pdf-theme-field {
@@ -4512,8 +4548,8 @@ footer h3 {
   }
 
   .menu-overlay {
-    align-items: end;
-    justify-items: stretch;
+    align-items: center;
+    justify-items: center;
     padding:
       max(0.5rem, env(safe-area-inset-top))
       max(0.5rem, env(safe-area-inset-right))
@@ -4522,7 +4558,7 @@ footer h3 {
   }
 
   .menu-sheet {
-    width: 100%;
+    width: min(100%, 460px);
     max-height: min(calc(var(--app-height) - 1rem), calc(100dvh - 1rem));
     border-radius: calc(var(--panel-radius) + 4px) calc(var(--panel-radius) + 4px) calc(var(--panel-radius-sm) + 4px) calc(var(--panel-radius-sm) + 4px);
     padding: 0.96rem 0.92rem 1rem;
