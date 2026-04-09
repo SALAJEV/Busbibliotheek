@@ -397,8 +397,6 @@ let favoritesPanelRestoreFocusEl = null;
 let feedEndDateValue = "";
 let vehiclesSourceUpdatedAt = "";
 let vehiclePhotoLookupToken = 0;
-let vehiclePhotoDescriptions = null;
-let vehiclePhotoDescriptionsPromise = null;
 const photoCaptureDateCache = new Map();
 const photoExifMetadataCache = new Map();
 let vehiclePlateFieldKey = "";
@@ -412,7 +410,7 @@ let realtimePausedByInactivity = false;
 let deeplinkHandled = false;
 let routeNavigationLocked = false;
 let injectedInitialHomeHistoryState = false;
-const APP_VERSION = "2026.04.09-1";
+const APP_VERSION = "2026.04.09-2";
 const dataLoadTimestamps = {
   realtime: 0
 };
@@ -439,6 +437,16 @@ let activeVehicleSuggestionInput = null;
 let favoriteDragState = null;
 let favoriteDragSuppressUntil = 0;
 const overlayModalElements = [];
+const KNOWN_PHOTOGRAPHER_FOLDERS = [
+  "Busspotter 95",
+  "Robin Van de Ven",
+  "@dln.spotter",
+  "@delijn821",
+  "@delijn_spotter",
+  "@delijn_spotter_mori",
+  "@spotter_ov",
+  "Arno Janssens"
+];
 
 function registerOverlayModal(modalEl) {
   if (!modalEl || overlayModalElements.includes(modalEl)) return;
@@ -2166,141 +2174,60 @@ async function getPhotoCaptureDate(src) {
   return pending;
 }
 
-function getPhotoDescriptionsLookup() {
-  if (!vehiclePhotoDescriptions || typeof vehiclePhotoDescriptions !== "object") return {};
-  return vehiclePhotoDescriptions;
-}
-
-async function loadVehiclePhotoDescriptions() {
-  if (vehiclePhotoDescriptions) return vehiclePhotoDescriptions;
-  if (vehiclePhotoDescriptionsPromise) return vehiclePhotoDescriptionsPromise;
-
-  vehiclePhotoDescriptionsPromise = fetch(`photo-descriptions.json?v=${APP_VERSION}`, { cache: "default" })
-    .then((response) => {
-      if (!response.ok) throw new Error(`photo-descriptions ${response.status}`);
-      return response.json();
-    })
-    .then((data) => {
-      vehiclePhotoDescriptions = data && typeof data === "object" ? data : {};
-      return vehiclePhotoDescriptions;
-    })
-    .catch((error) => {
-      console.warn("Fotobeschrijvingen laden mislukt", error);
-      vehiclePhotoDescriptions = {};
-      return vehiclePhotoDescriptions;
-    })
-    .finally(() => {
-      vehiclePhotoDescriptionsPromise = null;
-    });
-
-  return vehiclePhotoDescriptionsPromise;
-}
-
-function normalizePhotoEntry(entry, fallbackVehicleId, index = 0) {
-  if (!entry) return null;
-  if (typeof entry === "string") {
-    return {
-      src: entry,
-      caption: "",
-      meta: "",
-      metaFields: {},
-      alt: "",
-      sortOrder: index
-    };
-  }
-  if (typeof entry !== "object") return null;
-  const rawSrc = (entry.file || entry.src || "").toString().trim();
-  if (!rawSrc) return null;
-  const dateText = formatPhotoMetaDate(entry.date || entry.datum || "");
-  const makerText = (entry.maker || entry.fotograaf || entry.author || "").toString().trim();
-  const src = buildVehiclePhotoSourcePath(rawSrc, makerText);
-  const makerLink = (entry.makerLink || entry.fotograafLink || entry.authorLink || "").toString().trim() || buildInstagramProfileLink(makerText);
-  const placeText = (entry.place || entry.plaats || entry.location || "").toString().trim();
-  const creditText = (entry.credit || entry.credits || "").toString().trim();
-  const descriptionText = (entry.description || entry.caption || entry.beschrijving || entry.title || "").toString().trim();
-  const metaParts = [makerText, placeText, dateText, creditText].filter(Boolean);
+function buildVehiclePhotoEntry(src, maker = "", sortOrder = 0) {
+  const normalizedMaker = (maker || "").toString().trim();
   return {
     src,
-    caption: descriptionText,
-    meta: metaParts.join(" • "),
+    caption: "",
+    meta: normalizedMaker,
     metaFields: {
-      maker: makerText,
-      makerLink,
-      place: placeText,
-      placeLink: (entry.placeLink || entry.placeUrl || entry.locationUrl || "").toString().trim(),
-      date: dateText,
-      credit: creditText
+      maker: normalizedMaker,
+      makerLink: normalizedMaker ? buildInstagramProfileLink(normalizedMaker) : "",
+      place: "",
+      placeLink: "",
+      date: "",
+      credit: ""
     },
-    alt: (entry.alt || "").toString().trim(),
-    sortOrder: Number.isFinite(Number(entry.order)) ? Number(entry.order) : index
+    alt: "",
+    sortOrder
   };
 }
 
-function getConfiguredPhotoEntries(vehicleId) {
-  const lookup = getPhotoDescriptionsLookup();
+function getVehiclePhotoAliases(vehicleId) {
   const bus = findBusById(vehicleId);
   const aliases = new Set([
     normalize(vehicleId),
     normalize(bus?.Voertuignummer)
   ]);
-
   splitLegacyValues(getVehicleField(bus, oldVehicleNumbersFieldKey), true).forEach((alias) => aliases.add(normalize(alias)));
-
-  const entries = [];
-  aliases.forEach((alias) => {
-    const directEntries = lookup[alias];
-    if (Array.isArray(directEntries)) {
-      directEntries.forEach((entry, index) => {
-        const normalizedEntry = normalizePhotoEntry(entry, alias, index);
-        if (normalizedEntry) entries.push(normalizedEntry);
-      });
-    }
-  });
-
-  return entries
-    .filter(Boolean)
-    .sort((left, right) => left.sortOrder - right.sortOrder);
+  return Array.from(aliases).filter(Boolean);
 }
 
-function encodeMediaPathSegment(value) {
-  return encodeURIComponent((value || "").toString().trim()).replace(/%2F/gi, "/");
-}
-
-function buildVehiclePhotoSourcePath(rawSrc, maker = "") {
-  const normalizedSrc = (rawSrc || "").toString().trim();
-  if (!normalizedSrc) return "";
-  if (/^[a-z]+:|^\//i.test(normalizedSrc) || normalizedSrc.startsWith("media/")) {
-    return normalizedSrc;
-  }
-  const normalizedMaker = (maker || "").toString().trim();
-  if (!normalizedMaker || /[\\/]/.test(normalizedSrc)) {
-    return `media/${encodeMediaPathSegment(normalizedSrc)}`;
-  }
-  return `media/bus/${encodeMediaPathSegment(normalizedMaker)}/${encodeMediaPathSegment(normalizedSrc)}`;
+function buildVehiclePhotoFolderPath(folderName, fileName) {
+  return `media/bus/${folderName}/${fileName}`;
 }
 
 function getFallbackPhotoEntries(vehicleId) {
-  const bus = findBusById(vehicleId);
-  const aliases = new Set([
-    normalize(vehicleId),
-    normalize(bus?.Voertuignummer)
-  ]);
-  splitLegacyValues(getVehicleField(bus, oldVehicleNumbersFieldKey), true).forEach((alias) => aliases.add(normalize(alias)));
-  const extensions = ["jpeg", "jpg", "png"];
+  const aliases = getVehiclePhotoAliases(vehicleId);
+  const extensions = ["jpeg", "jpg", "JPG", "png", "webp"];
   const suffixes = ["", ...Array.from({ length: 12 }, (_, index) => ` (${index + 1})`)];
   const fallbackEntries = [];
+  const seen = new Set();
   aliases.forEach((alias) => {
     if (!alias) return;
     suffixes.forEach((suffix) => {
       extensions.forEach((extension) => {
-        fallbackEntries.push({
-          src: `media/${encodeURIComponent(`${alias}${suffix}`)}.${extension}`,
-          caption: "",
-          meta: "",
-          metaFields: {},
-          alt: "",
-          sortOrder: fallbackEntries.length
+        const fileName = `${alias}${suffix}.${extension}`;
+        KNOWN_PHOTOGRAPHER_FOLDERS.forEach((folderName) => {
+          const src = buildVehiclePhotoFolderPath(folderName, fileName);
+          if (seen.has(src)) return;
+          seen.add(src);
+          fallbackEntries.push(buildVehiclePhotoEntry(src, folderName, fallbackEntries.length));
         });
+        const legacySrc = `media/${fileName}`;
+        if (seen.has(legacySrc)) return;
+        seen.add(legacySrc);
+        fallbackEntries.push(buildVehiclePhotoEntry(legacySrc, "", fallbackEntries.length));
       });
     });
   });
@@ -2325,9 +2252,7 @@ function buildVehiclePhotoRequestUrl(src) {
 }
 
 async function resolveVehiclePhotoEntries(vehicleId) {
-  await loadVehiclePhotoDescriptions();
-  const configuredEntries = getConfiguredPhotoEntries(vehicleId);
-  const candidates = configuredEntries.length ? configuredEntries : getFallbackPhotoEntries(vehicleId);
+  const candidates = getFallbackPhotoEntries(vehicleId);
   const resolvedEntries = [];
   for (const entry of candidates) {
     const resolved = await probePhotoEntry(entry);
