@@ -2211,11 +2211,9 @@ function normalizePhotoEntry(entry, fallbackVehicleId, index = 0) {
   if (typeof entry !== "object") return null;
   const rawSrc = (entry.file || entry.src || "").toString().trim();
   if (!rawSrc) return null;
-  const src = /^[a-z]+:|^\//i.test(rawSrc) || rawSrc.startsWith("media/")
-    ? rawSrc
-    : `media/${rawSrc}`;
   const dateText = formatPhotoMetaDate(entry.date || entry.datum || "");
   const makerText = (entry.maker || entry.fotograaf || entry.author || "").toString().trim();
+  const src = buildVehiclePhotoSourcePath(rawSrc, makerText);
   const makerLink = (entry.makerLink || entry.fotograafLink || entry.authorLink || "").toString().trim() || buildInstagramProfileLink(makerText);
   const placeText = (entry.place || entry.plaats || entry.location || "").toString().trim();
   const creditText = (entry.credit || entry.credits || "").toString().trim();
@@ -2262,6 +2260,23 @@ function getConfiguredPhotoEntries(vehicleId) {
   return entries
     .filter(Boolean)
     .sort((left, right) => left.sortOrder - right.sortOrder);
+}
+
+function encodeMediaPathSegment(value) {
+  return encodeURIComponent((value || "").toString().trim()).replace(/%2F/gi, "/");
+}
+
+function buildVehiclePhotoSourcePath(rawSrc, maker = "") {
+  const normalizedSrc = (rawSrc || "").toString().trim();
+  if (!normalizedSrc) return "";
+  if (/^[a-z]+:|^\//i.test(normalizedSrc) || normalizedSrc.startsWith("media/")) {
+    return normalizedSrc;
+  }
+  const normalizedMaker = (maker || "").toString().trim();
+  if (!normalizedMaker || /[\\/]/.test(normalizedSrc)) {
+    return `media/${encodeMediaPathSegment(normalizedSrc)}`;
+  }
+  return `media/bus/${encodeMediaPathSegment(normalizedMaker)}/${encodeMediaPathSegment(normalizedSrc)}`;
 }
 
 function getFallbackPhotoEntries(vehicleId) {

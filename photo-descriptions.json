@@ -1,5 +1,5 @@
 {
-  "_instructions": "Gebruik per voertuignummer of oud voertuignummer een array van foto's. Velden per foto: file, description, maker, place, date, alt, order. 'file' mag alleen de bestandsnaam zijn (bijvoorbeeld 4452-1.jpeg, 4452-1.jpg of 4452-1.png) of een pad zoals media/4452-1.jpeg. De combinatie maker/plaats/datum komt automatisch onder de foto.",
+  "_instructions": "Gebruik per voertuignummer of oud voertuignummer een array van foto's. Velden per foto: file, description, maker, place, date, alt, order. Als 'file' alleen een bestandsnaam is en 'maker' is ingevuld, zoekt de app automatisch in media/bus/<maker>/<file>. Zo hoef je de naam van de fotograaf niet meer in de bestandsnaam te zetten. Een expliciet pad zoals media/4452-1.jpeg mag ook nog altijd. De combinatie maker/plaats/datum komt automatisch onder de foto.",
   "2889": [
     {
       "file": "2889.jpeg",
