@@ -5692,3 +5692,321 @@ footer::before {
   }
 }
 
+/* ===============================
+   HEADER POLISH
+================================ */
+
+.header-intro {
+  min-width: 0;
+}
+
+.header-bar {
+  gap: 1.15rem 1.4rem !important;
+  padding: 1.15rem 1.4rem 1.2rem !important;
+  border-radius: 30px !important;
+  border: 1px solid color-mix(in srgb, var(--accent) 12%, var(--stroke-strong)) !important;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 99%, white 1%), color-mix(in srgb, var(--surface) 97%, transparent)) !important,
+    linear-gradient(135deg, color-mix(in srgb, var(--accent-soft) 10%, transparent), transparent 42%) !important;
+  box-shadow:
+    0 18px 42px color-mix(in srgb, var(--accent-soft) 16%, rgba(15, 23, 42, 0.06)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.header-actions {
+  align-items: center !important;
+  align-self: start;
+  gap: 0.72rem !important;
+  padding-top: 0.06rem;
+}
+
+.search-shell {
+  margin-top: 0.88rem !important;
+}
+
+.search-row {
+  min-height: 58px;
+  padding: 0.36rem !important;
+  border-radius: 22px !important;
+  border: 1px solid color-mix(in srgb, var(--accent) 8%, var(--stroke-strong)) !important;
+  background: color-mix(in srgb, var(--surface-strong) 98%, transparent) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.52),
+    0 10px 24px rgba(15, 23, 42, 0.06) !important;
+}
+
+.search-row input {
+  padding-inline: 1rem 0.86rem !important;
+}
+
+#searchBtn {
+  width: 50px;
+  min-width: 50px;
+  border-radius: 16px !important;
+}
+
+.favorites-top {
+  display: flex;
+  align-items: center;
+}
+
+.more-toggle-btn,
+.more-toggle-btn:hover,
+.more-toggle-btn:active {
+  min-width: 118px;
+  height: 48px;
+  min-height: 48px;
+  padding: 0 1rem 0 0.92rem !important;
+  border-radius: 16px !important;
+  border: 1px solid color-mix(in srgb, var(--accent) 12%, var(--button-secondary-border)) !important;
+  background: color-mix(in srgb, var(--surface-strong) 98%, transparent) !important;
+  color: var(--text) !important;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08) !important;
+}
+
+.more-toggle-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--button-secondary-border)) !important;
+  background: color-mix(in srgb, var(--accent-soft) 34%, var(--surface-strong)) !important;
+}
+
+.more-toggle-btn.active {
+  border-color: color-mix(in srgb, var(--accent) 36%, var(--button-secondary-border)) !important;
+  background: color-mix(in srgb, var(--accent-soft) 54%, var(--surface-strong)) !important;
+}
+
+.more-toggle-icon {
+  width: 1rem !important;
+  min-width: 1rem !important;
+  font-size: 1.1rem !important;
+  transform: none !important;
+  opacity: 0.82;
+}
+
+#menuToggleText {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.vehicle-title-row {
+  align-items: center;
+  gap: 0.18rem;
+}
+
+.vehicle-favorite-btn,
+.vehicle-favorite-btn:hover,
+.vehicle-favorite-btn:active,
+.vehicle-favorite-btn.is-favorite {
+  width: auto !important;
+  min-width: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  padding: 0.02rem 0.08rem !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+.vehicle-favorite-btn {
+  color: color-mix(in srgb, #f59e0b 72%, var(--muted) 28%) !important;
+  font-size: 1.45rem !important;
+}
+
+.vehicle-favorite-btn:hover,
+.vehicle-favorite-btn.is-favorite {
+  color: #f59e0b !important;
+}
+
+:root[data-theme="dark"] .header-bar {
+  border-color: color-mix(in srgb, var(--accent) 10%, var(--stroke)) !important;
+  box-shadow:
+    0 22px 44px rgba(2, 8, 23, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+}
+
+:root[data-theme="dark"] .search-row {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 14px 30px rgba(2, 8, 23, 0.3) !important;
+}
+
+:root[data-theme="dark"] .more-toggle-btn,
+:root[data-theme="dark"] .more-toggle-btn:hover,
+:root[data-theme="dark"] .more-toggle-btn:active {
+  box-shadow: 0 14px 28px rgba(2, 8, 23, 0.24) !important;
+}
+
+@media (max-width: 980px) {
+  .header-bar {
+    grid-template-columns: 1fr !important;
+    gap: 0.95rem !important;
+    padding: 1rem 1rem 1.05rem !important;
+    border-radius: 24px !important;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end !important;
+  }
+
+  .menu-inline-search .search-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 0.42rem;
+    padding-right: 0.36rem !important;
+  }
+
+  .menu-inline-search .search-row .favorites-top {
+    margin-left: 0;
+  }
+
+  .menu-inline-search .search-row .more-toggle-btn {
+    min-width: 104px;
+    height: 50px;
+    min-height: 50px;
+    padding-inline: 0.86rem 0.9rem !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .header-bar {
+    padding: 0.94rem !important;
+    border-radius: 22px !important;
+  }
+
+  .search-row {
+    min-height: 54px;
+    border-radius: 20px !important;
+  }
+
+  .menu-inline-search .search-row .more-toggle-btn,
+  .menu-inline-search .search-row #searchBtn {
+    width: 46px;
+    min-width: 46px;
+    height: 46px;
+    min-height: 46px;
+    padding: 0 !important;
+    border-radius: 15px !important;
+    justify-content: center;
+  }
+
+  .menu-inline-search .search-row .more-toggle-btn #menuToggleText {
+    display: none;
+  }
+
+  .menu-inline-search .search-row .more-toggle-icon {
+    width: auto !important;
+    min-width: 0 !important;
+    font-size: 1.16rem !important;
+  }
+}
+
+/* ===============================
+   PHOTO POLISH
+================================ */
+
+.vehicle-photo-info {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.72rem;
+}
+
+.vehicle-photo-meta {
+  justify-self: start;
+  width: 100%;
+  min-width: 0;
+}
+
+.vehicle-photo-meta-card,
+.vehicle-photo-meta-item,
+.vehicle-photo-meta-copy {
+  justify-items: start;
+  text-align: left;
+}
+
+.vehicle-photo-counter {
+  justify-self: end;
+  align-self: start;
+}
+
+button.photo-nav-btn,
+button.photo-nav-btn:hover,
+button.photo-nav-btn:active,
+button.photo-nav-btn:focus-visible {
+  background: rgba(15, 23, 42, 0.56) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  box-shadow: 0 14px 30px rgba(2, 8, 23, 0.28) !important;
+}
+
+button.photo-nav-btn:hover,
+button.photo-nav-btn:active {
+  transform: translateY(-50%) !important;
+}
+
+.photo-nav-btn {
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    opacity 0.18s ease;
+}
+
+.photo-nav-btn:hover,
+.photo-nav-btn:focus-visible {
+  background: rgba(15, 23, 42, 0.68) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+}
+
+:root[data-theme="dark"] button.photo-nav-btn,
+:root[data-theme="dark"] button.photo-nav-btn:hover,
+:root[data-theme="dark"] button.photo-nav-btn:active,
+:root[data-theme="dark"] button.photo-nav-btn:focus-visible {
+  background: rgba(2, 8, 23, 0.72) !important;
+  border-color: rgba(148, 163, 184, 0.22) !important;
+}
+
+body.platform-android .header-bar {
+  border-radius: 24px !important;
+  padding: 1rem 1rem 1.05rem !important;
+}
+
+body.platform-android .search-row {
+  min-height: 56px;
+}
+
+body.platform-android .more-toggle-btn,
+body.platform-android #searchBtn {
+  min-height: 48px;
+}
+
+body.platform-android .photo-nav-btn {
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  min-height: 46px;
+  box-shadow: 0 10px 22px rgba(2, 8, 23, 0.22) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body.platform-android .vehicle-photo-meta-card {
+  padding: 0.78rem 0.82rem;
+}
+
+@media (max-width: 700px) {
+  .vehicle-photo-info {
+    grid-template-columns: 1fr;
+  }
+
+  .vehicle-photo-counter {
+    justify-self: end;
+  }
+}
+
