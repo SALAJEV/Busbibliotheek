@@ -87,6 +87,11 @@
   --button-secondary-bg-hover: #eef2f7;
   --button-secondary-bg-active: #e2e8f0;
   --button-secondary-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+  --theme-input-bg: var(--surface-strong);
+  --theme-input-border: color-mix(in srgb, var(--accent) 14%, var(--stroke));
+  --theme-map-border: color-mix(in srgb, var(--accent) 16%, var(--stroke));
+  --theme-icon-surface: color-mix(in srgb, var(--surface-strong) 92%, var(--accent-soft));
+  --theme-icon-border: color-mix(in srgb, var(--accent) 14%, var(--stroke));
 }
 
 :root[data-theme="light"] {
@@ -108,10 +113,10 @@
     radial-gradient(circle at 18% 14%, rgba(56, 189, 248, 0.11), transparent 26%),
     radial-gradient(circle at 82% 10%, rgba(45, 212, 191, 0.1), transparent 22%),
     radial-gradient(circle at 50% 110%, rgba(99, 102, 241, 0.12), transparent 36%);
-  --surface: rgba(10, 19, 35, 0.78);
-  --surface-strong: rgba(12, 22, 40, 0.92);
-  --surface-alt: rgba(15, 28, 49, 0.96);
-  --surface-elevated: rgba(17, 31, 55, 0.95);
+  --surface: color-mix(in srgb, var(--bg) 90%, var(--accent) 10%);
+  --surface-strong: color-mix(in srgb, var(--bg) 84%, var(--accent) 16%);
+  --surface-alt: color-mix(in srgb, var(--bg) 78%, var(--accent) 22%);
+  --surface-elevated: color-mix(in srgb, var(--bg) 74%, var(--accent) 26%);
   --panel-tint: color-mix(in srgb, var(--accent-soft) 68%, transparent);
   --panel-bg:
     linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 96%, transparent), color-mix(in srgb, var(--surface-strong) 94%, transparent)),
@@ -140,11 +145,16 @@
   --button-bg: #0f2f52;
   --button-bg-hover: #14406d;
   --button-bg-active: #0c2843;
-  --button-secondary-border: rgba(148, 163, 184, 0.18);
-  --button-secondary-bg: rgba(14, 27, 48, 0.92);
-  --button-secondary-bg-hover: rgba(19, 37, 63, 0.94);
-  --button-secondary-bg-active: rgba(24, 45, 77, 0.96);
+  --button-secondary-border: color-mix(in srgb, var(--accent) 16%, var(--stroke));
+  --button-secondary-bg: color-mix(in srgb, var(--surface-strong) 94%, var(--bg) 6%);
+  --button-secondary-bg-hover: color-mix(in srgb, var(--surface-elevated) 92%, var(--accent) 8%);
+  --button-secondary-bg-active: color-mix(in srgb, var(--surface-elevated) 86%, var(--accent) 14%);
   --button-secondary-shadow: 0 10px 24px rgba(2, 8, 23, 0.24);
+  --theme-input-bg: color-mix(in srgb, var(--surface-elevated) 82%, var(--bg) 18%);
+  --theme-input-border: color-mix(in srgb, var(--accent) 18%, var(--stroke));
+  --theme-map-border: color-mix(in srgb, var(--accent) 20%, var(--stroke));
+  --theme-icon-surface: color-mix(in srgb, var(--surface-elevated) 90%, var(--accent) 10%);
+  --theme-icon-border: color-mix(in srgb, var(--accent) 16%, var(--stroke));
 }
 
 @media (prefers-color-scheme: dark) {
@@ -163,10 +173,10 @@
       radial-gradient(circle at 18% 14%, rgba(56, 189, 248, 0.11), transparent 26%),
       radial-gradient(circle at 82% 10%, rgba(45, 212, 191, 0.1), transparent 22%),
       radial-gradient(circle at 50% 110%, rgba(99, 102, 241, 0.12), transparent 36%);
-    --surface: rgba(10, 19, 35, 0.78);
-    --surface-strong: rgba(12, 22, 40, 0.92);
-    --surface-alt: rgba(15, 28, 49, 0.96);
-    --surface-elevated: rgba(17, 31, 55, 0.95);
+    --surface: color-mix(in srgb, var(--bg) 90%, var(--accent) 10%);
+    --surface-strong: color-mix(in srgb, var(--bg) 84%, var(--accent) 16%);
+    --surface-alt: color-mix(in srgb, var(--bg) 78%, var(--accent) 22%);
+    --surface-elevated: color-mix(in srgb, var(--bg) 74%, var(--accent) 26%);
     --stroke: rgba(148, 163, 184, 0.16);
     --stroke-strong: rgba(148, 163, 184, 0.24);
     --stroke-soft: rgba(148, 163, 184, 0.11);
@@ -185,11 +195,16 @@
     --button-bg: #0f2f52;
     --button-bg-hover: #14406d;
     --button-bg-active: #0c2843;
-    --button-secondary-border: rgba(148, 163, 184, 0.18);
-    --button-secondary-bg: rgba(14, 27, 48, 0.92);
-    --button-secondary-bg-hover: rgba(19, 37, 63, 0.94);
-    --button-secondary-bg-active: rgba(24, 45, 77, 0.96);
+    --button-secondary-border: color-mix(in srgb, var(--accent) 16%, var(--stroke));
+    --button-secondary-bg: color-mix(in srgb, var(--surface-strong) 94%, var(--bg) 6%);
+    --button-secondary-bg-hover: color-mix(in srgb, var(--surface-elevated) 92%, var(--accent) 8%);
+    --button-secondary-bg-active: color-mix(in srgb, var(--surface-elevated) 86%, var(--accent) 14%);
     --button-secondary-shadow: 0 10px 24px rgba(2, 8, 23, 0.24);
+    --theme-input-bg: color-mix(in srgb, var(--surface-elevated) 82%, var(--bg) 18%);
+    --theme-input-border: color-mix(in srgb, var(--accent) 18%, var(--stroke));
+    --theme-map-border: color-mix(in srgb, var(--accent) 20%, var(--stroke));
+    --theme-icon-surface: color-mix(in srgb, var(--surface-elevated) 90%, var(--accent) 10%);
+    --theme-icon-border: color-mix(in srgb, var(--accent) 16%, var(--stroke));
   }
 }
 
@@ -4027,13 +4042,13 @@ body.offline-active {
 :root[data-theme="dark"] input,
 :root[data-theme="dark"] select {
   color: var(--text);
-  background: rgba(8, 17, 31, 0.78);
-  border-color: rgba(125, 211, 252, 0.1);
+  background: var(--theme-input-bg);
+  border-color: var(--theme-input-border);
 }
 
 :root[data-theme="dark"] #map,
 :root[data-theme="dark"] .dashboard-map {
-  border-color: rgba(125, 211, 252, 0.12);
+  border-color: var(--theme-map-border);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
     0 16px 36px rgba(2, 8, 23, 0.38);
@@ -4041,8 +4056,8 @@ body.offline-active {
 
 :root[data-theme="dark"] .weather-icon,
 :root[data-theme="dark"] .weather-card-chevron {
-  background: rgba(16, 31, 52, 0.9);
-  border: 1px solid rgba(125, 211, 252, 0.08);
+  background: var(--theme-icon-surface);
+  border: 1px solid var(--theme-icon-border);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
@@ -4093,13 +4108,13 @@ body.offline-active {
   :root:not([data-theme="light"]) input,
   :root:not([data-theme="light"]) select {
     color: var(--text);
-    background: rgba(8, 17, 31, 0.78);
-    border-color: rgba(125, 211, 252, 0.1);
+    background: var(--theme-input-bg);
+    border-color: var(--theme-input-border);
   }
 
   :root:not([data-theme="light"]) #map,
   :root:not([data-theme="light"]) .dashboard-map {
-    border-color: rgba(125, 211, 252, 0.12);
+    border-color: var(--theme-map-border);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.04),
       0 16px 36px rgba(2, 8, 23, 0.38);
@@ -4107,8 +4122,8 @@ body.offline-active {
 
   :root:not([data-theme="light"]) .weather-icon,
   :root:not([data-theme="light"]) .weather-card-chevron {
-    background: rgba(16, 31, 52, 0.9);
-    border: 1px solid rgba(125, 211, 252, 0.08);
+    background: var(--theme-icon-surface);
+    border: 1px solid var(--theme-icon-border);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
 
@@ -5706,7 +5721,7 @@ footer::before {
   border-radius: 30px !important;
   border: 1px solid color-mix(in srgb, var(--accent) 12%, var(--stroke-strong)) !important;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 99%, white 1%), color-mix(in srgb, var(--surface) 97%, transparent)) !important,
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 99%, white 1%), color-mix(in srgb, var(--surface) 97%, transparent)),
     linear-gradient(135deg, color-mix(in srgb, var(--accent-soft) 10%, transparent), transparent 42%) !important;
   box-shadow:
     0 18px 42px color-mix(in srgb, var(--accent-soft) 16%, rgba(15, 23, 42, 0.06)),
