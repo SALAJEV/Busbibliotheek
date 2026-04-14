@@ -113,13 +113,17 @@ class MainActivity : ComponentActivity() {
                     launcher.launch(permissionsToRequest)
                 }
 
-                val siteColor = if (isDarkTheme) Color(0xFF07111F) else Color(0xFFF3F6FB)
+                val fallbackSiteColor = if (isDarkTheme) Color(0xFF07111F) else Color(0xFFF3F6FB)
+                var siteColor by remember { mutableStateOf(fallbackSiteColor) }
+                var siteChromeIsDark by remember { mutableStateOf(isDarkTheme) }
                 
                 SideEffect {
                     val window = (context as Activity).window
+                    window.statusBarColor = siteColor.toArgb()
+                    window.navigationBarColor = siteColor.toArgb()
                     WindowCompat.getInsetsController(window, window.decorView).apply {
-                        isAppearanceLightStatusBars = !isDarkTheme
-                        isAppearanceLightNavigationBars = !isDarkTheme
+                        isAppearanceLightStatusBars = !siteChromeIsDark
+                        isAppearanceLightNavigationBars = !siteChromeIsDark
                     }
                 }
 
@@ -151,7 +155,12 @@ class MainActivity : ComponentActivity() {
                                     url = startUrl,
                                     modifier = Modifier.fillMaxSize(),
                                     siteColor = siteColor,
-                                    isDarkTheme = isDarkTheme
+                                    isDarkTheme = isDarkTheme,
+                                    chromeIsDark = siteChromeIsDark,
+                                    onHostThemeResolved = { resolvedColor, resolvedIsDark ->
+                                        siteColor = resolvedColor
+                                        siteChromeIsDark = resolvedIsDark
+                                    }
                                 )
                                 
                                 if (updateStatus is UpdateStatus.Available) {
@@ -275,7 +284,14 @@ fun UpdateDialog(isCritical: Boolean, onUpdate: () -> Unit, onDismiss: () -> Uni
 }
 
 @Composable
-fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color, isDarkTheme: Boolean) {
+fun WebViewScreen(
+    url: String,
+    modifier: Modifier = Modifier,
+    siteColor: Color,
+    isDarkTheme: Boolean,
+    chromeIsDark: Boolean,
+    onHostThemeResolved: (Color, Boolean) -> Unit
+) {
     var webViewInstance: WebView? by remember { mutableStateOf(null) }
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -444,12 +460,27 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color, 
                         fun downloadFile(url: String, fileName: String, contentType: String) {
                             enqueueDirectDownload(url, fileName, contentType, settings.userAgentString)
                         }
+
+                        @Suppress("unused")
+                        @JavascriptInterface
+                        fun updateTheme(themeColor: String?, colorScheme: String?) {
+                            val resolvedColor = parseWebThemeColor(themeColor) ?: return
+                            val resolvedIsDark = when (colorScheme?.trim()?.lowercase()) {
+                                "dark" -> true
+                                "light" -> false
+                                else -> false
+                            }
+                            (context as Activity).runOnUiThread {
+                                onHostThemeResolved(resolvedColor, resolvedIsDark)
+                                setBackgroundColor(resolvedColor.toArgb())
+                            }
+                        }
                     }, "Android")
 
                     isLongClickable = false
                     setOnLongClickListener { true }
 
-                    updateDarkMode(this, isDarkTheme)
+                    updateDarkMode(this, siteColor)
                     
                     webChromeClient = object : WebChromeClient() {
                         override fun onProgressChanged(view: WebView?, newProgress: Int) {
@@ -575,7 +606,7 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color, 
             },
             modifier = Modifier.fillMaxSize(),
             update = { view ->
-                updateDarkMode(view, isDarkTheme)
+                updateDarkMode(view, siteColor)
                 applyWebAppTheme(view, isDarkTheme)
             }
         )
@@ -584,18 +615,18 @@ fun WebViewScreen(url: String, modifier: Modifier = Modifier, siteColor: Color, 
             LinearProgressIndicator(
                 progress = { progress },
                 modifier = Modifier.fillMaxWidth().height(2.dp).align(Alignment.TopCenter),
-                color = if (isDarkTheme) Color.White else Color(0xFF2196F3),
+                color = if (chromeIsDark) Color.White else Color(0xFF3B82F6),
                 trackColor = Color.Transparent,
             )
         }
     }
 }
 
-private fun updateDarkMode(webView: WebView, isDarkTheme: Boolean) {
+private fun updateDarkMode(webView: WebView, siteColor: Color) {
     if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
         WebSettingsCompat.setAlgorithmicDarkeningAllowed(webView.settings, false)
     }
-    webView.setBackgroundColor(if (isDarkTheme) "#07111F".toColorInt() else "#F3F6FB".toColorInt())
+    webView.setBackgroundColor(siteColor.toArgb())
 }
 
 private fun applyWebAppTheme(webView: WebView, isDarkTheme: Boolean) {
@@ -604,10 +635,18 @@ private fun applyWebAppTheme(webView: WebView, isDarkTheme: Boolean) {
         (function() {
           document.documentElement.dataset.androidTheme = '$theme';
           document.documentElement.classList.add('android-host-app');
+          if (document.body) document.body.classList.add('android-host-app');
+          if (typeof window.syncPlatformBodyClasses === 'function') window.syncPlatformBodyClasses();
+          if (typeof window.updateSystemUiThemeColor === 'function') window.updateSystemUiThemeColor();
           window.dispatchEvent(new CustomEvent('bb-android-theme-change', { detail: { theme: '$theme' } }));
         })();
     """.trimIndent()
     webView.evaluateJavascript(script, null)
+}
+
+private fun parseWebThemeColor(rawColor: String?): Color? {
+    val value = rawColor?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+    return runCatching { Color(value.toColorInt()) }.getOrNull()
 }
 
 private fun getAppVersion(context: Context): String {

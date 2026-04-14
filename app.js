@@ -25,6 +25,7 @@ const dashboardToggleBtn = document.getElementById("dashboardToggleBtn");
 const halteSearchToggleBtn = document.getElementById("halteSearchToggleBtn");
 const iosInstallHintEl = document.getElementById("iosInstallHint");
 const settingsInfoBtn = document.getElementById("settingsInfoBtn");
+const appShellEl = document.querySelector(".app-shell");
 const favoritesBackdropEl = document.getElementById("favoritesBackdrop");
 const favoritesToggleBtn = document.getElementById("favoritesToggleBtn");
 const favoritesPanelEl = document.getElementById("favoritesPanel");
@@ -161,9 +162,11 @@ function supportsEnhancedDialogs() {
 function syncPlatformBodyClasses() {
   if (!document.body) return;
   const isStandalone = isStandaloneDisplayMode();
+  const isHostApp = isAndroidHostApp();
   document.body.classList.toggle("platform-touch", isTouchPlatform());
   document.body.classList.toggle("platform-android", isAndroidPlatform);
   document.body.classList.toggle("platform-android-webview", isAndroidWebView);
+  document.body.classList.toggle("platform-android-host-app", isHostApp);
   document.body.classList.toggle("platform-android-tv", isAndroidTvPlatform);
   document.body.classList.toggle("platform-standalone", isStandalone);
   document.body.classList.toggle("platform-android-standalone", isAndroidPlatform && isStandalone);
@@ -450,6 +453,8 @@ let activeVehicleSuggestionInput = null;
 let favoriteDragState = null;
 let favoriteDragSuppressUntil = 0;
 const overlayModalElements = [];
+const overlayModalRestoreFocusMap = new WeakMap();
+let interactiveOverlayStack = [];
 const KNOWN_PHOTOGRAPHER_FOLDERS = [
   "Busspotter 95",
   "Robin Van de Ven",
@@ -742,6 +747,8 @@ const PHOTO_LIBRARY_INDEX = {
 
 function registerOverlayModal(modalEl) {
   if (!modalEl || overlayModalElements.includes(modalEl)) return;
+  modalEl.setAttribute("aria-hidden", String(modalEl.hidden));
+  if ("inert" in modalEl) modalEl.inert = !!modalEl.hidden;
   overlayModalElements.push(modalEl);
 }
 
@@ -757,6 +764,74 @@ function registerOverlayModal(modalEl) {
   funnyModalEl
 ].forEach(registerOverlayModal);
 
+function isOverlayOpen(overlayEl) {
+  if (!overlayEl) return false;
+  if (overlayEl === favoritesBackdropEl) return favoritesPanelOpen && !favoritesBackdropEl.hidden;
+  return !overlayEl.hidden;
+}
+
+function pushInteractiveOverlay(overlayEl) {
+  if (!overlayEl) return;
+  interactiveOverlayStack = interactiveOverlayStack.filter((entry) => entry && entry !== overlayEl);
+  interactiveOverlayStack.push(overlayEl);
+}
+
+function removeInteractiveOverlay(overlayEl) {
+  if (!overlayEl) return;
+  interactiveOverlayStack = interactiveOverlayStack.filter((entry) => entry && entry !== overlayEl);
+}
+
+function getTopInteractiveOverlay() {
+  interactiveOverlayStack = interactiveOverlayStack.filter((overlayEl) => isOverlayOpen(overlayEl));
+  return interactiveOverlayStack.length ? interactiveOverlayStack[interactiveOverlayStack.length - 1] : null;
+}
+
+function getInteractiveOverlayFocusScope(overlayEl) {
+  if (!overlayEl) return null;
+  if (overlayEl === favoritesBackdropEl) return favoritesPanelEl || favoritesBackdropEl;
+  return overlayEl.querySelector(".pdf-modal-card, .funny-modal-card, .menu-sheet") || overlayEl.firstElementChild || overlayEl;
+}
+
+function isFocusableCandidate(element) {
+  if (!(element instanceof HTMLElement)) return false;
+  if (element.hasAttribute("disabled")) return false;
+  if (element.getAttribute("aria-hidden") === "true") return false;
+  if (element.hidden) return false;
+  if (element.closest("[hidden], [inert]")) return false;
+  return element.getClientRects().length > 0;
+}
+
+function getInteractiveOverlayFocusableElements(overlayEl) {
+  const scopeEl = getInteractiveOverlayFocusScope(overlayEl);
+  if (!scopeEl) return [];
+  return Array.from(
+    scopeEl.querySelectorAll("button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])")
+  ).filter((element) => isFocusableCandidate(element));
+}
+
+function focusInteractiveOverlay(overlayEl, preferredTarget = null) {
+  const scopeEl = getInteractiveOverlayFocusScope(overlayEl);
+  if (!(scopeEl instanceof HTMLElement)) return;
+  const focusableElements = getInteractiveOverlayFocusableElements(overlayEl);
+  const preferredIsValid =
+    preferredTarget instanceof HTMLElement &&
+    (preferredTarget === scopeEl || scopeEl.contains(preferredTarget)) &&
+    isFocusableCandidate(preferredTarget);
+  const nextFocusTarget = preferredIsValid
+    ? preferredTarget
+    : (focusableElements[0] instanceof HTMLElement ? focusableElements[0] : scopeEl);
+  if (nextFocusTarget === scopeEl && !scopeEl.hasAttribute("tabindex")) {
+    scopeEl.setAttribute("tabindex", "-1");
+  }
+  window.setTimeout(() => {
+    try {
+      nextFocusTarget.focus({ preventScroll: true });
+    } catch (_) {
+      nextFocusTarget.focus();
+    }
+  }, 30);
+}
+
 function syncOverlayModalBodyState() {
   const hasPdfStyleModalOpen = overlayModalElements.some((modalEl) =>
     modalEl &&
@@ -768,6 +843,27 @@ function syncOverlayModalBodyState() {
   document.body.classList.toggle("funny-open", hasFunnyModalOpen);
 }
 
+function syncInteractiveOverlayState() {
+  const activeOverlayEl = getTopInteractiveOverlay();
+  document.body.classList.toggle("overlay-open", !!activeOverlayEl);
+
+  if (appShellEl) {
+    Array.from(appShellEl.children).forEach((childEl) => {
+      if (!(childEl instanceof HTMLElement) || !("inert" in childEl)) return;
+      childEl.inert = !!activeOverlayEl && childEl !== activeOverlayEl;
+    });
+  }
+
+  overlayModalElements.forEach((modalEl) => {
+    if (!modalEl || !("inert" in modalEl)) return;
+    modalEl.inert = modalEl.hidden || modalEl !== activeOverlayEl;
+  });
+
+  if (favoritesPanelEl && "inert" in favoritesPanelEl) {
+    favoritesPanelEl.inert = !favoritesPanelOpen || activeOverlayEl !== favoritesBackdropEl;
+  }
+}
+
 function openOverlayModal(modalEl, options = {}) {
   if (!modalEl) return;
   const {
@@ -775,31 +871,59 @@ function openOverlayModal(modalEl, options = {}) {
     closeMenu = true
   } = options;
   if (closeMenu) setFavoritesPanel(false);
+  overlayModalRestoreFocusMap.set(
+    modalEl,
+    document.activeElement instanceof HTMLElement ? document.activeElement : null
+  );
   modalEl.hidden = false;
   modalEl.setAttribute("aria-hidden", "false");
   modalEl.classList.add("is-open");
   modalEl.style.display = "grid";
+  if ("inert" in modalEl) modalEl.inert = false;
+  pushInteractiveOverlay(modalEl);
   syncOverlayModalBodyState();
-  window.requestAnimationFrame(() => {
-    const nextFocusTarget =
-      focusTarget instanceof HTMLElement
-        ? focusTarget
-        : modalEl.querySelector("button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])");
-    if (nextFocusTarget instanceof HTMLElement) {
-      window.setTimeout(() => nextFocusTarget.focus({ preventScroll: true }), 30);
-    }
-  });
+  syncInteractiveOverlayState();
+  window.requestAnimationFrame(() => focusInteractiveOverlay(modalEl, focusTarget));
 }
 
 function closeOverlayModal(modalEl, options = {}) {
   if (!modalEl) return;
-  const { onAfterClose = null } = options;
+  const { onAfterClose = null, restoreFocus = true } = options;
+  const restoreTarget = overlayModalRestoreFocusMap.get(modalEl);
+  overlayModalRestoreFocusMap.delete(modalEl);
   modalEl.classList.remove("is-open");
   modalEl.setAttribute("aria-hidden", "true");
   modalEl.style.removeProperty("display");
   modalEl.hidden = true;
+  if ("inert" in modalEl) modalEl.inert = true;
+  removeInteractiveOverlay(modalEl);
   syncOverlayModalBodyState();
+  syncInteractiveOverlayState();
   if (typeof onAfterClose === "function") onAfterClose();
+  if (restoreFocus && restoreTarget instanceof HTMLElement && restoreTarget.isConnected && isFocusableCandidate(restoreTarget)) {
+    window.requestAnimationFrame(() => {
+      try {
+        restoreTarget.focus({ preventScroll: true });
+      } catch (_) {
+        restoreTarget.focus();
+      }
+    });
+    return;
+  }
+  const activeOverlayEl = getTopInteractiveOverlay();
+  if (activeOverlayEl) {
+    window.requestAnimationFrame(() => focusInteractiveOverlay(activeOverlayEl));
+    return;
+  }
+  if (restoreFocus && favoritesToggleBtn instanceof HTMLElement && isFocusableCandidate(favoritesToggleBtn)) {
+    window.requestAnimationFrame(() => {
+      try {
+        favoritesToggleBtn.focus({ preventScroll: true });
+      } catch (_) {
+        favoritesToggleBtn.focus();
+      }
+    });
+  }
 }
 
 function isDashboardPanelOpen() {
@@ -3832,6 +3956,13 @@ function updateSystemUiThemeColor() {
     metaEl.setAttribute("content", nextThemeColor);
   });
   if (colorSchemeMetaEl) colorSchemeMetaEl.setAttribute("content", resolvedTheme);
+  if (isAndroidHostApp() && typeof window.Android?.updateTheme === "function") {
+    try {
+      window.Android.updateTheme(nextThemeColor, resolvedTheme);
+    } catch (error) {
+      console.warn("Android theme-sync mislukt", error);
+    }
+  }
 }
 
 window.updateSystemUiThemeColor = updateSystemUiThemeColor;
@@ -4307,6 +4438,8 @@ function setFavoritesPanel(open) {
   if (!favoritesBackdropEl || !favoritesPanelEl || !favoritesToggleBtn) {
     favoritesPanelOpen = false;
     document.body.classList.remove("more-open");
+    removeInteractiveOverlay(favoritesBackdropEl);
+    syncInteractiveOverlayState();
     return;
   }
   if (shouldOpen === favoritesPanelOpen) return;
@@ -4315,26 +4448,31 @@ function setFavoritesPanel(open) {
     favoritesPanelRestoreFocusEl = document.activeElement instanceof HTMLElement ? document.activeElement : favoritesToggleBtn;
     favoritesBackdropEl.hidden = false;
     favoritesBackdropEl.setAttribute("aria-hidden", "false");
+    pushInteractiveOverlay(favoritesBackdropEl);
   } else {
     favoritesBackdropEl.setAttribute("aria-hidden", "true");
     favoritesBackdropEl.hidden = true;
+    removeInteractiveOverlay(favoritesBackdropEl);
   }
   favoritesPanelEl.setAttribute("aria-hidden", String(!favoritesPanelOpen));
-  if ("inert" in favoritesPanelEl) favoritesPanelEl.inert = !favoritesPanelOpen;
   favoritesToggleBtn.setAttribute("aria-expanded", String(favoritesPanelOpen));
   favoritesToggleBtn.classList.toggle("active", favoritesPanelOpen);
   document.body.classList.toggle("more-open", favoritesPanelOpen);
+  syncInteractiveOverlayState();
   if (favoritesPanelOpen) {
-    window.requestAnimationFrame(() => {
-      const firstFocusable = favoritesPanelEl.querySelector("button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])");
-      if (firstFocusable instanceof HTMLElement) firstFocusable.focus({ preventScroll: true });
-    });
+    window.requestAnimationFrame(() => focusInteractiveOverlay(favoritesBackdropEl));
     return;
   }
   const restoreTarget = favoritesPanelRestoreFocusEl;
   favoritesPanelRestoreFocusEl = null;
   if (restoreTarget instanceof HTMLElement) {
-    window.requestAnimationFrame(() => restoreTarget.focus({ preventScroll: true }));
+    window.requestAnimationFrame(() => {
+      try {
+        restoreTarget.focus({ preventScroll: true });
+      } catch (_) {
+        restoreTarget.focus();
+      }
+    });
   }
 }
 
@@ -4344,6 +4482,84 @@ function showFunnyModal() {
 
 function hideFunnyModal() {
   closeOverlayModal(funnyModalEl);
+}
+
+function closeInteractiveOverlay(overlayEl) {
+  if (!overlayEl || !isOverlayOpen(overlayEl)) return false;
+  if (overlayEl === favoritesBackdropEl) {
+    setFavoritesPanel(false);
+    return true;
+  }
+  if (overlayEl === halteSearchModalEl) {
+    hideHalteSearchModal();
+    return true;
+  }
+  if (overlayEl === dashboardSetupModalEl) {
+    hideDashboardSetupModal();
+    return true;
+  }
+  if (overlayEl === reviewModalEl) {
+    hideReviewModal();
+    return true;
+  }
+  if (overlayEl === termsModalEl) {
+    hideTermsModal();
+    return true;
+  }
+  if (overlayEl === weatherModalEl) {
+    hideWeatherModal();
+    return true;
+  }
+  if (overlayEl === infoModalEl) {
+    hideInfoModal();
+    return true;
+  }
+  if (overlayEl === compareModalEl) {
+    hideCompareModal();
+    return true;
+  }
+  if (overlayEl === pdfModalEl) {
+    hidePdfModal();
+    return true;
+  }
+  if (overlayEl === funnyModalEl) {
+    hideFunnyModal();
+    return true;
+  }
+  closeOverlayModal(overlayEl);
+  return true;
+}
+
+function trapInteractiveOverlayFocus(event, overlayEl) {
+  if (!overlayEl || event.key !== "Tab") return false;
+  const focusableElements = getInteractiveOverlayFocusableElements(overlayEl);
+  const scopeEl = getInteractiveOverlayFocusScope(overlayEl);
+  if (!(scopeEl instanceof HTMLElement)) return false;
+  if (!focusableElements.length) {
+    event.preventDefault();
+    focusInteractiveOverlay(overlayEl);
+    return true;
+  }
+  const firstFocusableEl = focusableElements[0];
+  const lastFocusableEl = focusableElements[focusableElements.length - 1];
+  const activeEl = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const isInsideOverlay = !!activeEl && (activeEl === scopeEl || scopeEl.contains(activeEl));
+  if (!isInsideOverlay) {
+    event.preventDefault();
+    focusInteractiveOverlay(overlayEl, event.shiftKey ? lastFocusableEl : firstFocusableEl);
+    return true;
+  }
+  if (event.shiftKey && activeEl === firstFocusableEl) {
+    event.preventDefault();
+    lastFocusableEl.focus({ preventScroll: true });
+    return true;
+  }
+  if (!event.shiftKey && activeEl === lastFocusableEl) {
+    event.preventDefault();
+    firstFocusableEl.focus({ preventScroll: true });
+    return true;
+  }
+  return false;
 }
 
 function triggerDirectDownload(url, fileName) {
@@ -5021,45 +5237,14 @@ settingsInfoBtn?.addEventListener("click", () => {
   showInfoModal();
 });
 document.addEventListener("keydown", (event) => {
+  const activeOverlayEl = getTopInteractiveOverlay();
+  if (activeOverlayEl && event.key === "Tab" && trapInteractiveOverlayFocus(event, activeOverlayEl)) {
+    return;
+  }
   const isBackKey = event.key === "Escape" || event.key === "GoBack" || event.key === "BrowserBack";
-  if (isBackKey && !halteSearchModalEl?.hidden) {
-    hideHalteSearchModal();
-    return;
-  }
-  if (isBackKey && !dashboardSetupModalEl?.hidden) {
-    hideDashboardSetupModal();
-    return;
-  }
-  if (isBackKey && !reviewModalEl?.hidden) {
-    hideReviewModal();
-    return;
-  }
-  if (isBackKey && !termsModalEl?.hidden) {
-    hideTermsModal();
-    return;
-  }
-  if (isBackKey && !weatherModalEl?.hidden) {
-    hideWeatherModal();
-    return;
-  }
-  if (isBackKey && !infoModalEl?.hidden) {
-    hideInfoModal();
-    return;
-  }
-  if (isBackKey && !compareModalEl?.hidden) {
-    hideCompareModal();
-    return;
-  }
-  if (isBackKey && !pdfModalEl?.hidden) {
-    hidePdfModal();
-    return;
-  }
-  if (isBackKey && !funnyModalEl?.hidden) {
-    hideFunnyModal();
-    return;
-  }
-  if (isBackKey && favoritesPanelOpen) {
-    setFavoritesPanel(false);
+  if (isBackKey && activeOverlayEl) {
+    event.preventDefault();
+    closeInteractiveOverlay(activeOverlayEl);
     return;
   }
   if (isTvSuggestionNavigationActive()) {
