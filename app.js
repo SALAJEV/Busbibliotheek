@@ -438,7 +438,6 @@ let tripsLoadPromise = null;
 let routesLoadPromise = null;
 let stopsLoadPromise = null;
 let jsPdfLoadPromise = null;
-let html2CanvasLoadPromise = null;
 let lastVerifiedInternetAt = 0;
 let lastVerifiedInternetState = true;
 let realtimeRequestToken = 0;
@@ -1573,6 +1572,7 @@ function getBusPdfRows(bus) {
     if (!formattedValue) continue;
 
     rows.push({
+      key: normalizeFieldKey(fieldKey),
       label: translateVehicleFieldLabel(fieldKey),
       value: formattedValue,
       isHansea: normalizeFieldKey(fieldKey) === "hansea nummer"
@@ -2272,142 +2272,390 @@ async function loadJsPdfLibrary() {
   return jsPdfLoadPromise;
 }
 
-async function loadHtml2CanvasLibrary() {
-  if (window.html2canvas) return window.html2canvas;
-  if (html2CanvasLoadPromise) return html2CanvasLoadPromise;
-
-  html2CanvasLoadPromise = new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
-    script.async = true;
-    script.onload = () => {
-      if (window.html2canvas) resolve(window.html2canvas);
-      else reject(new Error("html2canvas kon niet geladen worden"));
-    };
-    script.onerror = () => reject(new Error("html2canvas-script kon niet geladen worden"));
-    document.head.appendChild(script);
-  });
-
-  return html2CanvasLoadPromise;
+function normalizePdfThemeKey(themeKey = "geel") {
+  return Object.prototype.hasOwnProperty.call(PDF_EXPORT_THEMES, themeKey) ? themeKey : "geel";
 }
 
-function buildBusPdfHtml(bus, vehicleId, themeKey = "geel") {
-  const vehicleNumber = escapeHtml(bus.Voertuignummer || vehicleId || "");
-  const busType = escapeHtml(bus.Type || getLabel("unknownType", "Onbekend type"));
-  const plate = escapeHtml(getVehicleField(bus, "Nummerplaat") || "-");
-  const owner = escapeHtml(getVehicleField(bus, "Eigenaar") || "-");
-  const hansea = getVehicleField(bus, "Hansea nummer");
-  const intern = getVehicleField(bus, "Intern nummer");
-  const inDienst = escapeHtml(formatBusFieldValueForDisplay(bus, "Datum in dienst", getVehicleField(bus, "Datum in dienst")) || getLabel("notInServiceYet", "Bus nog niet in dienst"));
-  const uitDienst = escapeHtml(formatBusFieldValueForDisplay(bus, "Uit dienst", getVehicleField(bus, "Uit dienst")) || t("notOutOfService"));
-  const exportDate = escapeHtml(new Date().toLocaleDateString(localeForLanguage(settings.language), { day: "numeric", month: "long", year: "numeric" }));
-  const logoHtml = `<img class="logo" src="media/logo.png" alt="Busbibliotheek 95 logo">`;
-
-  const extraParts = [];
-  if (hansea && hansea !== "/") {
-    extraParts.push(`<span><span class="label">${escapeHtml(getLabel("pdfHansea", "Hansea"))}</span> <span class="hansea">${escapeHtml(hansea)}</span></span>`);
-  }
-  if (intern && intern !== "/") {
-    extraParts.push(`<span><span class="label">${escapeHtml(getLabel("pdfInternal", "Intern"))}</span> ${escapeHtml(intern)}</span>`);
-  }
-  const extraHtml = extraParts.length ? `<div class="meta-right">${extraParts.join('<span class="sep">|</span>')}</div>` : "";
-
-  return `
-    <div class="pdf-render-root" data-pdf-theme="${escapeHtml(themeKey)}">
-      <section class="page">
-        <div class="page-inner">
-          <div class="header hero">
-            <div class="hero-band">
-              <div class="hero-copy">
-                <div class="eyebrow">Busbibliotheek 95</div>
-                <h1>${vehicleNumber}</h1>
-                <div class="sub">${busType}</div>
-              </div>
-              ${logoHtml}
-            </div>
-            <div class="meta-strip">
-              <span class="meta-label">${escapeHtml(getLabel("pdfExportDate", "Exportdatum"))}</span>
-              <span class="meta-value">${exportDate}</span>
-            </div>
-          </div>
-          <div class="kaarten">
-            <div class="buskaart">
-              <div class="regel-boven">
-                <div class="main">
-                  <span class="nummer">${vehicleNumber}</span>
-                  <span class="type">${busType}</span>
-                  <span class="plaat">${plate}</span>
-                </div>
-                ${extraHtml}
-              </div>
-              <div class="eigenaar-lijn"><span class="label">${escapeHtml(getLabel("pdfOwner", "Eigenaar"))}</span> ${owner}</div>
-              <div class="regel-onder">
-                <span><span class="label">${escapeHtml(getLabel("pdfInService", "In dienst"))}</span> ${inDienst}</span>
-                <span class="sep">|</span>
-                <span><span class="label">${escapeHtml(getLabel("pdfOutOfService", "Uit dienst"))}</span> ${uitDienst}</span>
-              </div>
-            </div>
-            ${getBusPdfRows(bus).map((row) => `
-              <div class="buskaart">
-                <div class="regel-boven">
-                  <div class="main">
-                    <span class="nummer">${escapeHtml(row.label)}</span>
-                    <span class="type">${row.isHansea ? `<span class="hansea">${escapeHtml(row.value)}</span>` : escapeHtml(row.value)}</span>
-                  </div>
-                </div>
-              </div>
-            `).join("")}
-          </div>
-          <div class="page-footer">
-            <span>Busbibliotheek 95</span>
-            <span>${escapeHtml(getLabel("pdfPageCount", "Pagina 1 / 1"))}</span>
-          </div>
-        </div>
-      </section>
-    </div>
-  `;
+function getPdfThemePalette(themeKey = "geel") {
+  const baseTheme = PDF_EXPORT_THEMES[normalizePdfThemeKey(themeKey)] || PDF_EXPORT_THEMES.geel;
+  return {
+    ...baseTheme,
+    surface: "#ffffff",
+    text: "#0f172a",
+    muted: "#475569",
+    subtle: "#64748b",
+    heroText: "#ffffff"
+  };
 }
 
-async function renderHtmlToPdfDownload(htmlMarkup, fileName) {
-  const jsPDF = await loadJsPdfLibrary();
-  const html2canvas = await loadHtml2CanvasLibrary();
+function hexToRgb(hexValue, fallback = [15, 23, 42]) {
+  const normalizedValue = (hexValue || "").toString().trim().replace(/^#/, "");
+  const expandedValue = normalizedValue.length === 3
+    ? normalizedValue.split("").map((part) => part + part).join("")
+    : normalizedValue;
+  if (!/^[\da-f]{6}$/i.test(expandedValue)) return fallback;
+  return [
+    Number.parseInt(expandedValue.slice(0, 2), 16),
+    Number.parseInt(expandedValue.slice(2, 4), 16),
+    Number.parseInt(expandedValue.slice(4, 6), 16)
+  ];
+}
 
-  const host = document.createElement("div");
-  host.className = "pdf-render-host";
-  host.innerHTML = htmlMarkup;
-  document.body.appendChild(host);
+function setPdfFillColor(doc, hexValue) {
+  const [r, g, b] = hexToRgb(hexValue);
+  doc.setFillColor(r, g, b);
+}
 
-  try {
-    const pageEls = Array.from(host.querySelectorAll(".page"));
-    const pdf = new jsPDF({
-      orientation: "portrait",
-      unit: "mm",
-      format: "a4",
-      compress: true
+function setPdfDrawColor(doc, hexValue) {
+  const [r, g, b] = hexToRgb(hexValue);
+  doc.setDrawColor(r, g, b);
+}
+
+function setPdfTextColor(doc, hexValue) {
+  const [r, g, b] = hexToRgb(hexValue);
+  doc.setTextColor(r, g, b);
+}
+
+function getPdfPageMetrics(doc) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const outerMargin = 12;
+  const panelPadding = 6;
+  const panelX = outerMargin;
+  const panelY = outerMargin;
+  const panelWidth = pageWidth - outerMargin * 2;
+  const panelHeight = pageHeight - outerMargin * 2;
+  const innerX = panelX + panelPadding;
+  const innerY = panelY + panelPadding;
+  const innerWidth = panelWidth - panelPadding * 2;
+  const footerY = panelY + panelHeight - 5.5;
+  const bottomLimit = footerY - 8;
+  return {
+    pageWidth,
+    pageHeight,
+    panelX,
+    panelY,
+    panelWidth,
+    panelHeight,
+    panelPadding,
+    innerX,
+    innerY,
+    innerWidth,
+    footerY,
+    bottomLimit
+  };
+}
+
+function getBusPdfSummaryItems(bus) {
+  const owner = cleanText(getVehicleField(bus, "Eigenaar")) || "-";
+  const plate = cleanText(getVehicleField(bus, "Nummerplaat")) || "-";
+  const operator = cleanText(getVehicleField(bus, "Vervoersmaatschappij")) || "-";
+  const inService = formatBusFieldValueForDisplay(bus, "Datum in dienst", getVehicleField(bus, "Datum in dienst")) || getLabel("notInServiceYet", "Bus nog niet in dienst");
+  const outOfService = formatBusFieldValueForDisplay(bus, "Uit dienst", getVehicleField(bus, "Uit dienst")) || t("notOutOfService");
+  const hansea = cleanText(getVehicleField(bus, "Hansea nummer"));
+  const intern = cleanText(getVehicleField(bus, "Intern nummer"));
+
+  return [
+    { label: getLabel("pdfOwner", "Eigenaar"), value: owner },
+    { label: translateVehicleFieldLabel("Nummerplaat"), value: plate },
+    { label: translateVehicleFieldLabel("Vervoersmaatschappij"), value: operator },
+    { label: getLabel("pdfInService", "In dienst"), value: inService },
+    { label: getLabel("pdfOutOfService", "Uit dienst"), value: outOfService },
+    ...(hansea ? [{ label: getLabel("pdfHansea", "Hansea"), value: hansea, emphasis: true }] : []),
+    ...(intern ? [{ label: getLabel("pdfInternal", "Intern"), value: intern }] : [])
+  ];
+}
+
+function getBusPdfDetailRows(bus) {
+  const summaryFieldKeys = new Set([
+    "nummerplaat",
+    "eigenaar",
+    "datum in dienst",
+    "in dienst",
+    "uit dienst",
+    "hansea nummer",
+    "intern nummer"
+  ]);
+
+  return getBusPdfRows(bus).filter((row) => !summaryFieldKeys.has(normalizeFieldKey(row.key || "")));
+}
+
+function drawPdfPageBase(doc, palette, metrics) {
+  setPdfFillColor(doc, palette.pageBg);
+  doc.rect(0, 0, metrics.pageWidth, metrics.pageHeight, "F");
+
+  setPdfFillColor(doc, palette.surface);
+  setPdfDrawColor(doc, palette.cardLine);
+  doc.setLineWidth(0.35);
+  doc.roundedRect(metrics.panelX, metrics.panelY, metrics.panelWidth, metrics.panelHeight, 6, 6, "FD");
+}
+
+function drawPdfFirstPageHeader(doc, palette, metrics, context) {
+  const heroX = metrics.innerX;
+  const heroY = metrics.innerY;
+  const heroHeight = 35;
+  const badgeWidth = 42;
+  const badgeHeight = 8;
+
+  setPdfFillColor(doc, palette.accent);
+  doc.roundedRect(heroX, heroY, metrics.innerWidth, heroHeight, 5, 5, "F");
+
+  setPdfFillColor(doc, palette.accentSoft);
+  doc.roundedRect(heroX + metrics.innerWidth - badgeWidth - 4, heroY + 4, badgeWidth, badgeHeight, 3, 3, "F");
+  setPdfTextColor(doc, palette.badgeFg);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.5);
+  doc.text("Busbibliotheek 95", heroX + metrics.innerWidth - badgeWidth / 2 - 4, heroY + 9.1, { align: "center" });
+
+  setPdfTextColor(doc, palette.heroText);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(24);
+  doc.text(context.vehicleTitle, heroX + 6, heroY + 13.4);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  doc.text(context.busType, heroX + 6, heroY + 21.4);
+
+  doc.setFontSize(9.2);
+  doc.text(`${getLabel("pdfExportDate", "Exportdatum")}: ${context.exportDate}`, heroX + 6, heroY + 28.6);
+
+  return heroY + heroHeight + 8;
+}
+
+function drawPdfContinuingHeader(doc, palette, metrics, context) {
+  const headerX = metrics.innerX;
+  const headerY = metrics.innerY;
+  setPdfTextColor(doc, palette.text);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.text(context.vehicleTitle, headerX, headerY + 5);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.5);
+  setPdfTextColor(doc, palette.subtle);
+  doc.text(`${context.busType} • ${context.exportDate}`, headerX, headerY + 10.6);
+
+  setPdfDrawColor(doc, palette.cardLine);
+  doc.setLineWidth(0.3);
+  doc.line(headerX, headerY + 14.5, headerX + metrics.innerWidth, headerY + 14.5);
+
+  return headerY + 20;
+}
+
+function drawPdfSectionHeading(doc, palette, metrics, y, title) {
+  setPdfTextColor(doc, palette.text);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11.5);
+  doc.text(title, metrics.innerX, y);
+  setPdfDrawColor(doc, palette.accentSoft);
+  doc.setLineWidth(0.35);
+  doc.line(metrics.innerX, y + 1.8, metrics.innerX + metrics.innerWidth, y + 1.8);
+  return y + 7;
+}
+
+function measurePdfCardHeight(doc, width, value, options = {}) {
+  const valueFontSize = options.valueFontSize || 11;
+  doc.setFont("helvetica", options.valueFontStyle || "bold");
+  doc.setFontSize(valueFontSize);
+  const valueLines = doc.splitTextToSize(String(value || "-"), Math.max(30, width - 8));
+  const baseHeight = options.baseHeight || 14;
+  const lineHeight = options.lineHeight || 4.6;
+  return {
+    valueLines,
+    height: Math.max(baseHeight, 9 + valueLines.length * lineHeight)
+  };
+}
+
+function ensurePdfPageSpace(doc, palette, metrics, state, context, requiredHeight, repeatedSectionTitle = "") {
+  if (state.y + requiredHeight <= metrics.bottomLimit) return;
+  doc.addPage();
+  state.pageNumber += 1;
+  drawPdfPageBase(doc, palette, metrics);
+  state.y = drawPdfContinuingHeader(doc, palette, metrics, context);
+  if (repeatedSectionTitle) {
+    state.y = drawPdfSectionHeading(doc, palette, metrics, state.y, repeatedSectionTitle);
+  }
+}
+
+function drawPdfInfoCard(doc, palette, x, y, width, height, label, valueLines, options = {}) {
+  setPdfFillColor(doc, palette.surface);
+  setPdfDrawColor(doc, palette.cardLine);
+  doc.setLineWidth(0.25);
+  doc.roundedRect(x, y, width, height, 3.6, 3.6, "FD");
+
+  setPdfTextColor(doc, palette.subtle);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.8);
+  doc.text(String(label || ""), x + 4, y + 4.8);
+
+  setPdfTextColor(doc, options.valueColor || palette.text);
+  doc.setFont("helvetica", options.valueFontStyle || "bold");
+  doc.setFontSize(options.valueFontSize || 11);
+  doc.text(valueLines, x + 4, y + 9.6, { baseline: "top" });
+}
+
+function drawPdfSummaryCards(doc, palette, metrics, state, context, items) {
+  if (!items.length) return;
+  const cardGap = 4;
+  const cardWidth = (metrics.innerWidth - cardGap) / 2;
+  const sectionTitle = getLabel("pdfSummaryTitle", "Overzicht");
+
+  for (let index = 0; index < items.length; index += 2) {
+    const rowItems = items.slice(index, index + 2);
+    const measuredCards = rowItems.map((item) => measurePdfCardHeight(doc, cardWidth, item.value, {
+      valueColor: item.emphasis ? "#b91c1c" : palette.text
+    }));
+    const rowHeight = Math.max(...measuredCards.map((measurement) => measurement.height));
+    ensurePdfPageSpace(doc, palette, metrics, state, context, rowHeight, sectionTitle);
+
+    rowItems.forEach((item, itemIndex) => {
+      const measurement = measuredCards[itemIndex];
+      const cardX = metrics.innerX + itemIndex * (cardWidth + cardGap);
+      drawPdfInfoCard(
+        doc,
+        palette,
+        cardX,
+        state.y,
+        cardWidth,
+        rowHeight,
+        item.label,
+        measurement.valueLines,
+        {
+          valueColor: item.emphasis ? "#b91c1c" : palette.text
+        }
+      );
     });
 
-    for (let index = 0; index < pageEls.length; index += 1) {
-      if (index > 0) pdf.addPage();
-      const canvas = await html2canvas(pageEls[index], {
-        scale: 2,
-        useCORS: true,
-      });
-      const imgData = canvas.toDataURL("image/jpeg", 0.94);
-      pdf.addImage(imgData, "JPEG", 0, 0, 210, 297, undefined, "FAST");
-    }
-
-    pdf.save(fileName);
-  } finally {
-    host.remove();
+    state.y += rowHeight + cardGap;
   }
+}
+
+function drawPdfDetailCards(doc, palette, metrics, state, context, rows) {
+  const sectionTitle = getLabel("pdfDetailsTitle", "Voertuiggegevens");
+  const fullWidth = metrics.innerWidth;
+  const rowGap = 3.4;
+  const detailRows = rows.length
+    ? rows
+    : [{
+      label: getLabel("pdfNoDetails", "Geen extra voertuiggegevens beschikbaar."),
+      value: getLabel("pdfNoDetailsBody", "Voor dit voertuig waren er geen bijkomende gegevens om te exporteren."),
+      isHansea: false
+    }];
+
+  detailRows.forEach((row) => {
+    const valueColor = row.isHansea ? "#b91c1c" : palette.text;
+    const measurement = measurePdfCardHeight(doc, fullWidth, row.value, {
+      valueColor,
+      valueFontStyle: row.isHansea ? "bold" : "normal",
+      valueFontSize: row.isHansea ? 11.2 : 10.4,
+      baseHeight: 16,
+      lineHeight: 4.4
+    });
+    ensurePdfPageSpace(doc, palette, metrics, state, context, measurement.height, sectionTitle);
+    drawPdfInfoCard(doc, palette, metrics.innerX, state.y, fullWidth, measurement.height, row.label, measurement.valueLines, {
+      valueColor,
+      valueFontStyle: row.isHansea ? "bold" : "normal",
+      valueFontSize: row.isHansea ? 11.2 : 10.4
+    });
+    state.y += measurement.height + rowGap;
+  });
+}
+
+function applyPdfFooters(doc, palette, metrics) {
+  const totalPages = doc.getNumberOfPages();
+  for (let pageIndex = 1; pageIndex <= totalPages; pageIndex += 1) {
+    doc.setPage(pageIndex);
+    setPdfDrawColor(doc, palette.accentSoft);
+    doc.setLineWidth(0.3);
+    doc.line(metrics.innerX, metrics.footerY - 4.2, metrics.innerX + metrics.innerWidth, metrics.footerY - 4.2);
+
+    setPdfTextColor(doc, palette.subtle);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.6);
+    doc.text("Busbibliotheek 95", metrics.innerX, metrics.footerY);
+    doc.text(`Pagina ${pageIndex} / ${totalPages}`, metrics.innerX + metrics.innerWidth, metrics.footerY, { align: "right" });
+  }
+}
+
+async function createBusPdfDocument(bus, vehicleId, themeKey = "geel") {
+  const jsPDF = await loadJsPdfLibrary();
+  const normalizedThemeKey = normalizePdfThemeKey(themeKey);
+  const palette = getPdfThemePalette(normalizedThemeKey);
+  const displayVehicleId = getVehicleDisplayId(bus) || bus.Voertuignummer || vehicleId || "";
+  const context = {
+    vehicleTitle: String(displayVehicleId || vehicleId || ""),
+    busType: cleanText(bus.Type) || getLabel("unknownType", "Onbekend type"),
+    exportDate: new Date().toLocaleDateString(localeForLanguage(settings.language), {
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    })
+  };
+  const summaryItems = getBusPdfSummaryItems(bus);
+  const detailRows = getBusPdfDetailRows(bus);
+
+  const doc = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: "a4",
+    compress: true,
+    putOnlyUsedFonts: true
+  });
+  const metrics = getPdfPageMetrics(doc);
+  const state = {
+    pageNumber: 1,
+    y: 0
+  };
+
+  drawPdfPageBase(doc, palette, metrics);
+  state.y = drawPdfFirstPageHeader(doc, palette, metrics, context);
+  state.y = drawPdfSectionHeading(doc, palette, metrics, state.y, getLabel("pdfSummaryTitle", "Overzicht"));
+  drawPdfSummaryCards(doc, palette, metrics, state, context, summaryItems);
+  state.y += 1.5;
+  state.y = drawPdfSectionHeading(doc, palette, metrics, state.y, getLabel("pdfDetailsTitle", "Voertuiggegevens"));
+  drawPdfDetailCards(doc, palette, metrics, state, context, detailRows);
+  applyPdfFooters(doc, palette, metrics);
+
+  doc.setProperties({
+    title: `Busbibliotheek ${context.vehicleTitle}`,
+    subject: context.busType,
+    author: "Busbibliotheek 95",
+    creator: "Busbibliotheek 95"
+  });
+
+  return doc;
+}
+
+async function saveGeneratedPdf(doc, fileName) {
+  const safeFileName = sanitizeFileName((fileName || "").replace(/\.pdf$/i, ""), "Busbibliotheek") + ".pdf";
+  if (isAndroidHostApp() && typeof window.Android?.processDownloadNamed === "function") {
+    window.Android.processDownloadNamed(doc.output("datauristring"), safeFileName, "application/pdf");
+    return;
+  }
+  if (isAndroidHostApp() && typeof window.Android?.processDownload === "function") {
+    window.Android.processDownload(doc.output("datauristring"), "application/pdf");
+    return;
+  }
+
+  const pdfBlob = doc.output("blob");
+  const downloadUrl = URL.createObjectURL(pdfBlob);
+  const downloadLink = document.createElement("a");
+  downloadLink.href = downloadUrl;
+  downloadLink.download = safeFileName;
+  downloadLink.rel = "noopener";
+  document.body.appendChild(downloadLink);
+  downloadLink.click();
+  downloadLink.remove();
+  window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 2500);
 }
 
 async function exportBusPdf(vehicleId, themeKey = "geel") {
   const bus = findBusById(vehicleId);
   if (!bus) return;
-  const htmlMarkup = buildBusPdfHtml(bus, vehicleId, themeKey);
-  const fileName = sanitizeFileName(`Bus ${vehicleId}`) + ".pdf";
-  await renderHtmlToPdfDownload(htmlMarkup, fileName);
+  const doc = await createBusPdfDocument(bus, vehicleId, themeKey);
+  const displayVehicleId = getVehicleDisplayId(bus) || vehicleId || bus.Voertuignummer || "bus";
+  const fileName = `Busbibliotheek_${displayVehicleId}`;
+  await saveGeneratedPdf(doc, fileName);
 }
 
 function updateVehiclePhotoTexts() {
@@ -4064,7 +4312,7 @@ function applyTranslations() {
   if (funnyModalCloseBtn) funnyModalCloseBtn.textContent = getLabel("funnyClose", "Haha, oke");
   if (pdfModalTitleEl) pdfModalTitleEl.textContent = getLabel("pdfTitle", "PDF downloaden");
   if (pdfThemeFieldLabelEl) pdfThemeFieldLabelEl.textContent = t("colorTheme");
-  if (pdfModalNoteEl) pdfModalNoteEl.textContent = getLabel("pdfNote", "Na bevestigen wordt de PDF rechtstreeks als bestand gedownload.");
+  if (pdfModalNoteEl) pdfModalNoteEl.textContent = getLabel("pdfNote", "De PDF wordt als echt document opgebouwd en meteen gedownload.");
   pdfModalCloseBtn.setAttribute("aria-label", getLabel("close", "Sluiten"));
   pdfModalCancelBtn.textContent = getLabel("cancel", "Annuleren");
   pdfModalConfirmBtn.textContent = getLabel("pdfConfirm", "PDF downloaden");

@@ -414,40 +414,65 @@ fun WebViewScreen(
                             }
                         }
 
+                        private fun saveBase64Download(
+                            base64Data: String,
+                            fileName: String?,
+                            contentType: String
+                        ) {
+                            val resolvedMimeType = contentType.ifBlank { "application/octet-stream" }
+                            val generatedFileName = "Busfiche_${System.currentTimeMillis()}.${
+                                if (resolvedMimeType.contains("pdf", ignoreCase = true)) "pdf" else "bin"
+                            }"
+                            val resolvedFileName = fileName?.trim()?.takeIf { it.isNotEmpty() } ?: generatedFileName
+
+                            val pureBase64 = base64Data.substringAfter("base64,")
+                            val bytes = android.util.Base64.decode(pureBase64, android.util.Base64.DEFAULT)
+
+                            val resolver = context.contentResolver
+                            val contentValues = ContentValues().apply {
+                                put(MediaStore.MediaColumns.DISPLAY_NAME, resolvedFileName)
+                                put(MediaStore.MediaColumns.MIME_TYPE, resolvedMimeType)
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                                }
+                            }
+
+                            val downloadsUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                @Suppress("InlinedApi")
+                                MediaStore.Downloads.EXTERNAL_CONTENT_URI
+                            } else {
+                                MediaStore.Files.getContentUri("external")
+                            }
+
+                            val uri = resolver.insert(downloadsUri, contentValues)
+                                ?: throw Exception("Failed to create MediaStore entry")
+
+                            resolver.openOutputStream(uri).use { outputStream ->
+                                outputStream?.write(bytes)
+                            }
+
+                            (context as Activity).runOnUiThread {
+                                Toast.makeText(context, context.getString(R.string.download_started), Toast.LENGTH_SHORT).show()
+                            }
+                        }
+
                         @Suppress("unused")
                         @JavascriptInterface
                         fun processDownload(base64Data: String, contentType: String) {
                             try {
-                                val pureBase64 = base64Data.substringAfter("base64,")
-                                val bytes = android.util.Base64.decode(pureBase64, android.util.Base64.DEFAULT)
-                                val fileName = "Busfiche_${System.currentTimeMillis()}.${if (contentType.contains("pdf")) "pdf" else "bin"}"
-                                
-                                val resolver = context.contentResolver
-                                val contentValues = ContentValues().apply {
-                                    put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-                                    put(MediaStore.MediaColumns.MIME_TYPE, contentType)
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-                                    }
+                                saveBase64Download(base64Data, null, contentType)
+                            } catch (e: Exception) {
+                                (context as Activity).runOnUiThread {
+                                    Toast.makeText(context, context.getString(R.string.download_failed), Toast.LENGTH_SHORT).show()
                                 }
-                                
-                                val downloadsUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                    @Suppress("InlinedApi")
-                                    MediaStore.Downloads.EXTERNAL_CONTENT_URI
-                                } else {
-                                    MediaStore.Files.getContentUri("external")
-                                }
-                                
-                                val uri = resolver.insert(downloadsUri, contentValues)
-                                uri?.let {
-                                    resolver.openOutputStream(it).use { outputStream ->
-                                        outputStream?.write(bytes)
-                                    }
-                                    (context as Activity).runOnUiThread {
-                                        Toast.makeText(context, context.getString(R.string.download_started), Toast.LENGTH_SHORT).show()
-                                    }
-                                } ?: throw Exception("Failed to create MediaStore entry")
-                                
+                            }
+                        }
+
+                        @Suppress("unused")
+                        @JavascriptInterface
+                        fun processDownloadNamed(base64Data: String, fileName: String, contentType: String) {
+                            try {
+                                saveBase64Download(base64Data, fileName, contentType)
                             } catch (e: Exception) {
                                 (context as Activity).runOnUiThread {
                                     Toast.makeText(context, context.getString(R.string.download_failed), Toast.LENGTH_SHORT).show()
