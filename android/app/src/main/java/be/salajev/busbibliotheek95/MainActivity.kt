@@ -360,6 +360,9 @@ fun WebViewScreen(
                     CookieManager.getInstance().setAcceptCookie(true)
                     CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
                     
+                    // Gebruik LOAD_DEFAULT zodat de browser zelf checkt of er een nieuwe versie is.
+                    // We wissen de data NIET meer bij opstarten, zodat logins en instellingen bewaard blijven.
+                    
                     settings.apply {
                         @Suppress("SetJavaScriptEnabled")
                         javaScriptEnabled = true
@@ -644,6 +647,12 @@ fun WebViewScreen(
                                     "body { -webkit-user-select: auto; } " +
                                     ".install-app-button, #install-banner { display: none !important; }';" +
                                     "document.head.appendChild(style);" +
+                                    // Forceer check voor nieuwe versie van de site (Service Worker update)
+                                    "if ('serviceWorker' in navigator) { " +
+                                    "  navigator.serviceWorker.getRegistrations().then(function(regs) { " +
+                                    "    for(let reg of regs) reg.update(); " +
+                                    "  }); " +
+                                    "}" +
                                     "})()")
                             view?.post {
                                 applyWebAppTheme(view, isDarkTheme)
