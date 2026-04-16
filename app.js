@@ -466,7 +466,7 @@ let realtimePausedByInactivity = false;
 let deeplinkHandled = false;
 let routeNavigationLocked = false;
 let injectedInitialHomeHistoryState = false;
-const APP_VERSION = "2026.04.11-1";
+const APP_VERSION = "2026.04.17-1";
 const dataLoadTimestamps = {
   realtime: 0
 };
@@ -3654,10 +3654,7 @@ async function resolvePhotoEntriesFromCandidates(candidates) {
 async function resolveVehiclePhotoEntries(vehicleId) {
   const indexedEntries = getIndexedPhotoEntries(vehicleId);
   if (indexedEntries.length) {
-    const enrichedIndexedEntries = await Promise.all(
-      indexedEntries.map((entry) => enrichResolvedPhotoEntry(entry).catch(() => entry))
-    );
-    const resolvedIndexedEntries = enrichedIndexedEntries.filter(Boolean);
+    const resolvedIndexedEntries = await resolvePhotoEntriesFromCandidates(indexedEntries);
     const indexedSrcSet = new Set(
       resolvedIndexedEntries
         .map((entry) => (entry?.src || "").toString())
