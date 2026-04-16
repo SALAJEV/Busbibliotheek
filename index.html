@@ -77,23 +77,8 @@
     window.__BB_FORCE_LEGACY_ANDROID__ = forceLegacyAndroid;
   })();
 </script>
-<style>
-  .legacy-only { display: none; }
-  .app-shell { visibility: hidden; }
-  html.modern-browser:not(.preload) .app-shell { visibility: visible; }
-  html.legacy-browser .app-shell { display: none !important; }
-  html.legacy-browser .legacy-only { display: block !important; }
-  html.legacy-android6 .legacy-btn-secondary { display: none !important; }
-</style>
 <link rel="stylesheet" href="legacy.css?v=20260410-1">
-<link rel="stylesheet" href="style.css?v=20260411-2">
-<noscript>
-  <style>
-    .app-shell { visibility: visible !important; }
-    .legacy-only { display: block !important; }
-    .app-shell { display: none !important; }
-  </style>
-</noscript>
+<link rel="stylesheet" href="style.css?v=20260416-1">
 </head>
 <body>
 <div class="legacy-experience legacy-only">
@@ -122,8 +107,10 @@
       <button id="appTitleBtn" class="title-home-btn" type="button">
         <h1 id="appTitle">Busbibliotheek</h1>
       </button>
-      <p id="appSubtitle">Zoek een voertuig en volg het in realtime.</p>
-      <p id="appContextLine" class="app-context-line">Over bussen van de Vlaamse vervoermaatschappij De Lijn.</p>
+      <div class="header-copy">
+        <p id="appSubtitle">Zoek een voertuig en volg het in realtime.</p>
+        <p id="appContextLine" class="app-context-line">Over bussen van de Vlaamse vervoermaatschappij De Lijn.</p>
+      </div>
       <div class="search-shell">
         <div class="search-row">
           <input id="voertuignummer" placeholder="Voertuignummer of nummerplaat" autocomplete="off">
@@ -137,10 +124,22 @@
         <ul id="suggestielijst" hidden></ul>
       </div>
     </div>
-    <div class="header-actions">
-      <button id="installBtn" title="App installeren op thuisscherm">Installeer App</button>
-      <div class="favorites-top">
-        <button id="favoritesToggleBtn" class="icon-btn more-toggle-btn" type="button" title="Menu" aria-label="Menu" aria-controls="favoritesPanel" aria-expanded="false"><span class="more-toggle-icon" aria-hidden="true">⋮</span><span id="menuToggleText">Menu</span></button>
+    <div class="header-side">
+      <div class="header-actions">
+        <button id="installBtn" title="App installeren op thuisscherm">Installeer App</button>
+        <div class="favorites-top">
+          <button id="favoritesToggleBtn" class="icon-btn more-toggle-btn" type="button" title="Menu" aria-label="Menu" aria-controls="favoritesPanel" aria-expanded="false"><span class="more-toggle-icon" aria-hidden="true">⋮</span><span id="menuToggleText">Menu</span></button>
+        </div>
+      </div>
+      <div class="header-visual" aria-hidden="true">
+        <span class="header-visual-grid"></span>
+        <span class="header-visual-orbit header-visual-orbit--primary"></span>
+        <span class="header-visual-orbit header-visual-orbit--secondary"></span>
+        <span class="header-visual-stop header-visual-stop--a"></span>
+        <span class="header-visual-stop header-visual-stop--b"></span>
+        <span class="header-visual-stop header-visual-stop--c"></span>
+        <span class="header-visual-card header-visual-card--secondary"></span>
+        <span class="header-visual-card header-visual-card--primary"></span>
       </div>
     </div>
   </div>
