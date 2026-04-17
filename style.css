@@ -7571,6 +7571,86 @@ footer h3 {
   }
 }
 
+.menu-inline-search .search-row #favoritesToggleBtn.search-menu-btn,
+.menu-inline-search .search-row #favoritesToggleBtn.search-menu-btn:hover,
+.menu-inline-search .search-row #favoritesToggleBtn.search-menu-btn:active,
+.menu-inline-search .search-row #favoritesToggleBtn.search-menu-btn.active {
+  grid-column: 3;
+  width: var(--search-inline-action-size) !important;
+  min-width: var(--search-inline-action-size) !important;
+  height: var(--search-inline-action-size) !important;
+  min-height: var(--search-inline-action-size) !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  align-self: stretch !important;
+  justify-self: stretch !important;
+  gap: 0 !important;
+  border-radius: var(--search-inline-action-radius) !important;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  isolation: isolate;
+  font-size: 0 !important;
+  border: 1px solid color-mix(in srgb, var(--button-border) 88%, white 12%) !important;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--button-bg) 88%, white 12%), color-mix(in srgb, var(--accent-2) 84%, var(--button-bg) 16%)) !important;
+  color: var(--button-text) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 12px 28px color-mix(in srgb, var(--accent-soft) 28%, transparent) !important;
+  transform: none;
+}
+
+.menu-inline-search .search-row #favoritesToggleBtn.search-menu-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 72%, white 8%) !important;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--button-bg-hover) 88%, white 12%), color-mix(in srgb, var(--accent) 82%, var(--button-bg-hover) 18%)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 14px 30px color-mix(in srgb, var(--accent-soft) 34%, transparent) !important;
+  transform: translateY(-1px);
+}
+
+.menu-inline-search .search-row #favoritesToggleBtn.search-menu-btn:active,
+.menu-inline-search .search-row #favoritesToggleBtn.search-menu-btn.active {
+  border-color: color-mix(in srgb, var(--button-border) 88%, white 12%) !important;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--button-bg) 88%, white 12%), color-mix(in srgb, var(--accent-2) 84%, var(--button-bg) 16%)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 12px 28px color-mix(in srgb, var(--accent-soft) 28%, transparent) !important;
+  transform: translateY(0);
+}
+
+.menu-inline-search .search-row #favoritesToggleBtn.search-menu-btn::before {
+  content: none;
+}
+
+.menu-inline-search .search-row #favoritesToggleBtn.search-menu-btn #menuToggleText {
+  display: none !important;
+}
+
+.menu-inline-search .search-row #favoritesToggleBtn.search-menu-btn .more-toggle-icon {
+  width: 1.05rem !important;
+  height: 1.05rem !important;
+  min-width: 1.05rem !important;
+  line-height: 1 !important;
+  opacity: 1;
+  transform: none !important;
+}
+
+@media (max-width: 640px) {
+  .menu-inline-search .search-row #favoritesToggleBtn.search-menu-btn,
+  .menu-inline-search .search-row #favoritesToggleBtn.search-menu-btn:hover,
+  .menu-inline-search .search-row #favoritesToggleBtn.search-menu-btn:active,
+  .menu-inline-search .search-row #favoritesToggleBtn.search-menu-btn.active {
+    width: 48px !important;
+    min-width: 48px !important;
+    height: 48px !important;
+    min-height: 48px !important;
+    border-radius: 15px !important;
+  }
+}
+
 /* Keep the Instagram CTA on-brand even after the shared button polish layer. */
 .btn.btn--instagram,
 a.btn.btn--instagram,
