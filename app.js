@@ -20,7 +20,7 @@ document.addEventListener('touchstart', () => hideSplash(150), { once: true });
 
 // Install Prompt (beter gecontroleerde PWA-installatie)
 let deferredPrompt = null;
-const installBtn = document.getElementById('installBtn');
+const installBtn = document.getElementById("footerInstallBtn");
 const dashboardToggleBtn = document.getElementById("dashboardToggleBtn");
 const halteSearchToggleBtn = document.getElementById("halteSearchToggleBtn");
 const iosInstallHintEl = document.getElementById("iosInstallHint");
@@ -38,7 +38,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
   deferredPrompt = e;
   syncInstallButtonVisibility();
 });
-installBtn.addEventListener('click', async () => {
+installBtn?.addEventListener("click", async () => {
   if (isAndroid6OrLower) {
     syncInstallButtonVisibility();
     return;
@@ -218,7 +218,6 @@ function syncInstallButtonVisibility() {
     !isAndroidWebView &&
     !isAndroidTvPlatform &&
     (isAndroidAbove6 || Boolean(deferredPrompt) || isIosInstallable());
-  installBtn.classList.toggle("show", shouldShow);
   installBtn.hidden = !shouldShow;
 }
 
@@ -1474,7 +1473,13 @@ function hideInfoModal() {
 
 function showHalteSearchModal() {
   if (!halteSearchModalEl) return;
+  halteSearchRequestToken += 1;
+  setHalteStatus("");
+  clearHalteSearchResults();
   openOverlayModal(halteSearchModalEl, { focusTarget: haltecodeInputEl });
+  void laadStops().catch((error) => {
+    console.warn("Haltes vooraf laden mislukt", error);
+  });
 }
 
 function hideHalteSearchModal() {
@@ -4302,7 +4307,7 @@ function applyTranslations() {
     appContextLineEl.setAttribute("aria-hidden", "true");
   }
   if (splashCreditEl) splashCreditEl.textContent = getLabel("madeBy", "Made by @delijn_busspotter");
-  installBtn.textContent = t("install");
+  if (installBtn) installBtn.textContent = t("install");
   const moreLabel = getLabel("more", "Meer");
   const menuLabel = getLabel("menu", "Menu");
   favoritesToggleBtn.title = menuLabel;
@@ -4491,11 +4496,19 @@ function getGroupedHalteBaseName(rawName = "") {
     .trim();
 }
 
+function normalizeHalteCode(value = "") {
+  return String(value || "").replace(/\D+/g, "");
+}
+
+function isValidHalteCode(value = "") {
+  return HALTE_CODE_REGEX.test(normalizeHalteCode(value));
+}
+
 function getHalteRealtimeLink(codes = []) {
   const normalizedCodes = [...new Set(
     (Array.isArray(codes) ? codes : [codes])
-      .map((code) => String(code || "").trim())
-      .filter((code) => HALTE_CODE_REGEX.test(code))
+      .map((code) => normalizeHalteCode(code))
+      .filter((code) => isValidHalteCode(code))
   )];
   if (!normalizedCodes.length) return "";
   return `https://www.delijn.be/realtime/${normalizedCodes.join("+")}/20`;
@@ -4521,7 +4534,7 @@ function renderHalteSearchResults(haltes = []) {
     const halteCodes = Array.isArray(halte?.haltenummers)
       ? halte.haltenummers
       : [String(halte?.haltenummer || "").trim()];
-    const validCodes = halteCodes.filter((code) => HALTE_CODE_REGEX.test(code));
+    const validCodes = [...new Set(halteCodes.map((code) => normalizeHalteCode(code)).filter((code) => isValidHalteCode(code)))];
     if (!validCodes.length) return;
 
     const primaryCode = validCodes[0];
@@ -4549,6 +4562,7 @@ function renderHalteSearchResults(haltes = []) {
 async function updateHalteSuggestions() {
   const zoekTerm = (haltecodeInputEl?.value || "").trim();
   const requestToken = ++halteSearchRequestToken;
+  const normalizedCodeQuery = normalizeHalteCode(zoekTerm);
 
   if (!zoekTerm) {
     setHalteStatus("");
@@ -4556,7 +4570,7 @@ async function updateHalteSuggestions() {
     return;
   }
 
-  if (HALTE_CODE_REGEX.test(zoekTerm)) {
+  if (isValidHalteCode(normalizedCodeQuery)) {
     setHalteStatus("");
     clearHalteSearchResults();
     return;
@@ -4655,7 +4669,7 @@ function openHalteRealtime(codeOverride = "") {
   const haltecodes = Array.isArray(codeOverride)
     ? codeOverride
     : [(codeOverride || haltecodeInputEl?.value || "").trim()];
-  const validCodes = [...new Set(haltecodes.filter((code) => HALTE_CODE_REGEX.test(code)))];
+  const validCodes = [...new Set(haltecodes.map((code) => normalizeHalteCode(code)).filter((code) => isValidHalteCode(code)))];
   if (!validCodes.length) {
     setHalteStatus(getLabel("haltSearchInvalid", "Voer een haltecode of haltenaam in."));
     clearHalteSearchResults();
@@ -4667,11 +4681,12 @@ function openHalteRealtime(codeOverride = "") {
   setHalteStatus("");
   clearHalteSearchResults();
   hideHalteSearchModal();
-  return openExternalUrl(getHalteRealtimeLink(validCodes), { preferSameTab: true });
+  return openExternalUrl(getHalteRealtimeLink(validCodes), { forceSameTab: true });
 }
 
 async function searchHaltes() {
   const zoekTerm = (haltecodeInputEl?.value || "").trim();
+  const normalizedCodeQuery = normalizeHalteCode(zoekTerm);
   if (!zoekTerm) {
     setHalteStatus(getLabel("haltSearchInvalid", "Voer een haltecode of haltenaam in."));
     clearHalteSearchResults();
@@ -4679,8 +4694,9 @@ async function searchHaltes() {
     return;
   }
 
-  if (HALTE_CODE_REGEX.test(zoekTerm)) {
-    openHalteRealtime(zoekTerm);
+  if (isValidHalteCode(normalizedCodeQuery)) {
+    if (haltecodeInputEl) haltecodeInputEl.value = normalizedCodeQuery;
+    openHalteRealtime(normalizedCodeQuery);
     return;
   }
 
@@ -6296,6 +6312,16 @@ function ensureInlineSuggestionList(inputEl) {
   return listEl;
 }
 
+function ensurePrimarySuggestionList() {
+  if (!suggestieLijst) return null;
+  suggestieLijst.classList.add("inline-suggestion-list", "floating-suggestion-list", "primary-suggestion-list");
+  suggestieLijst.dataset.floating = "1";
+  if (suggestieLijst.parentElement !== document.body) {
+    document.body.appendChild(suggestieLijst);
+  }
+  return suggestieLijst;
+}
+
 function positionSuggestionList(listEl, inputEl) {
   if (!listEl || !inputEl || listEl.dataset.floating !== "1") return;
   const rect = inputEl.getBoundingClientRect();
@@ -6310,7 +6336,7 @@ function bindVehicleSuggestions(inputEl, onSelect) {
   if (!inputEl || inputEl.dataset.vehicleSuggestionsBound === "1") return;
   inputEl.dataset.vehicleSuggestionsBound = "1";
 
-  const listEl = inputEl.id === "voertuignummer" ? suggestieLijst : ensureInlineSuggestionList(inputEl);
+  const listEl = inputEl.id === "voertuignummer" ? ensurePrimarySuggestionList() : ensureInlineSuggestionList(inputEl);
   if (!listEl) return;
 
   const render = () => {

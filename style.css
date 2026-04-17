@@ -5334,6 +5334,10 @@ textarea:focus-visible {
   -webkit-backdrop-filter: none !important;
 }
 
+.floating-suggestion-list.primary-suggestion-list {
+  z-index: 1705 !important;
+}
+
 #suggestielijst li:hover,
 #suggestielijst li.is-active,
 .inline-suggestion-list li:hover,

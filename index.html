@@ -21,7 +21,7 @@
     document.documentElement.classList.add("preload");
   })();
 </script>
-<link id="appStylesheet" rel="stylesheet" href="style.css?v=20260417-5">
+<link id="appStylesheet" rel="stylesheet" href="style.css?v=20260417-6">
 <script>
   (function () {
     var attachStylesheetFallback = function (id, fallbackHref) {
@@ -74,7 +74,6 @@
     </div>
     <div class="header-side">
       <div class="header-actions">
-        <button id="installBtn" title="App installeren op thuisscherm">Installeer App</button>
         <div class="favorites-top">
           <button id="favoritesToggleBtn" class="icon-btn more-toggle-btn" type="button" title="Menu" aria-label="Menu" aria-controls="favoritesPanel" aria-expanded="false">
             <svg class="more-toggle-icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false">
@@ -182,6 +181,7 @@
     <div class="footer-links">
       <button id="footerReviewBtn" class="footer-link-btn" type="button">Review afleggen</button>
       <button id="footerTermsBtn" class="footer-link-btn" type="button">Gebruiksvoorwaarden</button>
+      <button id="footerInstallBtn" class="footer-link-btn" type="button" hidden>App installeren</button>
     </div>
     <p id="copyrightText" class="footer-meta">&copy; Busspotter 95, 2023-<span id="currentYear"></span></p>
   </footer>
@@ -485,7 +485,7 @@
   translationsScript.src = "translations.js?v=20260218-1";
   translationsScript.onload = function () {
     var appScript = document.createElement("script");
-    appScript.src = "app.js?v=20260417-2";
+    appScript.src = "app.js?v=20260417-5";
     appScript.defer = true;
     document.body.appendChild(appScript);
   };
