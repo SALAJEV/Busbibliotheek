@@ -7480,13 +7480,28 @@ footer h3 {
     border-radius: 22px !important;
   }
 
+  .menu-inline-search .search-row .favorites-top,
   #searchBtn,
   #searchBtn:hover,
-  #searchBtn:active {
+  #searchBtn:active,
+  .menu-inline-search .search-row #favoritesToggleBtn,
+  .menu-inline-search .search-row #favoritesToggleBtn:hover,
+  .menu-inline-search .search-row #favoritesToggleBtn:active,
+  .menu-inline-search .search-row #favoritesToggleBtn.active {
+    width: 48px !important;
+    min-width: 48px !important;
+    height: 48px !important;
+    min-height: 48px !important;
+  }
+
+  #searchBtn,
+  #searchBtn:hover,
+  #searchBtn:active,
+  .menu-inline-search .search-row #favoritesToggleBtn,
+  .menu-inline-search .search-row #favoritesToggleBtn:hover,
+  .menu-inline-search .search-row #favoritesToggleBtn:active,
+  .menu-inline-search .search-row #favoritesToggleBtn.active {
     width: 48px;
-    min-width: 48px;
-    height: 48px;
-    min-height: 48px;
     border-radius: 15px !important;
   }
 

@@ -4300,7 +4300,7 @@ function applyTranslations() {
   splash?.setAttribute("aria-label", getLabel("splashAria", "Busbibliotheek laden"));
   appTitleEl.textContent = getLabel("appTitle", "Busbibliotheek");
   if (splashTitleEl) splashTitleEl.textContent = getLabel("appTitle", "Busbibliotheek");
-  appSubtitleEl.textContent = t("subtitle");
+  appSubtitleEl.textContent = t("subtitle").replace(/\.\s*$/, "");
   if (appContextLineEl) {
     appContextLineEl.textContent = "";
     appContextLineEl.hidden = true;

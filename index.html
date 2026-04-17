@@ -21,7 +21,7 @@
     document.documentElement.classList.add("preload");
   })();
 </script>
-<link id="appStylesheet" rel="stylesheet" href="style.css?v=20260417-6">
+<link id="appStylesheet" rel="stylesheet" href="style.css?v=20260417-7">
 <script>
   (function () {
     var attachStylesheetFallback = function (id, fallbackHref) {
@@ -56,7 +56,7 @@
         <h1 id="appTitle">Busbibliotheek</h1>
       </button>
       <div class="header-copy">
-        <p id="appSubtitle">Zoek een voertuig en volg het in realtime.</p>
+        <p id="appSubtitle">Zoek een voertuig en volg het in realtime</p>
         <p id="appContextLine" class="app-context-line" hidden aria-hidden="true"></p>
       </div>
       <div class="search-shell">
@@ -485,7 +485,7 @@
   translationsScript.src = "translations.js?v=20260218-1";
   translationsScript.onload = function () {
     var appScript = document.createElement("script");
-    appScript.src = "app.js?v=20260417-5";
+    appScript.src = "app.js?v=20260417-6";
     appScript.defer = true;
     document.body.appendChild(appScript);
   };
