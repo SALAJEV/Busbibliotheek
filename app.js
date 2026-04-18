@@ -84,6 +84,7 @@ const API_URL = "https://busbibliotheek95.pages.dev/api";
 const PYTHON_MAIN_DOWNLOAD_URL = "https://busbibliotheek95.pages.dev/python/script.py";
 const APK_DOWNLOAD_URL = `${window.location.origin}/android/app/release/app-release.apk`;
 const PHOTO_UPLOAD_FORM_URL = "https://forms.gle/MLzezhEKqxg6xagm9";
+const ZONE01_HERCULES_SEARCH_URL = "https://www.zone01.be/hercules/resultaten";
 const LEAFLET_CSS_URL = "https://unpkg.com/leaflet/dist/leaflet.css";
 const LEAFLET_JS_URL = "https://unpkg.com/leaflet/dist/leaflet.js";
 const NETWORK_CHECK_URL = `${window.location.origin}/manifest.json?network-check=1`;
@@ -6413,10 +6414,111 @@ function getSuggestionResults(query = "", limit = 8) {
   return matches;
 }
 
+function buildZone01HerculesSearchUrl(query = "") {
+  const params = new URLSearchParams();
+  params.set("q", normalize(query));
+  return `${ZONE01_HERCULES_SEARCH_URL}?${params.toString()}`;
+}
+
+function getMissingVehicleSuggestionCopy(query = "") {
+  const normalizedQuery = normalize(query);
+  return {
+    badge: getLabel("missingVehicleBadge", "Niet gevonden"),
+    title: getLabel("missingVehicleTitle", "Dit voertuig ontbreekt in onze database."),
+    text: getLabel("missingVehicleText", "Meld het ons via het formulier onderaan en zoek dit voertuig in Hercules op Zone 01."),
+    reportCta: getLabel("missingVehicleReportCta", "Meld via formulier"),
+    zone01Cta: normalizedQuery
+      ? fillTemplate(getLabel("missingVehicleZone01Cta", "Zoek {id} op Zone 01"), normalizedQuery)
+      : getLabel("missingVehicleZone01CtaGeneric", "Zoek op Zone 01"),
+    zone01Url: buildZone01HerculesSearchUrl(normalizedQuery)
+  };
+}
+
+function createMissingVehicleCallout(query = "", options = {}) {
+  const { compact = false, onReport = null } = options;
+  const copy = getMissingVehicleSuggestionCopy(query);
+  const wrapper = document.createElement("div");
+  wrapper.className = compact ? "missing-vehicle-callout missing-vehicle-callout--compact" : "missing-vehicle-callout";
+
+  const badgeEl = document.createElement("span");
+  badgeEl.className = "missing-vehicle-badge";
+  badgeEl.textContent = copy.badge;
+
+  const titleEl = document.createElement("strong");
+  titleEl.className = "missing-vehicle-title";
+  titleEl.textContent = copy.title;
+
+  const textEl = document.createElement("p");
+  textEl.className = "missing-vehicle-text";
+  textEl.textContent = copy.text;
+
+  const actionsEl = document.createElement("div");
+  actionsEl.className = "missing-vehicle-actions";
+
+  const reportBtn = document.createElement("button");
+  reportBtn.type = "button";
+  reportBtn.className = "missing-vehicle-action";
+  reportBtn.textContent = copy.reportCta;
+  reportBtn.addEventListener("mousedown", (event) => {
+    event.preventDefault();
+  });
+  reportBtn.addEventListener("click", (event) => {
+    event.preventDefault();
+    if (typeof onReport === "function") onReport();
+  });
+
+  const zone01Link = document.createElement("a");
+  zone01Link.className = "missing-vehicle-action missing-vehicle-action--external";
+  zone01Link.href = copy.zone01Url;
+  zone01Link.target = "_blank";
+  zone01Link.rel = "noopener noreferrer";
+  zone01Link.textContent = copy.zone01Cta;
+  zone01Link.addEventListener("mousedown", (event) => {
+    event.preventDefault();
+  });
+
+  actionsEl.append(reportBtn, zone01Link);
+  wrapper.append(badgeEl, titleEl, textEl, actionsEl);
+  return wrapper;
+}
+
+function renderMissingVehicleSuggestionList(listEl, inputEl, query = "") {
+  if (!listEl || !inputEl) return;
+  listEl.innerHTML = "";
+  listEl.dataset.activeIndex = "-1";
+  listEl.setAttribute("role", "group");
+  listEl.setAttribute("aria-live", "polite");
+  const rowEl = document.createElement("li");
+  rowEl.className = "vehicle-suggestion-empty-row";
+  rowEl.tabIndex = -1;
+  rowEl.setAttribute("role", "presentation");
+  rowEl.appendChild(createMissingVehicleCallout(query, {
+    compact: true,
+    onReport: () => {
+      hideSuggestionList(listEl);
+      showReviewModal();
+    }
+  }));
+  listEl.appendChild(rowEl);
+  listEl.hidden = false;
+  positionSuggestionList(listEl, inputEl);
+}
+
+function renderMissingVehicleStaticState(query = "") {
+  if (!vasteDataEl) return;
+  vasteDataEl.innerHTML = "";
+  vasteDataEl.appendChild(createMissingVehicleCallout(query, {
+    onReport: () => {
+      showReviewModal();
+    }
+  }));
+}
+
 function hideSuggestionList(listEl) {
   if (!listEl) return;
   listEl.innerHTML = "";
   listEl.hidden = true;
+  listEl.removeAttribute("aria-live");
   if (listEl.dataset.floating === "1") {
     listEl.style.removeProperty("top");
     listEl.style.removeProperty("left");
@@ -6517,12 +6619,18 @@ function getBusIcon() {
 
 function renderSuggestionList(listEl, inputEl, onSelect) {
   if (!listEl || !inputEl) return;
-  const results = getSuggestionResults(inputEl.value.trim());
+  const query = inputEl.value.trim();
+  const results = getSuggestionResults(query);
   listEl.innerHTML = "";
   listEl.dataset.activeIndex = "-1";
+  listEl.removeAttribute("aria-live");
   listEl.setAttribute("role", "listbox");
 
   if (!results.length) {
+    if (inputEl.id === "voertuignummer" && query && vehicleSuggestionIndex.length) {
+      renderMissingVehicleSuggestionList(listEl, inputEl, query);
+      return;
+    }
     listEl.hidden = true;
     return;
   }
@@ -7057,7 +7165,7 @@ function toonVasteData(id){
   const bus = findBusById(id);
 
   if(!bus){
-    vasteDataEl.innerHTML=t("noFixed");
+    renderMissingVehicleStaticState(id);
     hideVehiclePhotoCard();
     return;
   }
