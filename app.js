@@ -91,6 +91,7 @@ const NETWORK_CHECK_URL = `${window.location.origin}/manifest.json?network-check
 const NETWORK_CHECK_TIMEOUT_MS = 5000;
 const NETWORK_CHECK_INTERVAL_MS = 30000;
 const NETWORK_CHECK_CACHE_MS = 20000;
+const PRIMARY_VEHICLE_QUERY_MAX_LENGTH = 10;
 const WEATHER_CACHE_MS = 5 * 60 * 1000;
 const FAVORITES_KEY = "bb_favorites_v1";
 const SETTINGS_KEY = "bb_settings_v1";
@@ -5641,6 +5642,12 @@ dashboardCloseBtn?.addEventListener("click", () => {
   }
   closeDashboardPanel({ historyMode: "replace" });
 });
+voertuigInput.addEventListener("input", () => {
+  const clampedValue = clampPrimaryVehicleQuery(voertuigInput.value);
+  if (voertuigInput.value !== clampedValue) {
+    voertuigInput.value = clampedValue;
+  }
+});
 voertuigInput.addEventListener("input", updateFavoriteButtonState);
 favoritesToggleBtn.addEventListener("click", (event) => {
   event.stopPropagation();
@@ -6241,6 +6248,10 @@ function buildVehicleSearchEntry(vehicle) {
     const normalizedValue = normalizeLookup(value);
     if (normalizedValue) prefixes.push(normalizedValue);
   };
+  const pushPlatePrefix = (value) => {
+    const normalizedValue = normalizePlateLookup(value);
+    if (normalizedValue) prefixes.push(normalizedValue);
+  };
   const pushExactId = (value) => {
     const normalizedValue = normalizeLookup(value);
     if (normalizedValue) exactIds.push(normalizedValue);
@@ -6261,6 +6272,7 @@ function buildVehicleSearchEntry(vehicle) {
   const plateValue = getVehicleField(vehicle, vehiclePlateFieldKey);
   if (plateValue) {
     pushPrefix(plateValue);
+    pushPlatePrefix(plateValue);
     pushExactPlate(plateValue);
   }
 
@@ -6271,6 +6283,7 @@ function buildVehicleSearchEntry(vehicle) {
 
   splitLegacyValues(getVehicleField(vehicle, oldLicensePlatesFieldKey), false).forEach((value) => {
     pushPrefix(value);
+    pushPlatePrefix(value);
     pushExactPlate(value);
   });
 
@@ -6420,17 +6433,18 @@ function buildZone01HerculesSearchUrl(query = "") {
   return `${ZONE01_HERCULES_SEARCH_URL}?${params.toString()}`;
 }
 
+function clampPrimaryVehicleQuery(value = "") {
+  return (value || "").toString().slice(0, PRIMARY_VEHICLE_QUERY_MAX_LENGTH);
+}
+
 function getMissingVehicleSuggestionCopy(query = "") {
-  const normalizedQuery = normalize(query);
   return {
     badge: getLabel("missingVehicleBadge", "Niet gevonden"),
     title: getLabel("missingVehicleTitle", "Dit voertuig ontbreekt in onze database."),
     text: getLabel("missingVehicleText", "Meld het ons via het formulier onderaan en zoek dit voertuig in Hercules op Zone 01."),
     reportCta: getLabel("missingVehicleReportCta", "Meld via formulier"),
-    zone01Cta: normalizedQuery
-      ? fillTemplate(getLabel("missingVehicleZone01Cta", "Zoek {id} op Zone 01"), normalizedQuery)
-      : getLabel("missingVehicleZone01CtaGeneric", "Zoek op Zone 01"),
-    zone01Url: buildZone01HerculesSearchUrl(normalizedQuery)
+    zone01Cta: getLabel("missingVehicleZone01CtaGeneric", "Zoek op Zone 01"),
+    zone01Url: buildZone01HerculesSearchUrl(query)
   };
 }
 
@@ -6764,6 +6778,12 @@ function bindVehicleSuggestions(inputEl, onSelect) {
   if (!listEl) return;
 
   const render = () => {
+    if (inputEl.id === "voertuignummer") {
+      const clampedValue = clampPrimaryVehicleQuery(inputEl.value);
+      if (inputEl.value !== clampedValue) {
+        inputEl.value = clampedValue;
+      }
+    }
     if (getVehicleInputResolvedId(inputEl) && inputEl.value.trim() !== getVehicleDisplayId(getVehicleInputResolvedId(inputEl))) {
       setVehicleInputResolvedId(inputEl, "");
     }
@@ -7006,7 +7026,11 @@ async function zoekAlles(options = {}) {
   } = options;
   const searchToken = ++latestSearchToken;
   markUserInteraction();
-  const query = (queryOverride || voertuigInput.value || "").trim();
+  const rawQuery = queryOverride || voertuigInput.value || "";
+  const query = clampPrimaryVehicleQuery(rawQuery).trim();
+  if (voertuigInput && voertuigInput.value !== query) {
+    voertuigInput.value = query;
+  }
   if(!query) return;
   const hasInternet = await verifyInternetConnection();
   if (searchToken !== latestSearchToken) return;
