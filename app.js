@@ -5619,10 +5619,21 @@ bindVehicleSuggestions(voertuigInput, () => {
 });
 voertuigInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
+    const shouldOpenZone01 =
+      !!suggestieLijst &&
+      !suggestieLijst.hidden &&
+      suggestieLijst.dataset.mode === "missing-vehicle" &&
+      !!suggestieLijst.dataset.zone01Url;
     const hasActiveSuggestion =
       !!suggestieLijst &&
       !suggestieLijst.hidden &&
       Number(suggestieLijst.dataset.activeIndex || -1) >= 0;
+    if (shouldOpenZone01) {
+      event.preventDefault();
+      dismissPrimaryVehicleSearchInput({ closeKeyboard: true });
+      openExternalUrl(suggestieLijst.dataset.zone01Url, { preferSameTab: true });
+      return;
+    }
     if (hasActiveSuggestion) return;
     event.preventDefault();
     dismissPrimaryVehicleSearchInput({ closeKeyboard: true });
@@ -6498,8 +6509,11 @@ function createMissingVehicleCallout(query = "", options = {}) {
 
 function renderMissingVehicleSuggestionList(listEl, inputEl, query = "") {
   if (!listEl || !inputEl) return;
+  const zone01Url = buildZone01HerculesSearchUrl(query);
   listEl.innerHTML = "";
   listEl.dataset.activeIndex = "-1";
+  listEl.dataset.mode = "missing-vehicle";
+  listEl.dataset.zone01Url = zone01Url;
   listEl.setAttribute("role", "group");
   listEl.setAttribute("aria-live", "polite");
   const rowEl = document.createElement("li");
@@ -6533,6 +6547,8 @@ function hideSuggestionList(listEl) {
   listEl.innerHTML = "";
   listEl.hidden = true;
   listEl.removeAttribute("aria-live");
+  delete listEl.dataset.mode;
+  delete listEl.dataset.zone01Url;
   if (listEl.dataset.floating === "1") {
     listEl.style.removeProperty("top");
     listEl.style.removeProperty("left");
@@ -6638,6 +6654,8 @@ function renderSuggestionList(listEl, inputEl, onSelect) {
   listEl.innerHTML = "";
   listEl.dataset.activeIndex = "-1";
   listEl.removeAttribute("aria-live");
+  delete listEl.dataset.mode;
+  delete listEl.dataset.zone01Url;
   listEl.setAttribute("role", "listbox");
 
   if (!results.length) {
