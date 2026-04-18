@@ -309,6 +309,9 @@ const vehiclePhotoCounterEl = document.getElementById("vehiclePhotoCounter");
 const vehiclePhotoMetaEl = document.getElementById("vehiclePhotoMeta");
 const vehiclePhotoCaptionEl = document.getElementById("vehiclePhotoCaption");
 const vehiclePhotoEmptyStateEl = document.getElementById("vehiclePhotoEmptyState");
+const vehiclePhotoEmptyBadgeEl = document.getElementById("vehiclePhotoEmptyBadge");
+const vehiclePhotoEmptyTitleEl = document.getElementById("vehiclePhotoEmptyTitle");
+const vehiclePhotoEmptyTextEl = document.getElementById("vehiclePhotoEmptyText");
 const vehiclePhotoUploadBtn = document.getElementById("vehiclePhotoUploadBtn");
 const disclaimerTitleEl = document.getElementById("disclaimerTitle");
 const disclaimerTextEl = document.getElementById("disclaimerText");
@@ -344,7 +347,11 @@ const reviewMobileLinkEl = document.getElementById("reviewMobileLink");
 const photoUploadModalEl = document.getElementById("photoUploadModal");
 const photoUploadModalTitleEl = document.getElementById("photoUploadModalTitle");
 const photoUploadModalSummaryEl = document.getElementById("photoUploadModalSummary");
+const photoUploadModalBadgeEl = document.getElementById("photoUploadModalBadge");
 const photoUploadModalNoteEl = document.getElementById("photoUploadModalNote");
+const photoUploadStep1El = document.getElementById("photoUploadStep1");
+const photoUploadStep2El = document.getElementById("photoUploadStep2");
+const photoUploadStep3El = document.getElementById("photoUploadStep3");
 const photoUploadModalCloseBtn = document.getElementById("photoUploadModalCloseBtn");
 const photoUploadModalDoneBtn = document.getElementById("photoUploadModalDoneBtn");
 const photoUploadOpenLinkEl = document.getElementById("photoUploadOpenLink");
@@ -1658,6 +1665,7 @@ function hideReviewModal() {
 
 function showPhotoUploadModal() {
   if (!photoUploadModalEl) return;
+  updatePhotoUploadCopy(currentPhotoVehicleId);
   if (shouldOpenExternalFormExperience()) {
     openExternalUrl(PHOTO_UPLOAD_FORM_URL, { preferSameTab: true });
     return;
@@ -2905,19 +2913,61 @@ async function exportBusPdf(vehicleId, themeKey = "geel") {
 function updateVehiclePhotoTexts() {
   if (!photoCardTitleEl || !vehiclePhotoImgEl || !vehiclePhotoCaptionEl) return;
   photoCardTitleEl.textContent = translateTemplate("photoCard", "Voertuigfoto");
+  updatePhotoUploadCopy(currentPhotoVehicleId);
+  renderActiveVehiclePhoto();
+}
+
+function updatePhotoUploadCopy(vehicleId = currentPhotoVehicleId) {
+  const visibleVehicleId = getVehicleDisplayId(vehicleId);
+  const hasSpecificVehicleId = !!visibleVehicleId;
+  if (vehiclePhotoEmptyBadgeEl) vehiclePhotoEmptyBadgeEl.textContent = getLabel("photoUploadEmptyBadge", "Nog geen foto");
+  if (vehiclePhotoEmptyTitleEl) {
+    vehiclePhotoEmptyTitleEl.textContent = hasSpecificVehicleId
+      ? fillTemplate(getLabel("photoUploadEmptyTitle", "Nog geen foto beschikbaar van voertuig {id}."), visibleVehicleId)
+      : getLabel("photoUploadEmptyTitleGeneric", "Nog geen foto beschikbaar van dit voertuig.");
+  }
+  if (vehiclePhotoEmptyTextEl) {
+    vehiclePhotoEmptyTextEl.textContent = hasSpecificVehicleId
+      ? fillTemplate(getLabel("photoUploadEmptyText", "Heb jij wel een goede foto van voertuig {id}? Help Busbibliotheek aanvullen via het uploadformulier."), visibleVehicleId)
+      : getLabel("photoUploadEmptyTextGeneric", "Heb jij wel een goede foto? Help Busbibliotheek aanvullen via het uploadformulier.");
+  }
   if (vehiclePhotoUploadBtn) vehiclePhotoUploadBtn.textContent = getLabel("photoUploadCta", "Jouw foto hier? Upload hier.");
   if (photoUploadModalTitleEl) photoUploadModalTitleEl.textContent = getLabel("photoUploadTitle", "Foto uploaden");
-  if (photoUploadModalSummaryEl) photoUploadModalSummaryEl.textContent = getLabel("photoUploadSummary", "Heb jij een foto van dit voertuig? Stuur ze door via het formulier.");
-  if (photoUploadModalNoteEl) photoUploadModalNoteEl.textContent = getLabel("photoUploadNote", "Het formulier opent in een nieuw tabblad zodat je jouw foto makkelijk kan doorsturen.");
+  if (photoUploadModalSummaryEl) {
+    photoUploadModalSummaryEl.textContent = hasSpecificVehicleId
+      ? fillTemplate(getLabel("photoUploadSummary", "Help Busbibliotheek aanvullen met een foto van voertuig {id}."), visibleVehicleId)
+      : getLabel("photoUploadSummaryGeneric", "Help Busbibliotheek aanvullen met een foto van dit voertuig.");
+  }
+  if (photoUploadModalBadgeEl) photoUploadModalBadgeEl.textContent = getLabel("photoUploadModalBadge", "Voertuigfoto ontbreekt");
+  if (photoUploadModalNoteEl) {
+    photoUploadModalNoteEl.textContent = hasSpecificVehicleId
+      ? fillTemplate(getLabel("photoUploadNote", "We zoeken nog een duidelijke foto van voertuig {id}. Heb jij er eentje? Dan kan je die hieronder doorsturen."), visibleVehicleId)
+      : getLabel("photoUploadNoteGeneric", "We zoeken nog een duidelijke foto van dit voertuig. Heb jij er eentje? Dan kan je die hieronder doorsturen.");
+  }
+  if (photoUploadStep1El) photoUploadStep1El.textContent = getLabel("photoUploadStep1", "Open het formulier in je browser.");
+  if (photoUploadStep2El) {
+    photoUploadStep2El.textContent = hasSpecificVehicleId
+      ? fillTemplate(getLabel("photoUploadStep2", "Voeg je foto toe en vermeld voertuig {id}."), visibleVehicleId)
+      : getLabel("photoUploadStep2Generic", "Voeg je foto toe en vermeld het voertuignummer.");
+  }
+  if (photoUploadStep3El) photoUploadStep3El.textContent = getLabel("photoUploadStep3", "Na controle kan de foto op Busbibliotheek verschijnen.");
   if (photoUploadOpenLinkEl) {
     photoUploadOpenLinkEl.textContent = getLabel("photoUploadOpen", "Open uploadformulier");
     photoUploadOpenLinkEl.href = PHOTO_UPLOAD_FORM_URL;
   }
-  renderActiveVehiclePhoto();
 }
 
 function setVehiclePhotoEmptyStateVisible(visible) {
-  if (vehiclePhotoFrameEl) vehiclePhotoFrameEl.hidden = visible;
+  if (vehiclePhotoFrameEl) vehiclePhotoFrameEl.classList.toggle("is-empty", !!visible);
+  if (vehiclePhotoImgEl) {
+    vehiclePhotoImgEl.hidden = !!visible;
+    vehiclePhotoImgEl.setAttribute("aria-hidden", String(!!visible));
+  }
+  if (visible) {
+    if (vehiclePhotoPrevBtn) vehiclePhotoPrevBtn.hidden = true;
+    if (vehiclePhotoNextBtn) vehiclePhotoNextBtn.hidden = true;
+    if (vehiclePhotoCaptionEl) vehiclePhotoCaptionEl.hidden = true;
+  }
   if (vehiclePhotoInfoEl) vehiclePhotoInfoEl.hidden = visible;
   if (vehiclePhotoEmptyStateEl) {
     vehiclePhotoEmptyStateEl.hidden = !visible;
@@ -2944,6 +2994,7 @@ function showVehiclePhotoUploadPrompt(vehicleId) {
     vehiclePhotoCounterEl.hidden = true;
     vehiclePhotoCounterEl.textContent = "";
   }
+  updatePhotoUploadCopy(currentPhotoVehicleId);
   setVehiclePhotoEmptyStateVisible(true);
   vehiclePhotoCardEl.hidden = false;
   vehiclePhotoCardEl.setAttribute("aria-hidden", "false");

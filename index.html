@@ -21,7 +21,7 @@
     document.documentElement.classList.add("preload");
   })();
 </script>
-<link id="appStylesheet" rel="stylesheet" href="style.css?v=20260417-23">
+<link id="appStylesheet" rel="stylesheet" href="style.css?v=20260418-1">
 <script>
   (function () {
     var attachStylesheetFallback = function (id, fallbackHref) {
@@ -151,15 +151,18 @@
           <button id="vehiclePhotoNextBtn" class="photo-nav-btn photo-nav-btn--next" type="button" hidden aria-label="Volgende foto">
             <span aria-hidden="true">&#8250;</span>
           </button>
+          <div id="vehiclePhotoEmptyState" class="vehicle-photo-empty" hidden aria-hidden="true">
+            <span id="vehiclePhotoEmptyBadge" class="vehicle-photo-empty-badge">Nog geen foto</span>
+            <strong id="vehiclePhotoEmptyTitle" class="vehicle-photo-empty-title">Nog geen foto beschikbaar van dit voertuig.</strong>
+            <p id="vehiclePhotoEmptyText" class="vehicle-photo-empty-text">Heb jij wel een foto? Help Busbibliotheek aanvullen via het uploadformulier.</p>
+            <button id="vehiclePhotoUploadBtn" class="btn vehicle-photo-upload-btn" type="button">Jouw foto hier? Upload hier.</button>
+          </div>
         </div>
         <div class="vehicle-photo-info">
           <p id="vehiclePhotoCounter" class="vehicle-photo-counter" hidden></p>
           <div id="vehiclePhotoMeta" class="vehicle-photo-meta" hidden aria-hidden="true"></div>
         </div>
         <p id="vehiclePhotoCaption" class="vehicle-photo-caption"></p>
-        <p id="vehiclePhotoEmptyState" class="vehicle-photo-empty" hidden aria-hidden="true">
-          <button id="vehiclePhotoUploadBtn" class="footer-link-btn" type="button">Jouw foto hier? Upload hier.</button>
-        </p>
       </div>
 
       <div id="compareCard" class="card compare-card" hidden aria-hidden="true">
@@ -492,8 +495,18 @@
       <button id="photoUploadModalCloseBtn" class="settings-close-btn" type="button" aria-label="Sluiten">&times;</button>
     </div>
     <div class="pdf-modal-body legal-modal-body">
-      <p id="photoUploadModalNote" class="install-guide-note">Het formulier opent in een nieuw tabblad zodat je jouw foto makkelijk kan doorsturen.</p>
-      <a id="photoUploadOpenLink" class="btn" href="https://forms.gle/MLzezhEKqxg6xagm9" target="_blank" rel="noopener noreferrer">Open uploadformulier</a>
+      <div class="photo-upload-modal-copy">
+        <div class="photo-upload-callout">
+          <span id="photoUploadModalBadge" class="photo-upload-badge">Voertuigfoto ontbreekt</span>
+          <p id="photoUploadModalNote" class="photo-upload-lead">Nog geen foto beschikbaar van dit voertuig. Heb jij er eentje?</p>
+        </div>
+        <ul class="install-guide-steps photo-upload-steps">
+          <li id="photoUploadStep1">Open het formulier in je browser.</li>
+          <li id="photoUploadStep2">Voeg je foto toe en vermeld het voertuignummer.</li>
+          <li id="photoUploadStep3">Na controle kan de foto op Busbibliotheek verschijnen.</li>
+        </ul>
+        <a id="photoUploadOpenLink" class="btn" href="https://forms.gle/MLzezhEKqxg6xagm9" target="_blank" rel="noopener noreferrer">Open uploadformulier</a>
+      </div>
     </div>
     <div class="pdf-modal-actions">
       <button id="photoUploadModalDoneBtn" class="btn" type="button">Sluiten</button>
@@ -540,7 +553,7 @@
   translationsScript.src = "translations.js?v=20260218-1";
   translationsScript.onload = function () {
     var appScript = document.createElement("script");
-    appScript.src = "app.js?v=20260417-15";
+    appScript.src = "app.js?v=20260418-1";
     appScript.defer = true;
     document.body.appendChild(appScript);
   };
