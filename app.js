@@ -76,7 +76,7 @@ window.addEventListener('appinstalled', () => {
 
 function syncHeaderActionPlacement() {
   if (!favoritesTopEl || !headerActionsEl || !headerSearchRowEl || !window.matchMedia) return;
-  const shouldInlineMenu = true;
+  const shouldInlineMenu = window.matchMedia("(max-width: 980px)").matches;
   const targetParent = shouldInlineMenu ? headerSearchRowEl : headerActionsEl;
   if (favoritesTopEl.parentElement !== targetParent) {
     targetParent.appendChild(favoritesTopEl);
@@ -4125,8 +4125,9 @@ function saveSettings() {
 
 function applyTheme(theme) {
   const root = document.documentElement;
-  if (theme === "auto") root.removeAttribute("data-theme");
-  else root.setAttribute("data-theme", theme);
+  const normalizedTheme = theme === "dark" || theme === "light" ? theme : "auto";
+  if (normalizedTheme === "auto") root.removeAttribute("data-theme");
+  else root.setAttribute("data-theme", normalizedTheme);
   updateSystemUiThemeColor();
 }
 
@@ -4152,12 +4153,15 @@ function applyColorTheme(colorTheme) {
 }
 
 function updateSystemUiThemeColor() {
+  const root = document.documentElement;
   const css = getComputedStyle(document.documentElement);
   const resolvedTheme = getResolvedThemeMode();
   const nextThemeColor =
     css.getPropertyValue("--bg-gradient-top").trim() ||
     css.getPropertyValue("--bg").trim() ||
     "#f4f7fb";
+  root.setAttribute("data-resolved-theme", resolvedTheme);
+  root.style.colorScheme = resolvedTheme;
   themeColorMetaEls.forEach((metaEl) => {
     metaEl.setAttribute("content", nextThemeColor);
   });
@@ -4175,6 +4179,8 @@ window.updateSystemUiThemeColor = updateSystemUiThemeColor;
 prefersDarkScheme.addEventListener?.("change", () => {
   if (settings.theme === "auto") updateSystemUiThemeColor();
 });
+
+window.addEventListener("resize", debounce(syncHeaderActionPlacement, 120), { passive: true });
 
 function applyTranslations() {
   document.documentElement.lang = settings.language || DEFAULT_LANG;
