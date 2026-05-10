@@ -4170,7 +4170,7 @@ body.offline-active {
   justify-content: center;
   min-width: 2.1rem;
   padding: 0.28rem 0.6rem;
-  border-radius: 999px;
+  border-radius: 5px;
   line-height: 1.15;
   font-size: 0.8rem;
   font-weight: 800;
@@ -7916,9 +7916,10 @@ footer > *,
   width: fit-content;
   min-width: 2.1rem;
   padding: 0.22rem 0.52rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 5px;
+  background: #E40521;
+  border: 1px solid #E40521;
+  color: #FFFFFF;
   font-size: 0.98rem;
   font-weight: 800;
   letter-spacing: 0.01em;
@@ -8915,9 +8916,9 @@ footer h3 {
 }
 
 :root[data-resolved-theme="dark"] .header-visual-card-route {
-  background: rgba(255, 255, 255, 0.34) !important;
-  border-color: rgba(23, 32, 51, 0.12) !important;
-  color: #172033 !important;
+  background: #E40521 !important;
+  border-color: #E40521 !important;
+  color: #FFFFFF !important;
 }
 
 :root[data-resolved-theme="dark"] .header-visual-card-destination {
