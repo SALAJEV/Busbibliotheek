@@ -76,7 +76,7 @@ window.addEventListener('appinstalled', () => {
 
 function syncHeaderActionPlacement() {
   if (!favoritesTopEl || !headerActionsEl || !headerSearchRowEl || !window.matchMedia) return;
-  const shouldInlineMenu = window.matchMedia("(max-width: 980px)").matches;
+  const shouldInlineMenu = true;
   const targetParent = shouldInlineMenu ? headerSearchRowEl : headerActionsEl;
   if (favoritesTopEl.parentElement !== targetParent) {
     targetParent.appendChild(favoritesTopEl);
