@@ -307,6 +307,7 @@ const vehiclePhotoCardEl = document.getElementById("vehiclePhotoCard");
 const vehiclePhotoFrameEl = vehiclePhotoCardEl?.querySelector(".vehicle-photo-frame");
 const vehiclePhotoInfoEl = vehiclePhotoCardEl?.querySelector(".vehicle-photo-info");
 let vehiclePhotoImgEl = document.getElementById("vehiclePhotoImg");
+let vehiclePhotoLoaderEl = document.getElementById("vehiclePhotoLoader");
 const vehiclePhotoPrevBtn = document.getElementById("vehiclePhotoPrevBtn");
 const vehiclePhotoNextBtn = document.getElementById("vehiclePhotoNextBtn");
 const vehiclePhotoCounterEl = document.getElementById("vehiclePhotoCounter");
@@ -1137,6 +1138,17 @@ function updateUrlState(mode = "replace") {
   window.history[shouldPush ? "pushState" : "replaceState"](historyState, "", nextUrl);
 }
 
+function navigateHomeAndReload(options = {}) {
+  const { replaceHistory = true } = options;
+  const homeUrl = buildUrlForRouteState({ view: "home", bus: "", compare: "" });
+  window.location[replaceHistory ? "replace" : "assign"](homeUrl);
+}
+
+function isSpecialVehicleCommand(query = "") {
+  const normalizedQuery = (query || "").toString().trim().toLowerCase();
+  return ["python", "android", "apk", "info", "best", "bus beih"].includes(normalizedQuery);
+}
+
 function initializeRouteHistory() {
   if (injectedInitialHomeHistoryState) return;
   injectedInitialHomeHistoryState = true;
@@ -1916,6 +1928,14 @@ async function applyRouteStateFromLocation() {
 
   try {
     if (routeState.bus) {
+      if (voertuigen.length === 0) await laadVoertuigen();
+      if (!resolveVehicleSearch(routeState.bus).bus) {
+        terug({ historyMode: "replace", scrollBehavior: "auto" });
+        return;
+      }
+    }
+
+    if (routeState.bus) {
       const shouldLoadVehicle =
         currentVehicleId !== routeState.bus ||
         !resultsWrapEl.classList.contains("show");
@@ -1924,7 +1944,8 @@ async function applyRouteStateFromLocation() {
         setVehicleInputResolvedId(voertuigInput, routeState.bus);
         await zoekAlles({
           queryOverride: routeState.bus,
-          historyMode: "replace"
+          historyMode: "replace",
+          openZone01OnMissing: false
         });
       } else {
         updateDocumentTitle(routeState.bus);
@@ -2459,6 +2480,35 @@ function ensureVehiclePhotoImageElement() {
   return imageEl;
 }
 
+function ensureVehiclePhotoLoaderElement() {
+  if (vehiclePhotoLoaderEl?.isConnected) return vehiclePhotoLoaderEl;
+  if (!vehiclePhotoFrameEl) return null;
+  const loaderEl = document.createElement("div");
+  loaderEl.id = "vehiclePhotoLoader";
+  loaderEl.className = "vehicle-photo-loader";
+  loaderEl.hidden = true;
+  loaderEl.setAttribute("aria-hidden", "true");
+  loaderEl.innerHTML = `
+    <span class="page-loading-spinner vehicle-photo-loader-spinner" aria-hidden="true"></span>
+    <span class="vehicle-photo-loader-text">${escapeHtml(getLabel("photoLoading", "Foto wordt geladen..."))}</span>
+  `;
+  vehiclePhotoFrameEl.appendChild(loaderEl);
+  vehiclePhotoLoaderEl = loaderEl;
+  return loaderEl;
+}
+
+function setVehiclePhotoFrameLoading(active, label = "") {
+  const loaderEl = ensureVehiclePhotoLoaderElement();
+  if (!loaderEl) return;
+  const textEl = loaderEl.querySelector(".vehicle-photo-loader-text");
+  if (textEl) {
+    textEl.textContent = label || getLabel("photoLoading", "Foto wordt geladen...");
+  }
+  loaderEl.hidden = !active;
+  loaderEl.setAttribute("aria-hidden", String(!active));
+  vehiclePhotoFrameEl?.classList.toggle("is-loading", !!active);
+}
+
 function clearVehiclePhotoImageElement(removeFromDom = false) {
   if (!vehiclePhotoImgEl) return;
   vehiclePhotoImgEl.onload = null;
@@ -2473,6 +2523,7 @@ function clearVehiclePhotoImageElement(removeFromDom = false) {
 
 function setVehiclePhotoEmptyStateVisible(visible) {
   if (vehiclePhotoFrameEl) vehiclePhotoFrameEl.classList.toggle("is-empty", !!visible);
+  if (visible) setVehiclePhotoFrameLoading(false);
   if (visible) clearVehiclePhotoImageElement(true);
   if (visible) {
     if (vehiclePhotoPrevBtn) vehiclePhotoPrevBtn.hidden = true;
@@ -2491,6 +2542,7 @@ function showVehiclePhotoUploadPrompt(vehicleId) {
   currentVehiclePhotoEntries = [];
   currentVehiclePhotoIndex = 0;
   if (!vehiclePhotoCardEl || !vehiclePhotoCaptionEl) return;
+  setVehiclePhotoFrameLoading(false);
   clearVehiclePhotoImageElement(true);
   vehiclePhotoCaptionEl.textContent = "";
   vehiclePhotoCaptionEl.hidden = true;
@@ -2531,7 +2583,7 @@ function readExifRationalValue(view, offset, littleEndian) {
 
 function formatPhotoGpsCoordinate(latitude, longitude) {
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return "";
-  return `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+  return "";
 }
 
 function buildPhotoGpsMapLink(latitude, longitude) {
@@ -3461,11 +3513,18 @@ async function resolveVehiclePhotoEntries(vehicleId) {
 function buildVehiclePhotoCopy(entry, vehicleId) {
   const altTemplate = translateTemplate("photoAlt", "Foto van voertuig {id}");
   const visibleVehicleId = getVehicleDisplayId(vehicleId);
+  const placeValue = cleanText(entry?.metaFields?.place);
   return {
     alt: entry?.alt || fillTemplate(altTemplate, visibleVehicleId),
     caption: entry?.caption || "",
     meta: entry?.meta || "",
-    metaFields: entry?.metaFields || {}
+    metaFields: entry?.metaFields || {},
+    locationPending: Boolean(
+      entry?.gpsCoordinates &&
+      entry?.placeDerivedFromGps &&
+      !entry?.locationResolved &&
+      !placeValue
+    )
   };
 }
 
@@ -3481,6 +3540,7 @@ function getPhotoMetaIconMarkup(iconKey) {
 
 function buildVehiclePhotoMetaMarkup(copy) {
   const metaFields = copy?.metaFields || {};
+  const locationPending = !!copy?.locationPending && !cleanText(metaFields.place);
   const metaItems = [
     ["maker", getLabel("photoPhotographer", "Fotograaf"), metaFields.maker, metaFields.makerLink],
     ["place", getLabel("photoPlace", "Plaats"), metaFields.place, metaFields.placeLink],
@@ -3488,7 +3548,7 @@ function buildVehiclePhotoMetaMarkup(copy) {
     ["credit", getLabel("photoCredit", "Credits"), metaFields.credit, ""]
   ].filter(([, , value]) => cleanText(value));
 
-  if (!metaItems.length) return "";
+  if (!metaItems.length && !locationPending) return "";
 
   return `
     <div class="vehicle-photo-meta-card">
@@ -3503,6 +3563,18 @@ function buildVehiclePhotoMetaMarkup(copy) {
           </div>
         </div>
       `).join("")}
+      ${locationPending ? `
+        <div class="vehicle-photo-meta-item">
+          <span class="vehicle-photo-meta-icon" aria-hidden="true">${getPhotoMetaIconMarkup("place")}</span>
+          <div class="vehicle-photo-meta-copy">
+            <span class="vehicle-photo-meta-label">${escapeHtml(getLabel("photoPlace", "Plaats"))}</span>
+            <strong class="vehicle-photo-meta-value vehicle-photo-meta-value--loading">
+              <span class="spinner vehicle-photo-meta-spinner" aria-hidden="true"></span>
+              ${escapeHtml(getLabel("photoPlaceLoading", "Locatie wordt opgezocht..."))}
+            </strong>
+          </div>
+        </div>
+      ` : ""}
     </div>
   `;
 }
@@ -3541,6 +3613,7 @@ async function hydrateActiveVehiclePhotoLocation(entry, vehicleId, entryIndex) {
 function renderActiveVehiclePhoto() {
   if (!vehiclePhotoCaptionEl) return;
   if (!currentPhotoVehicleId || !currentVehiclePhotoEntries.length) {
+    setVehiclePhotoFrameLoading(false);
     clearVehiclePhotoImageElement(true);
     vehiclePhotoCaptionEl.textContent = "";
     if (vehiclePhotoMetaEl) {
@@ -3558,6 +3631,9 @@ function renderActiveVehiclePhoto() {
   currentVehiclePhotoIndex = safeIndex;
   const activeEntry = currentVehiclePhotoEntries[safeIndex];
   const copy = buildVehiclePhotoCopy(activeEntry, currentPhotoVehicleId);
+  setVehiclePhotoFrameLoading(true, getLabel("photoLoading", "Foto wordt geladen..."));
+  photoImgEl.onload = () => setVehiclePhotoFrameLoading(false);
+  photoImgEl.onerror = () => setVehiclePhotoFrameLoading(false);
   photoImgEl.src = buildVehiclePhotoRequestUrl(activeEntry.src);
   photoImgEl.alt = copy.alt;
   vehiclePhotoCaptionEl.textContent = copy.caption;
@@ -3632,6 +3708,7 @@ function hideVehiclePhotoCard() {
   currentVehiclePhotoEntries = [];
   currentVehiclePhotoIndex = 0;
   if (!vehiclePhotoCardEl || !vehiclePhotoCaptionEl) return;
+  setVehiclePhotoFrameLoading(false);
   vehiclePhotoCardEl.hidden = true;
   vehiclePhotoCardEl.setAttribute("aria-hidden", "true");
   clearVehiclePhotoImageElement(true);
@@ -3660,9 +3737,10 @@ async function updateVehiclePhotoCard(vehicleId) {
   currentPhotoVehicleId = "";
   currentVehiclePhotoEntries = [];
   currentVehiclePhotoIndex = 0;
-  vehiclePhotoCardEl.hidden = true;
-  vehiclePhotoCardEl.setAttribute("aria-hidden", "true");
+  vehiclePhotoCardEl.hidden = false;
+  vehiclePhotoCardEl.setAttribute("aria-hidden", "false");
   setVehiclePhotoEmptyStateVisible(false);
+  setVehiclePhotoFrameLoading(true, getLabel("photoLoading", "Foto wordt geladen..."));
   clearVehiclePhotoImageElement(true);
   vehiclePhotoCaptionEl.textContent = "";
   vehiclePhotoCaptionEl.hidden = true;
@@ -3687,8 +3765,6 @@ async function updateVehiclePhotoCard(vehicleId) {
   currentVehiclePhotoEntries = photoEntries;
   currentVehiclePhotoIndex = 0;
   renderActiveVehiclePhoto();
-  vehiclePhotoCardEl.hidden = false;
-  vehiclePhotoCardEl.setAttribute("aria-hidden", "false");
 }
 
 function parseFlexibleDateParts(rawValue) {
@@ -5085,14 +5161,8 @@ closeBtnEl?.addEventListener("click", () => {
   terug({ historyMode: "replace" });
 });
 appTitleBtnEl?.addEventListener("click", () => {
-  const routeState = getCurrentRouteState();
   closeTransientOverlays();
-  if (routeState.view === "home") {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    return;
-  }
-  closeDashboardPanel({ historyMode: "replace" });
-  terug({ historyMode: "push" });
+  navigateHomeAndReload({ replaceHistory: true });
 });
 bindVehicleSuggestions(voertuigInput, () => {
   dismissPrimaryVehicleSearchInput({ closeKeyboard: true });
@@ -5112,7 +5182,7 @@ voertuigInput.addEventListener("keydown", (event) => {
     if (shouldOpenZone01) {
       event.preventDefault();
       dismissPrimaryVehicleSearchInput({ closeKeyboard: true });
-      openExternalUrl(suggestieLijst.dataset.zone01Url, { preferSameTab: true });
+      openExternalUrl(suggestieLijst.dataset.zone01Url, { forceSameTab: true });
       return;
     }
     if (hasActiveSuggestion) return;
@@ -6534,7 +6604,8 @@ if (window.location.search.includes("bus=") || isAndroidTvPlatform) {
 async function zoekAlles(options = {}) {
   const {
     queryOverride = "",
-    historyMode = routeNavigationLocked ? "replace" : "push"
+    historyMode = routeNavigationLocked ? "replace" : "push",
+    openZone01OnMissing = true
   } = options;
   const searchToken = ++latestSearchToken;
   markUserInteraction();
@@ -6595,6 +6666,12 @@ async function zoekAlles(options = {}) {
   const resolved = resolveVehicleQuery(query, getVehicleInputResolvedId(voertuigInput));
   const activeVehicleId = resolved.vehicleId || normalize(query);
   const bus = resolved.bus;
+  if (!bus && openZone01OnMissing && !isSpecialVehicleCommand(query)) {
+    hideSuggestionList(suggestieLijst);
+    setPageLoading(false);
+    openExternalUrl(buildZone01HerculesSearchUrl(query), { forceSameTab: true });
+    return;
+  }
   currentVehicleId = activeVehicleId;
   realtimePausedByInactivity = false;
   if (compareVehicleId === currentVehicleId) compareVehicleId = "";
