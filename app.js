@@ -84,6 +84,7 @@ const API_URL = "https://busbibliotheek95.pages.dev/api";
 const PYTHON_MAIN_DOWNLOAD_URL = "https://busbibliotheek95.pages.dev/python/script.py";
 const APK_DOWNLOAD_URL = `${window.location.origin}/android/app/release/app-release.apk`;
 const PHOTO_UPLOAD_FORM_URL = "https://forms.gle/MLzezhEKqxg6xagm9";
+const REPORT_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScrSDIN__F9mfOxpuMd2Kvw2GbGB3djKZrao1dB-Ry2-a67TA/viewform";
 const ZONE01_HERCULES_SEARCH_URL = "https://www.zone01.be/hercules/resultaten";
 const LEAFLET_CSS_URL = "https://unpkg.com/leaflet/dist/leaflet.css";
 const LEAFLET_JS_URL = "https://unpkg.com/leaflet/dist/leaflet.js";
@@ -346,6 +347,12 @@ const reviewModalSummaryEl = document.getElementById("reviewModalSummary");
 const reviewModalCloseBtn = document.getElementById("reviewModalCloseBtn");
 const reviewModalDoneBtn = document.getElementById("reviewModalDoneBtn");
 const reviewMobileLinkEl = document.getElementById("reviewMobileLink");
+const reportModalEl = document.getElementById("reportModal");
+const reportModalTitleEl = document.getElementById("reportModalTitle");
+const reportModalSummaryEl = document.getElementById("reportModalSummary");
+const reportModalCloseBtn = document.getElementById("reportModalCloseBtn");
+const reportModalDoneBtn = document.getElementById("reportModalDoneBtn");
+const reportMobileLinkEl = document.getElementById("reportMobileLink");
 const photoUploadModalEl = document.getElementById("photoUploadModal");
 const photoUploadModalTitleEl = document.getElementById("photoUploadModalTitle");
 const photoUploadModalSummaryEl = document.getElementById("photoUploadModalSummary");
@@ -855,6 +862,7 @@ function registerOverlayModal(modalEl) {
   appDialogModalEl,
   halteSearchModalEl,
   reviewModalEl,
+  reportModalEl,
   photoUploadModalEl,
   termsModalEl,
   weatherModalEl,
@@ -1667,6 +1675,21 @@ function showReviewModal() {
 
 function hideReviewModal() {
   closeOverlayModal(reviewModalEl);
+}
+
+function showReportModal() {
+  if (!reportModalEl) return;
+
+  if (shouldOpenExternalFormExperience()) {
+    openExternalUrl(REPORT_FORM_URL, { preferSameTab: true });
+    return;
+  }
+
+  openOverlayModal(reportModalEl, { focusTarget: reportModalCloseBtn || reportModalDoneBtn });
+}
+
+function hideReportModal() {
+  closeOverlayModal(reportModalEl);
 }
 
 function showPhotoUploadModal() {
@@ -4712,6 +4735,11 @@ function applyTranslations() {
   if (reviewModalCloseBtn) reviewModalCloseBtn.setAttribute("aria-label", getLabel("close", "Sluiten"));
   if (reviewModalDoneBtn) reviewModalDoneBtn.textContent = getLabel("close", "Sluiten");
   if (reviewMobileLinkEl) reviewMobileLinkEl.textContent = getLabel("reviewMobileOpen", "Open reviewformulier");
+  if (reportModalTitleEl) reportModalTitleEl.textContent = getLabel("reportModalTitle", "Voertuig melden");
+  if (reportModalSummaryEl) reportModalSummaryEl.textContent = getLabel("reportModalSummary", "Meld een ontbrekend voertuig via het formulier hieronder.");
+  if (reportModalCloseBtn) reportModalCloseBtn.setAttribute("aria-label", getLabel("close", "Sluiten"));
+  if (reportModalDoneBtn) reportModalDoneBtn.textContent = getLabel("close", "Sluiten");
+  if (reportMobileLinkEl) reportMobileLinkEl.textContent = getLabel("reportMobileOpen", "Open meldformulier");
   if (photoUploadModalCloseBtn) photoUploadModalCloseBtn.setAttribute("aria-label", getLabel("close", "Sluiten"));
   if (photoUploadModalDoneBtn) photoUploadModalDoneBtn.textContent = getLabel("close", "Sluiten");
   if (termsModalTitleEl) termsModalTitleEl.textContent = getLabel("footerTerms", "Gebruiksvoorwaarden");
@@ -5148,6 +5176,10 @@ function closeInteractiveOverlay(overlayEl) {
   }
   if (overlayEl === reviewModalEl) {
     hideReviewModal();
+    return true;
+  }
+  if (overlayEl === reportModalEl) {
+    hideReportModal();
     return true;
   }
   if (overlayEl === photoUploadModalEl) {
@@ -5786,6 +5818,11 @@ reviewModalCloseBtn?.addEventListener("click", hideReviewModal);
 reviewModalDoneBtn?.addEventListener("click", hideReviewModal);
 reviewModalEl?.addEventListener("click", (event) => {
   if (event.target === reviewModalEl) hideReviewModal();
+});
+reportModalCloseBtn?.addEventListener("click", hideReportModal);
+reportModalDoneBtn?.addEventListener("click", hideReportModal);
+reportModalEl?.addEventListener("click", (event) => {
+  if (event.target === reportModalEl) hideReportModal();
 });
 vehiclePhotoUploadBtn?.addEventListener("click", showPhotoUploadModal);
 photoUploadModalCloseBtn?.addEventListener("click", hidePhotoUploadModal);
@@ -6524,7 +6561,7 @@ function renderMissingVehicleSuggestionList(listEl, inputEl, query = "") {
     compact: true,
     onReport: () => {
       hideSuggestionList(listEl);
-      showReviewModal();
+      showReportModal();
     }
   }));
   listEl.appendChild(rowEl);
@@ -6537,7 +6574,7 @@ function renderMissingVehicleStaticState(query = "") {
   vasteDataEl.innerHTML = "";
   vasteDataEl.appendChild(createMissingVehicleCallout(query, {
     onReport: () => {
-      showReviewModal();
+      showReportModal();
     }
   }));
 }

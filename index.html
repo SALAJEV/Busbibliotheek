@@ -484,6 +484,29 @@
   </div>
 </div>
 
+<div id="reportModal" class="pdf-modal" hidden role="dialog" aria-modal="true" aria-labelledby="reportModalTitle">
+  <div class="pdf-modal-card legal-modal-card">
+    <div class="pdf-modal-header">
+      <div>
+        <h3 id="reportModalTitle">Voertuig melden</h3>
+        <p id="reportModalSummary" class="pdf-modal-summary">Meld een ontbrekend voertuig via het formulier hieronder.</p>
+      </div>
+      <button id="reportModalCloseBtn" class="settings-close-btn" type="button" aria-label="Sluiten">&times;</button>
+    </div>
+    <div class="pdf-modal-body legal-modal-body">
+      <div class="review-embed-shell">
+        <iframe id="reportFormFrame" class="review-form-frame" src="https://docs.google.com/forms/d/e/1FAIpQLScrSDIN__F9mfOxpuMd2Kvw2GbGB3djKZrao1dB-Ry2-a67TA/viewform?embedded=true" width="640" height="623" frameborder="0" marginheight="0" marginwidth="0" title="Busbibliotheek meldformulier">Laden…</iframe>
+      </div>
+      <div class="review-mobile-fallback">
+        <a id="reportMobileLink" class="btn" href="https://docs.google.com/forms/d/e/1FAIpQLScrSDIN__F9mfOxpuMd2Kvw2GbGB3djKZrao1dB-Ry2-a67TA/viewform" target="_blank" rel="noopener noreferrer">Open meldformulier</a>
+      </div>
+    </div>
+    <div class="pdf-modal-actions">
+      <button id="reportModalDoneBtn" class="btn" type="button">Sluiten</button>
+    </div>
+  </div>
+</div>
+
 <div id="photoUploadModal" class="pdf-modal" hidden role="dialog" aria-modal="true" aria-labelledby="photoUploadModalTitle">
   <div class="pdf-modal-card legal-modal-card">
     <div class="pdf-modal-header">
