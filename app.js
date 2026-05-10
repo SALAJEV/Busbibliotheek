@@ -6749,7 +6749,6 @@ function toonVasteData(id){
     links.push(`<a class="btn btn--story" href="https://sites.google.com/view/delijn-busspotter/dampkap" target="_blank" rel="noopener">${t("story44xx")}</a>`);
   }
   html += `<div class="ig-btn-wrap">${links.join("")}</div>`;
-  html += `<p class="instagram-help-text">${escapeHtml(getLabel("instagramHelp", "Instagram zoeken werkt niet altijd goed op smartphone. Via de browser werkt het doorgaans wel, maar je moet meestal ingelogd zijn."))}</p>`;
   vasteDataEl.innerHTML=html;
   updateFavoriteButtonState();
 }
