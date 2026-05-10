@@ -1519,3 +1519,48 @@ Object.assign(window.BB_TRANSLATIONS.i18n.de, { menu: "Menü" });
 Object.assign(window.BB_TRANSLATIONS.i18n.pl, { menu: "Menu" });
 Object.assign(window.BB_TRANSLATIONS.i18n.es, { menu: "Menú" });
 Object.assign(window.BB_TRANSLATIONS.i18n.ru, { menu: "Меню" });
+(() => {
+  const translations = window.BB_TRANSLATIONS || {};
+  const languages = ["nl", "fr", "en", "de", "pl", "es", "ru"];
+  const fallbackLanguage = "nl";
+
+  const fillMissingLanguageKeys = (languageMap) => {
+    if (!languageMap || typeof languageMap !== "object") return;
+    const fallbackEntries = languageMap[fallbackLanguage];
+    if (!fallbackEntries || typeof fallbackEntries !== "object") return;
+
+    languages.forEach((language) => {
+      if (!languageMap[language] || typeof languageMap[language] !== "object") {
+        languageMap[language] = {};
+      }
+      Object.entries(fallbackEntries).forEach(([key, value]) => {
+        if (!(key in languageMap[language])) {
+          languageMap[language][key] = value;
+        }
+      });
+    });
+  };
+
+  fillMissingLanguageKeys(translations.i18n);
+
+  if (translations.localWordLabels && typeof translations.localWordLabels === "object") {
+    Object.values(translations.localWordLabels).forEach((labelMap) => fillMissingLanguageKeys(labelMap));
+  }
+
+  if (translations.vehicleFieldLabels && typeof translations.vehicleFieldLabels === "object") {
+    fillMissingLanguageKeys(translations.vehicleFieldLabels);
+  }
+
+  if (translations.delayLexicon && typeof translations.delayLexicon === "object") {
+    fillMissingLanguageKeys(translations.delayLexicon);
+  }
+
+  if (translations.localeMap && typeof translations.localeMap === "object") {
+    const fallbackLocale = translations.localeMap[fallbackLanguage] || "nl-BE";
+    languages.forEach((language) => {
+      if (!(language in translations.localeMap)) {
+        translations.localeMap[language] = fallbackLocale;
+      }
+    });
+  }
+})();

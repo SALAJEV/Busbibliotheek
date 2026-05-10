@@ -1294,6 +1294,8 @@ let settings = {
 const HALTE_CODE_REGEX = /^[1-5]\d{5}$/;
 const HALTE_SEARCH_LIMIT = 8;
 let halteSearchRequestToken = 0;
+let halteSearchIndex = null;
+const halteSearchCache = new Map();
 
 const translationsConfig = window.BB_TRANSLATIONS || {};
 const i18n = translationsConfig.i18n || { nl: {} };
@@ -5102,31 +5104,84 @@ function scoreLocalHalteMatch(stop, normalizedQuery) {
   return Number.POSITIVE_INFINITY;
 }
 
+function buildHalteSearchIndex() {
+  halteSearchIndex = Array.isArray(stops)
+    ? stops.map((stop) => {
+        const stopCode = cleanText(stop?.stop_code || stop?.stop_id);
+        const stopName = cleanText(stop?.stop_name) || stopCode;
+        const municipality = cleanText(stop?.stop_desc);
+        const normalizedCode = normalizeSearchText(stopCode);
+        const normalizedName = normalizeSearchText(stopName);
+        const normalizedDesc = normalizeSearchText(municipality);
+        const combined = `${normalizedName} ${normalizedDesc}`.trim();
+        return {
+          stop,
+          stopCode,
+          stopName,
+          municipality,
+          normalizedCode,
+          normalizedName,
+          normalizedDesc,
+          combined,
+          groupName: getGroupedHalteBaseName(stopName) || stopName
+        };
+      })
+    : [];
+  halteSearchCache.clear();
+}
+
+function ensureHalteSearchIndex() {
+  if (!Array.isArray(stops)) {
+    halteSearchIndex = [];
+    halteSearchCache.clear();
+    return [];
+  }
+  if (!Array.isArray(halteSearchIndex) || halteSearchIndex.length !== stops.length) {
+    buildHalteSearchIndex();
+  }
+  return halteSearchIndex;
+}
+
+function scoreIndexedHalteMatch(entry, normalizedQuery) {
+  if (!entry) return Number.POSITIVE_INFINITY;
+  if (!entry.normalizedCode && !entry.normalizedName && !entry.normalizedDesc) return Number.POSITIVE_INFINITY;
+  if (entry.normalizedCode === normalizedQuery) return 0;
+  if (entry.normalizedName === normalizedQuery) return 1;
+  if (entry.combined === normalizedQuery) return 2;
+  if (entry.normalizedCode.startsWith(normalizedQuery)) return 3;
+  if (entry.normalizedName.startsWith(normalizedQuery)) return 4;
+  if (entry.combined.startsWith(normalizedQuery)) return 5;
+  if (entry.normalizedCode.includes(normalizedQuery)) return 6;
+  if (entry.normalizedName.includes(normalizedQuery)) return 7;
+  if (entry.combined.includes(normalizedQuery)) return 8;
+  return Number.POSITIVE_INFINITY;
+}
+
 async function searchHaltesLocal(zoekTerm) {
   await laadStops();
   const normalizedQuery = normalizeSearchText(zoekTerm);
   if (!normalizedQuery) return [];
+  if (halteSearchCache.has(normalizedQuery)) {
+    return halteSearchCache.get(normalizedQuery).map((halte) => ({
+      ...halte,
+      haltenummers: [...halte.haltenummers]
+    }));
+  }
 
+  const searchIndex = ensureHalteSearchIndex();
   const groupedMatches = new Map();
 
-  stops
-    .map((stop) => {
-      const stopCode = cleanText(stop?.stop_code || stop?.stop_id);
-      return {
-        stop,
-        stopCode,
-        score: scoreLocalHalteMatch(stop, normalizedQuery)
-      };
-    })
+  searchIndex
+    .map((entry) => ({
+      ...entry,
+      score: scoreIndexedHalteMatch(entry, normalizedQuery)
+    }))
     .filter(({ stopCode, score }) => HALTE_CODE_REGEX.test(stopCode) && Number.isFinite(score))
     .sort((a, b) => {
       if (a.score !== b.score) return a.score - b.score;
-      return cleanText(a.stop?.stop_name).localeCompare(cleanText(b.stop?.stop_name), "nl");
+      return a.stopName.localeCompare(b.stopName, "nl");
     })
-    .forEach(({ stop, stopCode, score }) => {
-      const stopName = cleanText(stop?.stop_name) || stopCode;
-      const groupName = getGroupedHalteBaseName(stopName) || stopName;
-      const municipality = cleanText(stop?.stop_desc);
+    .forEach(({ stopCode, score, groupName, municipality }) => {
       const groupKey = `${normalizeSearchText(groupName)}|${normalizeSearchText(municipality)}`;
 
       if (!groupedMatches.has(groupKey)) {
@@ -5148,12 +5203,19 @@ async function searchHaltesLocal(zoekTerm) {
       }
     });
 
-  return Array.from(groupedMatches.values())
+  const results = Array.from(groupedMatches.values())
     .sort((a, b) => {
       if (a.score !== b.score) return a.score - b.score;
       return a.omschrijving.localeCompare(b.omschrijving, "nl");
     })
     .slice(0, HALTE_SEARCH_LIMIT);
+
+  halteSearchCache.set(normalizedQuery, results.map((halte) => ({
+    ...halte,
+    haltenummers: [...halte.haltenummers]
+  })));
+
+  return results;
 }
 
 function openHalteRealtime(codeOverride = "") {
