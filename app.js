@@ -1131,8 +1131,15 @@ function getRouteStateFromLocation() {
 }
 
 function getCurrentRouteState() {
+  if (isDashboardPanelOpen()) {
+    return {
+      view: "stalk",
+      bus: "",
+      compare: ""
+    };
+  }
   return {
-    view: isDashboardPanelOpen() ? "stalk" : (currentVehicleId ? "vehicle" : "home"),
+    view: currentVehicleId ? "vehicle" : "home",
     bus: currentVehicleId || "",
     compare: currentVehicleId ? (compareVehicleId || "") : ""
   };
@@ -1146,11 +1153,16 @@ function buildUrlForRouteState(routeState = {}) {
   };
   const url = new URL(window.location.href);
 
-  if (normalizedState.bus) url.searchParams.set("bus", normalizedState.bus);
-  else url.searchParams.delete("bus");
+  if (normalizedState.view === "stalk") {
+    url.searchParams.delete("bus");
+    url.searchParams.delete("compare");
+  } else {
+    if (normalizedState.bus) url.searchParams.set("bus", normalizedState.bus);
+    else url.searchParams.delete("bus");
 
-  if (normalizedState.bus && normalizedState.compare) url.searchParams.set("compare", normalizedState.compare);
-  else url.searchParams.delete("compare");
+    if (normalizedState.bus && normalizedState.compare) url.searchParams.set("compare", normalizedState.compare);
+    else url.searchParams.delete("compare");
+  }
 
   if (normalizedState.view === "stalk") url.searchParams.set("view", "stalk");
   else url.searchParams.delete("view");
@@ -1240,9 +1252,10 @@ const delayLexicon = translationsConfig.delayLexicon || {};
 
 const DEFAULT_LANG = "nl";
 const FALLBACK_LANG = "en";
-const ALLOWED_COLOR_THEMES = ["classic", "blue", "green", "yellow", "orange", "red", "purple"];
+const ALLOWED_COLOR_THEMES = ["classic", "blue", "green", "yellow", "orange", "red", "purple", "neon"];
 const ALLOWED_UPDATE_INTERVALS = [10000, 15000, 30000];
 const REQUEST_TIMEOUT_MS = 12000;
+const REALTIME_FETCH_TIMEOUT_MS = 10000;
 const VEHICLE_DISPLAY_FIELD_MAP = {
   vehicle_id: "Voertuignummer",
   bus: "Type",
@@ -2387,12 +2400,12 @@ async function refreshDashboardPanel(options = {}) {
         `;
       }
 
-      if (isOutOfService(bus)) {
+      if (isOutOfService(bus) || !canUseRealtimeForOperator(bus)) {
         return `
           <article class="dashboard-card is-offline" tabindex="0">
             <div class="dashboard-card-top">
               <strong>${escapeHtml(displayVehicleId)}</strong>
-              <span class="dashboard-status">${escapeHtml(getLabel("dashboardOutOfService", "Uit dienst"))}</span>
+              <span class="dashboard-status">${escapeHtml(getLabel("dashboardOffline", "Offline"))}</span>
             </div>
             <p class="dashboard-type">${escapeHtml(bus.Type || "")}</p>
             <p class="dashboard-meta">${escapeHtml(getLabel("dashboardNoRealtimeWithPeriod", "Geen realtime beschikbaar."))}</p>
@@ -3572,6 +3585,13 @@ function buildVehiclePhotoCopy(entry, vehicleId) {
   };
 }
 
+function getVehiclePhotoOrientationClass(entry) {
+  const width = Number(entry?.width || entry?.metaFields?.width || 0);
+  const height = Number(entry?.height || entry?.metaFields?.height || 0);
+  if (width > 0 && height > width) return "is-portrait";
+  return "is-landscape";
+}
+
 function getPhotoMetaIconMarkup(iconKey) {
   const icons = {
     maker: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12.2a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Z"></path><path d="M4.8 19.2a7.2 7.2 0 0 1 14.4 0"></path></svg>',
@@ -3676,6 +3696,8 @@ function renderActiveVehiclePhoto() {
   const activeEntry = currentVehiclePhotoEntries[safeIndex];
   const copy = buildVehiclePhotoCopy(activeEntry, currentPhotoVehicleId);
   setVehiclePhotoFrameLoading(true, getLabel("photoLoading", "Foto wordt geladen..."));
+  vehiclePhotoFrameEl?.classList.remove("is-portrait", "is-landscape");
+  vehiclePhotoFrameEl?.classList.add(getVehiclePhotoOrientationClass(activeEntry));
   photoImgEl.onload = () => setVehiclePhotoFrameLoading(false);
   photoImgEl.onerror = () => setVehiclePhotoFrameLoading(false);
   photoImgEl.src = buildVehiclePhotoRequestUrl(activeEntry.src);
@@ -6027,9 +6049,9 @@ function buildZone01HerculesSearchUrl(query = "") {
 }
 
 function renderRealtimeUnavailableState(vehicleId = "", options = {}) {
-  const { withTracker = false } = options;
+  const { withTracker = false, reason = "" } = options;
   const visibleVehicleId = getVehicleDisplayId(vehicleId || currentVehicleId || "") || vehicleId || "";
-  const message = getLabel("noData", "Geen realtimegegevens beschikbaar.");
+  const message = reason || getLabel("noData", "Geen realtimegegevens beschikbaar.");
 
   if (!withTracker) {
     realtimeEl.innerHTML = `<p class="realtime-empty-text">${escapeHtml(message)}</p>`;
@@ -6045,6 +6067,7 @@ function renderRealtimeUnavailableState(vehicleId = "", options = {}) {
 
   realtimeEl.innerHTML = `
     <div class="realtime-empty-state">
+      <p class="realtime-empty-text">${escapeHtml(message)}</p>
       <p class="realtime-empty-help">${escapeHtml(helperText)}</p>
       <a class="btn realtime-empty-link" href="${escapeHtml(DE_LIJN_VEHICLE_TRACKING_URL)}" target="_blank" rel="noopener noreferrer">${escapeHtml(getLabel("realtimeTrackerCta", "Zoek op vehicletracking.delijn.be"))}</a>
     </div>
@@ -6663,20 +6686,20 @@ function warmUpVehiclesAndDeepLinks() {
     .catch((e) => console.warn("Warm-up voertuigen mislukt", e));
 }
 
-if (window.location.search.includes("bus=") || isAndroidTvPlatform) {
-  warmUpVehiclesAndDeepLinks();
-} else {
-  scheduleNonCriticalTask(warmUpVehiclesAndDeepLinks, 1400);
-}
+warmUpVehiclesAndDeepLinks();
 
 async function zoekAlles(options = {}) {
   const {
     queryOverride = "",
     historyMode = routeNavigationLocked ? "replace" : "push",
-    openZone01OnMissing = true
+    openZone01OnMissing = true,
+    closeKeyboard = false
   } = options;
   const searchToken = ++latestSearchToken;
   markUserInteraction();
+  if (closeKeyboard) {
+    dismissPrimaryVehicleSearchInput({ closeKeyboard: true });
+  }
   const rawQuery = queryOverride || voertuigInput.value || "";
   const query = clampPrimaryVehicleQuery(rawQuery).trim();
   if (voertuigInput && voertuigInput.value !== query) {
@@ -6836,6 +6859,37 @@ function findBusById(id) {
   return resolveVehicleSearch(id).bus;
 }
 
+function getVehicleOperator(bus) {
+  return cleanText(getVehicleField(bus, "Vervoersmaatschappij") || getVehicleField(bus, "operator") || "");
+}
+
+function getVehicleOperatorType(bus) {
+  const normalizedOperator = normalizeFieldKey(getVehicleOperator(bus));
+  if (normalizedOperator.includes("le tec") || normalizedOperator.includes("tec")) return "tec";
+  if (normalizedOperator.includes("mivb") || normalizedOperator.includes("stib")) return "mivb";
+  return "delijn";
+}
+
+function canUseRealtimeForOperator(bus) {
+  return getVehicleOperatorType(bus) === "delijn";
+}
+
+function canUseLocationForOperator(bus) {
+  return getVehicleOperatorType(bus) === "delijn";
+}
+
+function buildInstagramSearchUrl(bus, vehicleId) {
+  const normalizedId = normalize(vehicleId);
+  const operatorType = getVehicleOperatorType(bus);
+  if (operatorType === "tec") {
+    return "https://www.instagram.com/explore/search/keyword/?q=%23tec";
+  }
+  if (operatorType === "mivb") {
+    return `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(`#mivb${normalizedId}`)}`;
+  }
+  return "https://www.instagram.com/explore/search/keyword/?q=%23dl";
+}
+
 function isOutOfService(bus) {
   if (!bus) return false;
   const outOfServiceDate = getVehicleField(bus, "Uit dienst");
@@ -6875,16 +6929,7 @@ function toonVasteData(id){
   }
   html+="</table>";
 
-  const operatorValue = normalizeFieldKey(getVehicleField(bus, "Vervoersmaatschappij"));
-  let instagramPrefix = "#dl";
-  if (operatorValue.includes("Le TEC")) {
-    instagramPrefix = "#tec";
-  } else if (operatorValue.includes("MIVB")) {
-    instagramPrefix = "#mivb";
-  } else if (operatorValue.includes("De Lijn")) {
-    instagramPrefix = "#dl";
-  }
-  const igUrl = 'https://www.instagram.com/explore/search/keyword/?q=' + encodeURIComponent(instagramPrefix + id);
+  const igUrl = buildInstagramSearchUrl(bus, id);
   const links = [
     `<a class="btn btn--instagram" href="${igUrl}" target="_blank" rel="noopener"><span class="btn-label">${localWord("instagramSearch")}</span></a>`,
     `<button id="vehicleCompareBtn" class="btn btn--compare" type="button" data-id="${safeFavoriteId}">${getLabel("compareConfirm", "Vergelijken")}</button>`
@@ -7302,8 +7347,21 @@ function getStopByStopId(stopId) {
 
 async function updateRealtime(id){
   const requestToken = ++realtimeRequestToken;
+  const bus = findBusById(id);
+  if (bus && !canUseRealtimeForOperator(bus)) {
+    renderRealtimeUnavailableState(id, {
+      withTracker: false,
+      reason: getLabel("realtimeUnavailableOperator", "Realtime locatie is niet beschikbaar voor deze vervoersmaatschappij.")
+    });
+    resetWeatherBlock();
+    mapEl.classList.add("hidden");
+    lastUpdateEl.textContent = `${t("lastUpdate")}: -`;
+    lastUpdateEl.hidden = true;
+    setPageLoading(false);
+    return;
+  }
   try{
-    const res = await fetchWithTimeout(API_URL);
+    const res = await fetchWithTimeout(API_URL, {}, REALTIME_FETCH_TIMEOUT_MS);
     const data = await res.json();
     if (requestToken !== realtimeRequestToken || id !== currentVehicleId) return;
     dataLoadTimestamps.realtime = Date.now();
@@ -7451,10 +7509,19 @@ async function updateRealtime(id){
         </div>
       </div>
     `;
-    void updateWeatherForCoordinates(Number(v.position.latitude), Number(v.position.longitude));
-    mapEl.classList.remove("hidden");
+    if (canUseLocationForOperator(bus)) {
+      void updateWeatherForCoordinates(Number(v.position.latitude), Number(v.position.longitude));
+      mapEl.classList.remove("hidden");
+    } else {
+      resetWeatherBlock();
+      mapEl.classList.add("hidden");
+    }
     lastUpdateEl.textContent = `${t("lastUpdate")}: ${formatRealtimeTimestampForUi(gpsEntityTimestamp) || new Date().toLocaleTimeString(localeForLanguage(settings.language))}`;
     lastUpdateEl.hidden = false;
+
+    if (!canUseLocationForOperator(bus)) {
+      return;
+    }
 
     await initMap(v.position.latitude,v.position.longitude);
     if (requestToken !== realtimeRequestToken || id !== currentVehicleId || !map) return;
@@ -7495,7 +7562,10 @@ async function updateRealtime(id){
   }catch(e){
     if (requestToken !== realtimeRequestToken || id !== currentVehicleId) return;
     console.error(e);
-    realtimeEl.innerHTML = t("realtimeError");
+    const reason = /timeout/i.test(String(e?.message || ""))
+      ? getLabel("realtimeTimeout", "Realtime laden duurde te lang. Probeer de officiële tracker van De Lijn.")
+      : t("realtimeError");
+    renderRealtimeUnavailableState(id, { withTracker: true, reason });
     resetWeatherBlock();
     mapEl.classList.add("hidden");
     lastUpdateEl.textContent = `${t("lastUpdate")}: -`;
