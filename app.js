@@ -6066,6 +6066,7 @@ function renderRealtimeUnavailableState(vehicleId = "", options = {}) {
   const { withTracker = false, reason = "" } = options;
   const visibleVehicleId = getVehicleDisplayId(vehicleId || currentVehicleId || "") || vehicleId || "";
   const message = reason || getLabel("noData", "Geen realtimegegevens beschikbaar.");
+  updateHeaderVisualRoutePresentation();
 
   if (!withTracker) {
     realtimeEl.innerHTML = `<p class="realtime-empty-text">${escapeHtml(message)}</p>`;
