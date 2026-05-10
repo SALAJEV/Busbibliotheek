@@ -6847,6 +6847,7 @@ function terug(options = {}) {
   voertuigInput.value = "";
   setVehicleInputResolvedId(voertuigInput, "");
   currentVehicleId = "";
+  updateHeaderVisualRoutePresentation();
   realtimePausedByInactivity = false;
   compareVehicleId = "";
   routeTrail = [];
@@ -7485,6 +7486,11 @@ async function updateRealtime(id){
     const routeTextColorRaw = (routeData?.route_text_color || "").replace(/[^0-9a-fA-F]/g, "").slice(0, 6);
     const routeColor = routeColorRaw.length === 6 ? `#${routeColorRaw}` : "#2563eb";
     const routeTextColor = routeTextColorRaw.length === 6 ? `#${routeTextColorRaw}` : "#ffffff";
+    if (routeShort !== "?" && destinationText !== "-") {
+      updateHeaderVisualRoutePresentation(routeShort, destinationText, routeColor, routeTextColor);
+    } else {
+      updateHeaderVisualRoutePresentation();
+    }
 
     // Delay from trip updates is authoritative; fallback to vehicle payload
     let delaySeconds = canUseTripUpdateStop ? getDelaySecondsFromTripUpdate(tripUpdate) : null;

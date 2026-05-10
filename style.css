@@ -3611,15 +3611,15 @@ tr + tr td {
 }
 
 .vehicle-photo-info {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.7rem;
-  flex-wrap: wrap;
+  align-items: start;
 }
 
 .vehicle-photo-counter {
-  margin: 0 0 0 auto;
+  margin: 0;
+  justify-self: end;
   padding: 0.34rem 0.6rem;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--stroke-soft));
@@ -3800,6 +3800,7 @@ tr + tr td {
 .vehicle-photo-meta {
   display: grid;
   gap: 0.55rem;
+  width: 100%;
 }
 
 .vehicle-photo-meta[hidden] {
@@ -3809,6 +3810,7 @@ tr + tr td {
 .vehicle-photo-meta-card {
   display: grid;
   gap: 0.55rem;
+  width: 100%;
   padding: 0.8rem 0.9rem;
   border-radius: calc(var(--panel-radius-sm) + 1px);
   border: 1px solid color-mix(in srgb, var(--accent) 10%, var(--stroke-soft));
@@ -7917,9 +7919,9 @@ footer > *,
   min-width: 2.1rem;
   padding: 0.22rem 0.52rem;
   border-radius: 5px;
-  background: #E40521;
-  border: 1px solid #E40521;
-  color: #FFFFFF;
+  background: var(--header-banner-line-bg, #E40521);
+  border: 1px solid var(--header-banner-line-border, #E40521);
+  color: var(--header-banner-line-fg, #FFFFFF);
   font-size: 0.98rem;
   font-weight: 800;
   letter-spacing: 0.01em;
@@ -8916,9 +8918,9 @@ footer h3 {
 }
 
 :root[data-resolved-theme="dark"] .header-visual-card-route {
-  background: #E40521 !important;
-  border-color: #E40521 !important;
-  color: #FFFFFF !important;
+  background: var(--header-banner-line-bg, #E40521) !important;
+  border-color: var(--header-banner-line-border, #E40521) !important;
+  color: var(--header-banner-line-fg, #FFFFFF) !important;
 }
 
 :root[data-resolved-theme="dark"] .header-visual-card-destination {
