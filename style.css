@@ -3492,11 +3492,17 @@ tr + tr td {
 .vehicle-photo-empty {
   display: grid;
   align-content: center;
-  justify-items: start;
-  gap: 0.72rem;
-  min-height: clamp(13.5rem, 28vw, 17rem);
-  padding: 1.15rem 1.1rem;
+  justify-items: center;
+  gap: 1.2rem;
+  min-height: clamp(14rem, 32vw, 18rem);
+  padding: 2rem 1.5rem;
   color: var(--muted);
+  text-align: center;
+  background: linear-gradient(135deg, 
+    color-mix(in srgb, var(--accent-soft) 12%, transparent) 0%, 
+    color-mix(in srgb, var(--accent-soft) 6%, transparent) 100%);
+  border-radius: calc(var(--panel-radius) - 4px);
+  border: 1px solid color-mix(in srgb, var(--accent) 14%, var(--stroke));
 }
 
 .vehicle-photo-empty[hidden] {
@@ -3507,37 +3513,63 @@ tr + tr td {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 1.9rem;
-  padding: 0.32rem 0.72rem;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--stroke-soft));
-  background: color-mix(in srgb, var(--accent-soft) 24%, var(--surface-strong));
-  color: color-mix(in srgb, var(--accent) 74%, var(--text));
-  font-size: 0.76rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  min-height: 2rem;
+  padding: 0.38rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--stroke));
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface-strong));
+  color: color-mix(in srgb, var(--accent) 85%, var(--text));
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 12%, rgba(15, 23, 42, 0.08));
 }
 
 .vehicle-photo-empty-title {
   color: var(--text);
-  font-size: clamp(1.04rem, 2.2vw, 1.22rem);
-  line-height: 1.3;
+  font-size: clamp(1.12rem, 2.4vw, 1.35rem);
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  max-width: 320px;
+  margin: 0.5rem auto 0;
 }
 
 .vehicle-photo-empty-text {
   margin: 0;
-  max-width: 32rem;
-  color: var(--muted);
-  font-size: 0.92rem;
-  line-height: 1.6;
+  max-width: 360px;
+  color: color-mix(in srgb, var(--muted) 88%, var(--text-secondary));
+  font-size: 0.95rem;
+  line-height: 1.65;
+  letter-spacing: 0.2px;
 }
 
 .vehicle-photo-upload-btn {
-  margin: 0 !important;
+  margin: 0.4rem auto 0 !important;
   min-width: 0 !important;
   width: auto;
-  padding-inline: 1rem !important;
+  padding: 0.9rem 1.6rem !important;
+  border-radius: 12px !important;
+  background: var(--accent) !important;
+  color: #fff !important;
+  font-size: 0.96rem !important;
+  font-weight: 600 !important;
+  border: none !important;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 28%, rgba(15, 23, 42, 0.15)) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer;
+}
+
+.vehicle-photo-upload-btn:hover {
+  background: color-mix(in srgb, var(--accent) 110%, var(--accent)) !important;
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 36%, rgba(15, 23, 42, 0.2)) !important;
+  transform: translateY(-1px) !important;
+}
+
+.vehicle-photo-upload-btn:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 20%, rgba(15, 23, 42, 0.1)) !important;
 }
 
 .photo-upload-modal-copy {
