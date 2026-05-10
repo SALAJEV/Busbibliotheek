@@ -1851,12 +1851,15 @@ button:disabled,
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.8rem;
+  align-items: stretch;
+  grid-auto-rows: 1fr;
 }
 
 .missing-vehicle-action,
 .missing-vehicle-action:hover,
 .missing-vehicle-action:active,
 .missing-vehicle-action:focus-visible {
+  align-self: stretch;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -7748,6 +7751,11 @@ footer > *,
   height: 1.08rem;
   min-width: 1.08rem;
   line-height: 1;
+  transition: transform 0.22s ease;
+}
+
+#favoritesToggleBtn.active .more-toggle-icon {
+  transform: rotate(90deg);
 }
 
 .header-visual {

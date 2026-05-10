@@ -1765,6 +1765,49 @@ function updateHeaderVisualRoutePresentation(routeShort = "2", destinationText =
   }
 }
 
+function normalizeRouteColor(value, fallback) {
+  const raw = (value || "").toString().replace(/[^0-9a-fA-F]/g, "").slice(0, 6);
+  return raw.length === 6 ? `#${raw}` : fallback;
+}
+
+function getRandomHeaderVisualRouteData() {
+  if (!routes?.length) return null;
+  const availableRoutes = routes.filter((route) => {
+    if (!route) return false;
+    return !!pickFirstText(route.route_short_name, route.route_id, route.route_long_name, route.route_desc);
+  });
+  if (!availableRoutes.length) return null;
+  const routeData = availableRoutes[Math.floor(Math.random() * availableRoutes.length)];
+  const routeShort = pickFirstText(routeData.route_short_name, routeData.route_id, "?");
+  const destinationText = pickFirstText(routeData.route_long_name, routeData.route_desc, `Naar ${routeShort}`);
+  return {
+    routeShort,
+    destinationText,
+    routeColor: normalizeRouteColor(routeData.route_color, "#2563eb"),
+    routeTextColor: normalizeRouteColor(routeData.route_text_color, "#ffffff"),
+  };
+}
+
+async function setRandomHeaderVisualRouteFromRoutes() {
+  let routePresentation = getRandomHeaderVisualRouteData();
+  if (!routePresentation) {
+    try {
+      await laadRoutes();
+    } catch {
+      // Ignore route loading failures and keep defaults.
+    }
+    routePresentation = getRandomHeaderVisualRouteData();
+  }
+  if (routePresentation) {
+    updateHeaderVisualRoutePresentation(
+      routePresentation.routeShort,
+      routePresentation.destinationText,
+      routePresentation.routeColor,
+      routePresentation.routeTextColor,
+    );
+  }
+}
+
 function getVehicleDisplayValue(bus, fieldKey, rawValue) {
   const value = rawValue == null ? "" : rawValue.toString().trim();
   const key = fieldKey.toLowerCase();
@@ -5231,6 +5274,7 @@ function initAppPreferences() {
   setFavoritesPanel(false);
   hideVehiclePhotoCard();
   renderFavorites();
+  void setRandomHeaderVisualRouteFromRoutes();
   loadFeedStatus();
   updateFavoriteButtonState();
   resultsWrapEl.classList.remove("show");
