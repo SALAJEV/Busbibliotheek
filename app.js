@@ -346,6 +346,13 @@ const settingsTitleEl = document.getElementById("settingsTitle");
 const intervalLabelEl = document.getElementById("intervalLabel");
 const themeLabelEl = document.getElementById("themeLabel");
 const languageLabelEl = document.getElementById("languageLabel");
+const languageOptNlEl = document.getElementById("languageOptNl");
+const languageOptFrEl = document.getElementById("languageOptFr");
+const languageOptEnEl = document.getElementById("languageOptEn");
+const languageOptDeEl = document.getElementById("languageOptDe");
+const languageOptPlEl = document.getElementById("languageOptPl");
+const languageOptEsEl = document.getElementById("languageOptEs");
+const languageOptRuEl = document.getElementById("languageOptRu");
 const dashboardTitleEl = document.getElementById("dashboardTitle");
 const staticCardTitleEl = document.getElementById("staticCardTitle");
 const realtimeCardTitleEl = document.getElementById("realtimeCardTitle");
@@ -390,6 +397,13 @@ const firstRunIntroTitleEl = document.getElementById("firstRunIntroTitle");
 const firstRunDescriptionEl = document.getElementById("firstRunDescription");
 const firstRunLanguageLabelEl = document.getElementById("firstRunLanguageLabel");
 const firstRunLanguageSelectEl = document.getElementById("firstRunLanguageSelect");
+const firstRunLanguageOptNlEl = document.getElementById("firstRunLanguageOptNl");
+const firstRunLanguageOptFrEl = document.getElementById("firstRunLanguageOptFr");
+const firstRunLanguageOptEnEl = document.getElementById("firstRunLanguageOptEn");
+const firstRunLanguageOptDeEl = document.getElementById("firstRunLanguageOptDe");
+const firstRunLanguageOptPlEl = document.getElementById("firstRunLanguageOptPl");
+const firstRunLanguageOptEsEl = document.getElementById("firstRunLanguageOptEs");
+const firstRunLanguageOptRuEl = document.getElementById("firstRunLanguageOptRu");
 const firstRunThemeLabelEl = document.getElementById("firstRunThemeLabel");
 const firstRunThemeSelectEl = document.getElementById("firstRunThemeSelect");
 const firstRunThemeAutoOptEl = document.getElementById("firstRunThemeAutoOpt");
@@ -419,12 +433,14 @@ const reviewModalTitleEl = document.getElementById("reviewModalTitle");
 const reviewModalSummaryEl = document.getElementById("reviewModalSummary");
 const reviewModalCloseBtn = document.getElementById("reviewModalCloseBtn");
 const reviewModalDoneBtn = document.getElementById("reviewModalDoneBtn");
+const reviewFormFrameEl = document.getElementById("reviewFormFrame");
 const reviewMobileLinkEl = document.getElementById("reviewMobileLink");
 const reportModalEl = document.getElementById("reportModal");
 const reportModalTitleEl = document.getElementById("reportModalTitle");
 const reportModalSummaryEl = document.getElementById("reportModalSummary");
 const reportModalCloseBtn = document.getElementById("reportModalCloseBtn");
 const reportModalDoneBtn = document.getElementById("reportModalDoneBtn");
+const reportFormFrameEl = document.getElementById("reportFormFrame");
 const reportMobileLinkEl = document.getElementById("reportMobileLink");
 const photoUploadModalEl = document.getElementById("photoUploadModal");
 const photoUploadModalTitleEl = document.getElementById("photoUploadModalTitle");
@@ -585,7 +601,6 @@ const APP_VERSION = "2026.04.17-1";
 const dataLoadTimestamps = {
   realtime: 0
 };
-if (currentYearEl) currentYearEl.textContent = String(new Date().getFullYear());
 let inactivityCheckHandle = null;
 let networkCheckHandle = null;
 let tripsLoadPromise = null;
@@ -1499,6 +1514,27 @@ function getLabel(key, fallback) {
   return translated === key ? fallback : translated;
 }
 
+function fillNamedTemplate(template, values = {}) {
+  return String(template || "").replace(/\{(\w+)\}/g, (match, key) => {
+    const value = values[key];
+    return value == null ? match : String(value);
+  });
+}
+
+function formatYearTemplate(key, fallback, year = new Date().getFullYear()) {
+  const template = getLabel(key, fallback);
+  return template.includes("{year}") ? template.replace("{year}", String(year)) : `${template} ${year}`;
+}
+
+function updateCopyrightText() {
+  const year = new Date().getFullYear();
+  if (currentYearEl) currentYearEl.textContent = String(year);
+  const copyrightTextEl = document.getElementById("copyrightText");
+  if (copyrightTextEl) {
+    copyrightTextEl.textContent = formatYearTemplate("copyrightNotice", "© Busspotter 95, 2023-{year}", year);
+  }
+}
+
 function normalizeSearchText(value) {
   return (value || "")
     .toString()
@@ -1826,7 +1862,7 @@ function updateDocumentTitle(vehicleId = "") {
   const normalizedVehicleId = getVehicleDisplayId(vehicleId || currentVehicleId);
   document.title = normalizedVehicleId
     ? `${getLabel("vehicleTitlePrefix", "Voertuig")} ${normalizedVehicleId}`
-    : "Busbibliotheek";
+    : getLabel("appTitle", "Busbibliotheek");
 }
 
 function updateHeaderVisualRoutePresentation(routeShort = "2", destinationText = "Erasmuslaan", routeColor = "#E40521", routeTextColor = "#FFFFFF") {
@@ -2066,6 +2102,7 @@ function renderComparison() {
   const compareDisplayId = getVehicleDisplayId(compareBus) || compareVehicleId;
   const baseRows = collectComparisonRows(baseBus);
   const compareRows = collectComparisonRows(compareBus);
+  const comparisonDateDetails = buildComparisonDateDetails(baseBus, compareBus, baseDisplayId, compareDisplayId);
   const rowMap = new Map();
 
   for (const row of baseRows) rowMap.set(row.key, { label: row.label, left: row, right: null });
@@ -2075,17 +2112,25 @@ function renderComparison() {
     else rowMap.set(row.key, { label: row.label, left: null, right: row });
   }
 
-  const renderCellValue = (row) => {
+  const renderCellValue = (row, side) => {
     if (!row) return '<span class="compare-empty">-</span>';
     const safeValue = escapeHtml(row.value);
-    return row.isHansea ? `<span class="compare-hansea">${safeValue}</span>` : safeValue;
+    const detail = comparisonDateDetails.get(row.key)?.[side] || "";
+    const primaryMarkup = row.isHansea ? `<span class="compare-hansea">${safeValue}</span>` : `<span class="compare-cell-main">${safeValue}</span>`;
+    if (!detail) return `<div class="compare-cell-value">${primaryMarkup}</div>`;
+    return `
+      <div class="compare-cell-value">
+        ${primaryMarkup}
+        <span class="compare-cell-meta">${escapeHtml(detail)}</span>
+      </div>
+    `;
   };
 
   const rowsHtml = Array.from(rowMap.values()).map((row) => `
     <tr>
       <th scope="row">${escapeHtml(row.label)}</th>
-      <td data-column="${escapeHtml(baseDisplayId)}">${renderCellValue(row.left)}</td>
-      <td data-column="${escapeHtml(compareDisplayId)}">${renderCellValue(row.right)}</td>
+      <td data-column="${escapeHtml(baseDisplayId)}">${renderCellValue(row.left, "left")}</td>
+      <td data-column="${escapeHtml(compareDisplayId)}">${renderCellValue(row.right, "right")}</td>
     </tr>
   `).join("");
 
@@ -4043,6 +4088,150 @@ function formatDateForUi(rawValue, options, language = settings.language) {
   return rawValue;
 }
 
+function parseDateValueToUtc(rawValue) {
+  const parts = parseFlexibleDateParts(rawValue);
+  if (parts) {
+    const utcDate = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
+    return Number.isNaN(utcDate.getTime()) ? null : utcDate;
+  }
+
+  const parsed = new Date(rawValue);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return new Date(Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()));
+}
+
+function getCalendarDiffParts(fromDate, toDate) {
+  const startDate = fromDate instanceof Date ? fromDate : parseDateValueToUtc(fromDate);
+  const endDate = toDate instanceof Date ? toDate : parseDateValueToUtc(toDate);
+  if (!startDate || !endDate) return null;
+
+  const start = new Date(startDate.getTime());
+  const end = new Date(endDate.getTime());
+  if (end.getTime() < start.getTime()) return null;
+
+  let years = end.getUTCFullYear() - start.getUTCFullYear();
+  let months = end.getUTCMonth() - start.getUTCMonth();
+  let days = end.getUTCDate() - start.getUTCDate();
+
+  if (days < 0) {
+    const borrowedMonthDate = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 0));
+    days += borrowedMonthDate.getUTCDate();
+    months -= 1;
+  }
+
+  if (months < 0) {
+    months += 12;
+    years -= 1;
+  }
+
+  return { years, months, days };
+}
+
+function formatComparisonDuration(fromDate, toDate) {
+  const parts = getCalendarDiffParts(fromDate, toDate);
+  if (!parts) return "";
+
+  const labels = [];
+  const units = [
+    ["years", "compareDurationYearOne", "compareDurationYearOther", "jaar", "jaar"],
+    ["months", "compareDurationMonthOne", "compareDurationMonthOther", "maand", "maanden"],
+    ["days", "compareDurationDayOne", "compareDurationDayOther", "dag", "dagen"]
+  ];
+
+  for (const [partKey, singularKey, pluralKey, singularFallback, pluralFallback] of units) {
+    const amount = parts[partKey];
+    if (!amount) continue;
+    const label = amount === 1
+      ? getLabel(singularKey, singularFallback)
+      : getLabel(pluralKey, pluralFallback);
+    labels.push(`${amount} ${label}`);
+    if (labels.length === 2) break;
+  }
+
+  if (!labels.length) {
+    labels.push(`0 ${getLabel("compareDurationDayOther", "dagen")}`);
+  }
+
+  return labels.join(" ");
+}
+
+function buildComparisonDateDetails(baseBus, compareBus, baseDisplayId, compareDisplayId) {
+  const detailMap = new Map();
+  const now = new Date();
+
+  const baseInServiceDate = parseDateValueToUtc(getVehicleField(baseBus, "In dienst"));
+  const compareInServiceDate = parseDateValueToUtc(getVehicleField(compareBus, "In dienst"));
+  if (baseInServiceDate && compareInServiceDate) {
+    const baseAge = formatComparisonDuration(baseInServiceDate, now);
+    const compareAge = formatComparisonDuration(compareInServiceDate, now);
+    const difference = formatComparisonDuration(
+      baseInServiceDate <= compareInServiceDate ? baseInServiceDate : compareInServiceDate,
+      baseInServiceDate <= compareInServiceDate ? compareInServiceDate : baseInServiceDate
+    );
+
+    let leftMeta = fillNamedTemplate(getLabel("compareAgeNow", "{age} oud"), { age: baseAge });
+    let rightMeta = fillNamedTemplate(getLabel("compareAgeNow", "{age} oud"), { age: compareAge });
+
+    if (difference) {
+      if (baseInServiceDate.getTime() < compareInServiceDate.getTime()) {
+        leftMeta += ` • ${fillNamedTemplate(getLabel("compareOlderBy", "{diff} ouder"), { diff: difference })}`;
+        rightMeta += ` • ${fillNamedTemplate(getLabel("compareYoungerBy", "{diff} jonger"), { diff: difference })}`;
+      } else if (baseInServiceDate.getTime() > compareInServiceDate.getTime()) {
+        leftMeta += ` • ${fillNamedTemplate(getLabel("compareYoungerBy", "{diff} jonger"), { diff: difference })}`;
+        rightMeta += ` • ${fillNamedTemplate(getLabel("compareOlderBy", "{diff} ouder"), { diff: difference })}`;
+      } else {
+        const sameDateLabel = getLabel("compareSameCommissionDate", "zelfde instroomdatum");
+        leftMeta += ` • ${sameDateLabel}`;
+        rightMeta += ` • ${sameDateLabel}`;
+      }
+    }
+
+    detailMap.set("in dienst", {
+      left: leftMeta,
+      right: rightMeta
+    });
+  }
+
+  const baseOutOfServiceDate = parseDateValueToUtc(getVehicleField(baseBus, "Uit dienst"));
+  const compareOutOfServiceDate = parseDateValueToUtc(getVehicleField(compareBus, "Uit dienst"));
+  if (baseOutOfServiceDate && compareOutOfServiceDate) {
+    const baseRetiredAge = baseInServiceDate ? formatComparisonDuration(baseInServiceDate, baseOutOfServiceDate) : "";
+    const compareRetiredAge = compareInServiceDate ? formatComparisonDuration(compareInServiceDate, compareOutOfServiceDate) : "";
+    const difference = formatComparisonDuration(
+      baseOutOfServiceDate <= compareOutOfServiceDate ? baseOutOfServiceDate : compareOutOfServiceDate,
+      baseOutOfServiceDate <= compareOutOfServiceDate ? compareOutOfServiceDate : baseOutOfServiceDate
+    );
+
+    let leftMeta = baseRetiredAge
+      ? fillNamedTemplate(getLabel("compareAgeAtRetirement", "{age} bij uit dienst"), { age: baseRetiredAge })
+      : "";
+    let rightMeta = compareRetiredAge
+      ? fillNamedTemplate(getLabel("compareAgeAtRetirement", "{age} bij uit dienst"), { age: compareRetiredAge })
+      : "";
+
+    if (difference) {
+      if (baseOutOfServiceDate.getTime() < compareOutOfServiceDate.getTime()) {
+        leftMeta = [leftMeta, fillNamedTemplate(getLabel("compareRetiredEarlierBy", "{diff} eerder uit dienst"), { diff: difference })].filter(Boolean).join(" • ");
+        rightMeta = [rightMeta, fillNamedTemplate(getLabel("compareRetiredLaterBy", "{diff} later uit dienst"), { diff: difference })].filter(Boolean).join(" • ");
+      } else if (baseOutOfServiceDate.getTime() > compareOutOfServiceDate.getTime()) {
+        leftMeta = [leftMeta, fillNamedTemplate(getLabel("compareRetiredLaterBy", "{diff} later uit dienst"), { diff: difference })].filter(Boolean).join(" • ");
+        rightMeta = [rightMeta, fillNamedTemplate(getLabel("compareRetiredEarlierBy", "{diff} eerder uit dienst"), { diff: difference })].filter(Boolean).join(" • ");
+      } else {
+        const sameRetirementDateLabel = getLabel("compareSameRetirementDate", "zelfde uitdienstdatum");
+        leftMeta = [leftMeta, sameRetirementDateLabel].filter(Boolean).join(" • ");
+        rightMeta = [rightMeta, sameRetirementDateLabel].filter(Boolean).join(" • ");
+      }
+    }
+
+    detailMap.set("uit dienst", {
+      left: leftMeta,
+      right: rightMeta
+    });
+  }
+
+  return detailMap;
+}
+
 function formatDelayMessage(delayMinutes) {
   const lex =
     delayLexicon[settings.language] ||
@@ -4347,6 +4536,28 @@ function normalizeLanguage(language) {
   return ALLOWED_LANGUAGES.includes(baseLanguage) ? baseLanguage : DEFAULT_LANG;
 }
 
+function getLocalizedLanguageLabel(languageCode, displayLanguage = settings.language) {
+  const normalizedCode = normalizeLanguage(languageCode);
+  const normalizedDisplayLanguage = normalizeLanguage(displayLanguage);
+  try {
+    const displayNames = new Intl.DisplayNames([normalizedDisplayLanguage], { type: "language" });
+    const label = displayNames.of(normalizedCode);
+    if (label) return label;
+  } catch (_) {
+    // Fallback below.
+  }
+  const fallbackLabels = {
+    nl: "Nederlands",
+    fr: "Français",
+    en: "English",
+    de: "Deutsch",
+    pl: "Polski",
+    es: "Español",
+    ru: "Русский"
+  };
+  return fallbackLabels[normalizedCode] || normalizedCode.toUpperCase();
+}
+
 function detectPreferredLanguage() {
   const candidates = [
     ...(Array.isArray(window.navigator.languages) ? window.navigator.languages : []),
@@ -4506,6 +4717,7 @@ window.addEventListener("resize", debounce(syncHeaderActionPlacement, 120), { pa
 function applyTranslations() {
   document.documentElement.lang = settings.language || DEFAULT_LANG;
   updateDocumentTitle();
+  updateCopyrightText();
   if (metaDescriptionEl) metaDescriptionEl.setAttribute("content", getLabel("metaDescription", "Busbibliotheek voor bussen van De Lijn: zoek een voertuig en volg het live."));
   splash?.setAttribute("aria-label", getLabel("splashAria", "Busbibliotheek laden"));
   appTitleEl.textContent = getLabel("appTitle", "Busbibliotheek");
@@ -4520,6 +4732,7 @@ function applyTranslations() {
   const menuLabel = getLabel("menu", "Menu");
   favoritesToggleBtn.title = menuLabel;
   favoritesToggleBtn.setAttribute("aria-label", menuLabel);
+  if (favoritesPanelCloseBtn) favoritesPanelCloseBtn.setAttribute("aria-label", getLabel("menuClose", "Menu sluiten"));
   if (menuToggleTextEl) menuToggleTextEl.textContent = menuLabel;
   if (morePanelTitleEl) morePanelTitleEl.textContent = moreLabel;
   if (morePanelSubtitleEl) morePanelSubtitleEl.textContent = getLabel("moreSubtitle", "Snelle functies en extra tools.");
@@ -4534,6 +4747,13 @@ function applyTranslations() {
   themeLabelEl.textContent = t("theme");
   colorThemeLabelEl.textContent = t("colorTheme");
   languageLabelEl.textContent = t("language");
+  if (languageOptNlEl) languageOptNlEl.textContent = getLocalizedLanguageLabel("nl");
+  if (languageOptFrEl) languageOptFrEl.textContent = getLocalizedLanguageLabel("fr");
+  if (languageOptEnEl) languageOptEnEl.textContent = getLocalizedLanguageLabel("en");
+  if (languageOptDeEl) languageOptDeEl.textContent = getLocalizedLanguageLabel("de");
+  if (languageOptPlEl) languageOptPlEl.textContent = getLocalizedLanguageLabel("pl");
+  if (languageOptEsEl) languageOptEsEl.textContent = getLocalizedLanguageLabel("es");
+  if (languageOptRuEl) languageOptRuEl.textContent = getLocalizedLanguageLabel("ru");
   intervalOpt10El.textContent = `10 ${t("intervalSeconds")}`;
   intervalOpt15El.textContent = `15 ${t("intervalSeconds")}`;
   intervalOpt30El.textContent = `30 ${t("intervalSeconds")}`;
@@ -4639,6 +4859,13 @@ function applyTranslations() {
   if (firstRunIntroTitleEl) firstRunIntroTitleEl.textContent = getLabel("firstRunIntroTitle", "Volg voertuigen van De Lijn in realtime.");
   if (firstRunDescriptionEl) firstRunDescriptionEl.textContent = getLabel("firstRunDescription", "Busbibliotheek helpt je snel een voertuig terugvinden, live volgen en extra info bekijken zoals foto's, favorieten en vergelijking.");
   if (firstRunLanguageLabelEl) firstRunLanguageLabelEl.textContent = t("language");
+  if (firstRunLanguageOptNlEl) firstRunLanguageOptNlEl.textContent = getLocalizedLanguageLabel("nl");
+  if (firstRunLanguageOptFrEl) firstRunLanguageOptFrEl.textContent = getLocalizedLanguageLabel("fr");
+  if (firstRunLanguageOptEnEl) firstRunLanguageOptEnEl.textContent = getLocalizedLanguageLabel("en");
+  if (firstRunLanguageOptDeEl) firstRunLanguageOptDeEl.textContent = getLocalizedLanguageLabel("de");
+  if (firstRunLanguageOptPlEl) firstRunLanguageOptPlEl.textContent = getLocalizedLanguageLabel("pl");
+  if (firstRunLanguageOptEsEl) firstRunLanguageOptEsEl.textContent = getLocalizedLanguageLabel("es");
+  if (firstRunLanguageOptRuEl) firstRunLanguageOptRuEl.textContent = getLocalizedLanguageLabel("ru");
   if (firstRunThemeLabelEl) firstRunThemeLabelEl.textContent = t("theme");
   if (firstRunThemeAutoOptEl) firstRunThemeAutoOptEl.textContent = t("themeAuto");
   if (firstRunThemeLightOptEl) firstRunThemeLightOptEl.textContent = t("themeLight");
@@ -4663,11 +4890,19 @@ function applyTranslations() {
   if (reviewModalSummaryEl) reviewModalSummaryEl.textContent = getLabel("reviewSummary", "Laat weten wat beter kan of wat je goed vindt aan Busbibliotheek.");
   if (reviewModalCloseBtn) reviewModalCloseBtn.setAttribute("aria-label", getLabel("close", "Sluiten"));
   if (reviewModalDoneBtn) reviewModalDoneBtn.textContent = getLabel("close", "Sluiten");
+  if (reviewFormFrameEl) {
+    reviewFormFrameEl.title = getLabel("reviewFormTitle", "Busbibliotheek reviewformulier");
+    reviewFormFrameEl.textContent = t("loading");
+  }
   if (reviewMobileLinkEl) reviewMobileLinkEl.textContent = getLabel("reviewMobileOpen", "Open reviewformulier");
   if (reportModalTitleEl) reportModalTitleEl.textContent = getLabel("reportModalTitle", "Voertuig melden");
   if (reportModalSummaryEl) reportModalSummaryEl.textContent = getLabel("reportModalSummary", "Meld een ontbrekend voertuig via het formulier hieronder.");
   if (reportModalCloseBtn) reportModalCloseBtn.setAttribute("aria-label", getLabel("close", "Sluiten"));
   if (reportModalDoneBtn) reportModalDoneBtn.textContent = getLabel("close", "Sluiten");
+  if (reportFormFrameEl) {
+    reportFormFrameEl.title = getLabel("reportFormTitle", "Busbibliotheek meldformulier");
+    reportFormFrameEl.textContent = t("loading");
+  }
   if (reportMobileLinkEl) reportMobileLinkEl.textContent = getLabel("reportMobileOpen", "Open meldformulier");
   if (photoUploadModalCloseBtn) photoUploadModalCloseBtn.setAttribute("aria-label", getLabel("close", "Sluiten"));
   if (photoUploadModalDoneBtn) photoUploadModalDoneBtn.textContent = getLabel("close", "Sluiten");
@@ -7231,12 +7466,12 @@ function buildInstagramSearchUrl(bus, vehicleId) {
   const normalizedId = normalize(vehicleId);
   const operatorType = getVehicleOperatorType(bus);
   if (operatorType === "tec") {
-    return `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(`#tec ${normalizedId}`)}`;
+    return `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(`#tec${normalizedId}`)}`;
   }
   if (operatorType === "mivb") {
-    return `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(`#mivb ${normalizedId}`)}`;
+    return `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(`#mivb${normalizedId}`)}`;
   }
-  return `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(`#dl ${normalizedId}`)}`;
+  return `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(`#dl${normalizedId}`)}`;
 }
 
 function isOutOfService(bus) {

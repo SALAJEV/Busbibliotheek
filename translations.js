@@ -1201,6 +1201,157 @@ Object.assign(window.BB_TRANSLATIONS.i18n.nl, { menu: "Menu" });
 Object.assign(window.BB_TRANSLATIONS.i18n.fr, { menu: "Menu" });
 Object.assign(window.BB_TRANSLATIONS.i18n.en, { menu: "Menu" });
 Object.assign(window.BB_TRANSLATIONS.i18n.nl, {
+  menuClose: "Menu sluiten"
+});
+Object.assign(window.BB_TRANSLATIONS.i18n.nl, {
+  compareAgeNow: "{age} oud",
+  compareAgeAtRetirement: "{age} bij uit dienst",
+  compareOlderBy: "{diff} ouder",
+  compareYoungerBy: "{diff} jonger",
+  compareRetiredEarlierBy: "{diff} eerder uit dienst",
+  compareRetiredLaterBy: "{diff} later uit dienst",
+  compareSameCommissionDate: "zelfde instroomdatum",
+  compareSameRetirementDate: "zelfde uitdienstdatum",
+  compareDurationYearOne: "jaar",
+  compareDurationYearOther: "jaar",
+  compareDurationMonthOne: "maand",
+  compareDurationMonthOther: "maanden",
+  compareDurationDayOne: "dag",
+  compareDurationDayOther: "dagen"
+});
+Object.assign(window.BB_TRANSLATIONS.i18n.fr, {
+  compareAgeNow: "{age} d'âge",
+  compareAgeAtRetirement: "{age} au retrait",
+  compareOlderBy: "{diff} plus ancien",
+  compareYoungerBy: "{diff} plus récent",
+  compareRetiredEarlierBy: "{diff} retiré plus tôt",
+  compareRetiredLaterBy: "{diff} retiré plus tard",
+  compareSameCommissionDate: "même date de mise en service",
+  compareSameRetirementDate: "même date de retrait",
+  compareDurationYearOne: "an",
+  compareDurationYearOther: "ans",
+  compareDurationMonthOne: "mois",
+  compareDurationMonthOther: "mois",
+  compareDurationDayOne: "jour",
+  compareDurationDayOther: "jours"
+});
+Object.assign(window.BB_TRANSLATIONS.i18n.en, {
+  compareAgeNow: "{age} old",
+  compareAgeAtRetirement: "{age} at retirement",
+  compareOlderBy: "{diff} older",
+  compareYoungerBy: "{diff} newer",
+  compareRetiredEarlierBy: "retired {diff} earlier",
+  compareRetiredLaterBy: "retired {diff} later",
+  compareSameCommissionDate: "same service-entry date",
+  compareSameRetirementDate: "same retirement date",
+  compareDurationYearOne: "year",
+  compareDurationYearOther: "years",
+  compareDurationMonthOne: "month",
+  compareDurationMonthOther: "months",
+  compareDurationDayOne: "day",
+  compareDurationDayOther: "days"
+});
+Object.assign(window.BB_TRANSLATIONS.i18n.de, {
+  compareAgeNow: "{age} alt",
+  compareAgeAtRetirement: "{age} bei Ausmusterung",
+  compareOlderBy: "{diff} älter",
+  compareYoungerBy: "{diff} jünger",
+  compareRetiredEarlierBy: "{diff} früher aus Dienst",
+  compareRetiredLaterBy: "{diff} später aus Dienst",
+  compareSameCommissionDate: "gleiches Indienststellungsdatum",
+  compareSameRetirementDate: "gleiches Ausmusterungsdatum",
+  compareDurationYearOne: "Jahr",
+  compareDurationYearOther: "Jahre",
+  compareDurationMonthOne: "Monat",
+  compareDurationMonthOther: "Monate",
+  compareDurationDayOne: "Tag",
+  compareDurationDayOther: "Tage"
+});
+Object.assign(window.BB_TRANSLATIONS.i18n.pl, {
+  compareAgeNow: "{age} wieku",
+  compareAgeAtRetirement: "{age} przy wycofaniu",
+  compareOlderBy: "{diff} starszy",
+  compareYoungerBy: "{diff} młodszy",
+  compareRetiredEarlierBy: "wycofany {diff} wcześniej",
+  compareRetiredLaterBy: "wycofany {diff} później",
+  compareSameCommissionDate: "ta sama data wejścia do służby",
+  compareSameRetirementDate: "ta sama data wycofania",
+  compareDurationYearOne: "rok",
+  compareDurationYearOther: "lat",
+  compareDurationMonthOne: "miesiąc",
+  compareDurationMonthOther: "miesięcy",
+  compareDurationDayOne: "dzień",
+  compareDurationDayOther: "dni"
+});
+Object.assign(window.BB_TRANSLATIONS.i18n.es, {
+  compareAgeNow: "{age} de edad",
+  compareAgeAtRetirement: "{age} al retirarse",
+  compareOlderBy: "{diff} más antiguo",
+  compareYoungerBy: "{diff} más nuevo",
+  compareRetiredEarlierBy: "retirado {diff} antes",
+  compareRetiredLaterBy: "retirado {diff} después",
+  compareSameCommissionDate: "misma fecha de entrada en servicio",
+  compareSameRetirementDate: "misma fecha de retirada",
+  compareDurationYearOne: "año",
+  compareDurationYearOther: "años",
+  compareDurationMonthOne: "mes",
+  compareDurationMonthOther: "meses",
+  compareDurationDayOne: "día",
+  compareDurationDayOther: "días"
+});
+Object.assign(window.BB_TRANSLATIONS.i18n.ru, {
+  compareAgeNow: "возраст: {age}",
+  compareAgeAtRetirement: "{age} к списанию",
+  compareOlderBy: "старше на {diff}",
+  compareYoungerBy: "младше на {diff}",
+  compareRetiredEarlierBy: "списан на {diff} раньше",
+  compareRetiredLaterBy: "списан на {diff} позже",
+  compareSameCommissionDate: "одна дата ввода в эксплуатацию",
+  compareSameRetirementDate: "одна дата списания",
+  compareDurationYearOne: "год",
+  compareDurationYearOther: "лет",
+  compareDurationMonthOne: "месяц",
+  compareDurationMonthOther: "месяцев",
+  compareDurationDayOne: "день",
+  compareDurationDayOther: "дней"
+});
+Object.assign(window.BB_TRANSLATIONS.i18n.fr, {
+  copyrightNotice: "© Busspotter 95, 2023-{year}",
+  menuClose: "Fermer le menu",
+  reportFormTitle: "Formulaire de signalement Busbibliotheek",
+  reviewFormTitle: "Formulaire d'avis Busbibliotheek"
+});
+Object.assign(window.BB_TRANSLATIONS.i18n.en, {
+  copyrightNotice: "© Busspotter 95, 2023-{year}",
+  menuClose: "Close menu",
+  reportFormTitle: "Busbibliotheek report form",
+  reviewFormTitle: "Busbibliotheek review form"
+});
+Object.assign(window.BB_TRANSLATIONS.i18n.de, {
+  copyrightNotice: "© Busspotter 95, 2023-{year}",
+  menuClose: "Menü schließen",
+  reportFormTitle: "Busbibliotheek Meldeformular",
+  reviewFormTitle: "Busbibliotheek Bewertungsformular"
+});
+Object.assign(window.BB_TRANSLATIONS.i18n.pl, {
+  copyrightNotice: "© Busspotter 95, 2023-{year}",
+  menuClose: "Zamknij menu",
+  reportFormTitle: "Formularz zgłoszenia Busbibliotheek",
+  reviewFormTitle: "Formularz opinii Busbibliotheek"
+});
+Object.assign(window.BB_TRANSLATIONS.i18n.es, {
+  copyrightNotice: "© Busspotter 95, 2023-{year}",
+  menuClose: "Cerrar menú",
+  reportFormTitle: "Formulario de aviso de Busbibliotheek",
+  reviewFormTitle: "Formulario de reseña de Busbibliotheek"
+});
+Object.assign(window.BB_TRANSLATIONS.i18n.ru, {
+  copyrightNotice: "© Busspotter 95, 2023-{year}",
+  menuClose: "Закрыть меню",
+  reportFormTitle: "Форма сообщения Busbibliotheek",
+  reviewFormTitle: "Форма отзыва Busbibliotheek"
+});
+Object.assign(window.BB_TRANSLATIONS.i18n.nl, {
   androidApkInstallInstructions: "De APK-download is gestart. Open daarna je downloads of meldingencentrum, tik op Busbibliotheek.apk en bevestig de installatie. Als Android het vraagt, sta dan installatie van onbekende apps toe voor je browser of bestandsapp.",
   apkDownloadStarted: "De download van Busbibliotheek.apk is gestart.",
   back: "Terug",
@@ -1214,6 +1365,7 @@ Object.assign(window.BB_TRANSLATIONS.i18n.nl, {
   dashboardVehicleDuplicate: "Dit voertuig staat al in de stalkmodus.",
   dashboardVehicleFormat: "Alleen bestaande voertuignummers met 4 of 6 cijfers zijn geldig.",
   dashboardVehicleUnknown: "Dit voertuignummer bestaat niet.",
+  copyrightNotice: "© Busspotter 95, 2023-{year}",
   dialogConfirmTitle: "Bevestiging",
   dialogInfoTitle: "Melding",
   dialogOk: "OK",
@@ -1265,11 +1417,13 @@ Object.assign(window.BB_TRANSLATIONS.i18n.nl, {
   realtimeTrackerHelp: "Geen realtime gevonden. Probeer voertuig {id} op de officiële tracker van De Lijn te zoeken.",
   realtimeTrackerHelpGeneric: "Geen realtime gevonden. Probeer op de officiële tracker van De Lijn te zoeken.",
   realtimeUnavailableOperator: "Realtime locatie is niet beschikbaar voor deze vervoersmaatschappij.",
+  reportFormTitle: "Busbibliotheek meldformulier",
   reportMobileOpen: "Open meldformulier",
   reportModalSummary: "Meld een ontbrekend voertuig via het formulier hieronder.",
   reportModalTitle: "Voertuig melden",
   resetSiteData: "Reset website",
   resetSiteDataConfirm: "Alles van Busbibliotheek op dit toestel resetten?",
+  reviewFormTitle: "Busbibliotheek reviewformulier",
   reviewMobileOpen: "Open reviewformulier",
   reviewSummary: "Laat weten wat beter kan of wat je goed vindt aan Busbibliotheek.",
   termsDataBody: "Realtimegegevens, voertuiginfo en andere inhoud worden zo goed mogelijk getoond, maar kunnen vertragingen, fouten of onvolledigheden bevatten. Aan de inhoud kunnen geen rechten worden ontleend.",
