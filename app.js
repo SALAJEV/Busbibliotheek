@@ -86,6 +86,7 @@ const APK_DOWNLOAD_URL = `${window.location.origin}/android/app/release/app-rele
 const PHOTO_UPLOAD_FORM_URL = "https://forms.gle/MLzezhEKqxg6xagm9";
 const REPORT_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScrSDIN__F9mfOxpuMd2Kvw2GbGB3djKZrao1dB-Ry2-a67TA/viewform";
 const ZONE01_HERCULES_SEARCH_URL = "https://www.zone01.be/hercules/resultaten";
+const DE_LIJN_VEHICLE_TRACKING_URL = "https://vehicletracking.delijn.be";
 const LEAFLET_CSS_URL = "https://unpkg.com/leaflet/dist/leaflet.css";
 const LEAFLET_JS_URL = "https://unpkg.com/leaflet/dist/leaflet.js";
 const NETWORK_CHECK_URL = `${window.location.origin}/manifest.json?network-check=1`;
@@ -4762,7 +4763,7 @@ function applyTranslations() {
     dashboardSummaryEl.textContent = getLabel("dashboardSummary", "Volg negen voertuigen tegelijk.");
   }
   if (!currentVehicleId) {
-    realtimeEl.innerHTML = t("noData");
+    renderRealtimeUnavailableState("", { withTracker: false });
     vasteDataEl.innerHTML = t("noneSelected");
     resetWeatherBlock();
   }
@@ -6481,6 +6482,32 @@ function buildZone01HerculesSearchUrl(query = "") {
   return `${ZONE01_HERCULES_SEARCH_URL}?${params.toString()}`;
 }
 
+function renderRealtimeUnavailableState(vehicleId = "", options = {}) {
+  const { withTracker = false } = options;
+  const visibleVehicleId = getVehicleDisplayId(vehicleId || currentVehicleId || "") || vehicleId || "";
+  const message = getLabel("noData", "Geen realtimegegevens beschikbaar.");
+
+  if (!withTracker) {
+    realtimeEl.innerHTML = `<p class="realtime-empty-text">${escapeHtml(message)}</p>`;
+    return;
+  }
+
+  const helperText = visibleVehicleId
+    ? fillTemplate(
+        getLabel("realtimeTrackerHelp", "Geen realtime gevonden. Probeer voertuig {id} op de officiële tracker van De Lijn te zoeken."),
+        visibleVehicleId
+      )
+    : getLabel("realtimeTrackerHelpGeneric", "Geen realtime gevonden. Probeer op de officiële tracker van De Lijn te zoeken.");
+
+  realtimeEl.innerHTML = `
+    <div class="realtime-empty-state">
+      <p class="realtime-empty-text">${escapeHtml(message)}</p>
+      <p class="realtime-empty-help">${escapeHtml(helperText)}</p>
+      <a class="btn realtime-empty-link" href="${escapeHtml(DE_LIJN_VEHICLE_TRACKING_URL)}" target="_blank" rel="noopener noreferrer">${escapeHtml(getLabel("realtimeTrackerCta", "Zoek op vehicletracking.delijn.be"))}</a>
+    </div>
+  `;
+}
+
 function clampPrimaryVehicleQuery(value = "") {
   return (value || "").toString().slice(0, PRIMARY_VEHICLE_QUERY_MAX_LENGTH);
 }
@@ -7212,7 +7239,7 @@ function terug(options = {}) {
   resultsGridEl.classList.remove("show");
   resultsWrapEl.classList.remove("show");
   closeBtnEl.style.display = "none";
-  realtimeEl.innerHTML = t("noData");
+  renderRealtimeUnavailableState("", { withTracker: false });
   vasteDataEl.innerHTML = t("noneSelected");
   hideVehiclePhotoCard();
   resetWeatherBlock();
@@ -7520,7 +7547,7 @@ async function updateRealtime(id){
     const gps = gpsEntity ? { vehicle: getEntityVehiclePayload(gpsEntity) } : null;
 
     if(!gps){
-      realtimeEl.innerHTML=t("noData");
+      renderRealtimeUnavailableState(id, { withTracker: true });
       resetWeatherBlock();
       mapEl.classList.add("hidden");
       lastUpdateEl.textContent = `${t("lastUpdate")}: -`;

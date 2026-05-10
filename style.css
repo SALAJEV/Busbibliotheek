@@ -3905,6 +3905,34 @@ body.offline-active {
   border-radius: 6px;
 }
 
+.realtime-empty-state {
+  display: grid;
+  align-content: start;
+  gap: 0.72rem;
+}
+
+.realtime-empty-text,
+.realtime-empty-help {
+  margin: 0;
+}
+
+.realtime-empty-text {
+  color: var(--text);
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.realtime-empty-help {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.realtime-empty-link {
+  justify-self: start;
+}
+
 .line-badge {
   background: var(--line-badge-bg, var(--accent));
   color: var(--line-badge-fg, #ffffff);
@@ -7585,7 +7613,7 @@ footer > *,
 }
 
 #resultsGrid > .card:nth-child(2):not([hidden]) {
-  grid-row: span 2;
+  grid-row: auto;
 }
 
 .card {
