@@ -1753,7 +1753,7 @@ function updateDocumentTitle(vehicleId = "") {
     : "Busbibliotheek";
 }
 
-function updateHeaderVisualRoutePresentation(routeShort = "2", destinationText = "Erasmuslaan", routeColor = "#E40521", routeTextColor = "#FFFFFF") {
+function updateHeaderVisualRoutePresentation(routeShort = "2", destinationText = "", routeColor = "#E40521", routeTextColor = "#FFFFFF") {
   if (headerVisualRouteEl) {
     headerVisualRouteEl.textContent = cleanText(routeShort) || "2";
     headerVisualRouteEl.style.setProperty("--header-banner-line-bg", routeColor || "#E40521");
@@ -1761,7 +1761,7 @@ function updateHeaderVisualRoutePresentation(routeShort = "2", destinationText =
     headerVisualRouteEl.style.setProperty("--header-banner-line-border", routeColor || "#E40521");
   }
   if (headerVisualDestinationEl) {
-    const displayDestination = destinationText == null ? "Erasmuslaan" : cleanText(destinationText);
+    const displayDestination = destinationText ? cleanText(destinationText) : "";
     headerVisualDestinationEl.textContent = displayDestination;
   }
 }
@@ -1777,7 +1777,7 @@ function getRandomRouteHeadsign(routeId) {
   const routeTrips = tripsByRouteId.get(normalizedRouteId) || [];
   const validHeadsigns = routeTrips
     .map((trip) => cleanText(trip.trip_headsign))
-    .filter((headsign) => headsign && headsign.length <= 15);
+    .filter((headsign) => headsign && headsign.length <= 20);
   if (!validHeadsigns.length) return "";
   return validHeadsigns[Math.floor(Math.random() * validHeadsigns.length)];
 }
