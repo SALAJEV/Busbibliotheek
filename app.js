@@ -136,6 +136,7 @@ const colorBlueOptEl = document.getElementById("colorBlueOpt");
 const colorOrangeOptEl = document.getElementById("colorOrangeOpt");
 const colorRedOptEl = document.getElementById("colorRedOpt");
 const colorPurpleOptEl = document.getElementById("colorPurpleOpt");
+const colorNeonOptEl = document.getElementById("colorNeonOpt");
 const themeColorMetaEls = Array.from(document.querySelectorAll('meta[name="theme-color"]'));
 const colorSchemeMetaEl = document.querySelector('meta[name="color-scheme"]');
 const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
@@ -474,6 +475,7 @@ const dashboardColorYellowOptEl = document.getElementById("dashboardColorYellowO
 const dashboardColorOrangeOptEl = document.getElementById("dashboardColorOrangeOpt");
 const dashboardColorRedOptEl = document.getElementById("dashboardColorRedOpt");
 const dashboardColorPurpleOptEl = document.getElementById("dashboardColorPurpleOpt");
+const dashboardColorNeonOptEl = document.getElementById("dashboardColorNeonOpt");
 const dashboardSetupGridEl = document.getElementById("dashboardSetupGrid");
 const dashboardSetupSummaryEl = document.getElementById("dashboardSetupSummary");
 const dashboardSetupErrorEl = document.getElementById("dashboardSetupError");
@@ -2515,7 +2517,7 @@ function ensureVehiclePhotoImageElement() {
   imageEl.id = "vehiclePhotoImg";
   imageEl.className = "vehicle-photo-image";
   imageEl.alt = "";
-  imageEl.loading = "eager";
+  imageEl.loading = "lazy";
   imageEl.decoding = "async";
   vehiclePhotoFrameEl.insertBefore(imageEl, vehiclePhotoNextBtn || vehiclePhotoEmptyStateEl || null);
   vehiclePhotoImgEl = imageEl;
@@ -4212,9 +4214,10 @@ function applyTranslations() {
   colorYellowOptEl.textContent = t("colorYellow");
   colorGreenOptEl.textContent = t("colorGreen");
   colorBlueOptEl.textContent = t("colorBlue");
-  colorOrangeOptEl.textContent = getLabel("colorOrange", "Oranje");
+  colorOrangeOptEl.textContent = t("colorOrange");
   colorRedOptEl.textContent = t("colorRed");
   colorPurpleOptEl.textContent = t("colorPurple");
+  colorNeonOptEl.textContent = t("colorNeon");
   if (dashboardTitleEl) dashboardTitleEl.textContent = getLabel("dashboard", "Stalk modus");
   dashboardToggleBtn.textContent = getLabel("dashboard", "Stalk modus");
   dashboardToggleBtn.title = getLabel("dashboardButtonTitle", "Stalk modus");
@@ -4285,9 +4288,10 @@ function applyTranslations() {
   if (dashboardColorBlueOptEl) dashboardColorBlueOptEl.textContent = t("colorBlue");
   if (dashboardColorGreenOptEl) dashboardColorGreenOptEl.textContent = t("colorGreen");
   if (dashboardColorYellowOptEl) dashboardColorYellowOptEl.textContent = t("colorYellow");
-  if (dashboardColorOrangeOptEl) dashboardColorOrangeOptEl.textContent = getLabel("colorOrange", "Oranje");
+  if (dashboardColorOrangeOptEl) dashboardColorOrangeOptEl.textContent = t("colorOrange");
   if (dashboardColorRedOptEl) dashboardColorRedOptEl.textContent = t("colorRed");
   if (dashboardColorPurpleOptEl) dashboardColorPurpleOptEl.textContent = t("colorPurple");
+  if (dashboardColorNeonOptEl) dashboardColorNeonOptEl.textContent = t("colorNeon");
   dashboardSetupCloseBtn.setAttribute("aria-label", getLabel("close", "Sluiten"));
   dashboardSetupCancelBtn.textContent = getLabel("cancel", "Annuleren");
   dashboardSetupConfirmBtn.textContent = getLabel("dashboardSetupConfirm", "Stalk modus openen");
@@ -5250,13 +5254,13 @@ dashboardCloseBtn?.addEventListener("click", () => {
   }
   closeDashboardPanel({ historyMode: "replace" });
 });
-voertuigInput.addEventListener("input", () => {
+voertuigInput.addEventListener("input", debounce(() => {
   const clampedValue = clampPrimaryVehicleQuery(voertuigInput.value);
   if (voertuigInput.value !== clampedValue) {
     voertuigInput.value = clampedValue;
   }
-});
-voertuigInput.addEventListener("input", updateFavoriteButtonState);
+}, 150));
+voertuigInput.addEventListener("input", debounce(updateFavoriteButtonState, 150));
 favoritesToggleBtn.addEventListener("click", (event) => {
   event.stopPropagation();
   setFavoritesPanel(!favoritesPanelOpen);
@@ -5301,9 +5305,9 @@ haltecodeInputEl?.addEventListener("keydown", (event) => {
     searchHaltes();
   }
 });
-haltecodeInputEl?.addEventListener("input", () => {
+haltecodeInputEl?.addEventListener("input", debounce(() => {
   void updateHalteSuggestions();
-});
+}, 200));
 favoritesBackdropEl?.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof Element)) return;
@@ -6045,6 +6049,19 @@ function clampPrimaryVehicleQuery(value = "") {
   return (value || "").toString().slice(0, PRIMARY_VEHICLE_QUERY_MAX_LENGTH);
 }
 
+// Performance optimization: Debounce function for input events
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
 function getMissingVehicleSuggestionCopy(query = "") {
   return {
     badge: getLabel("missingVehicleBadge", "Niet gevonden"),
@@ -6416,7 +6433,7 @@ function bindVehicleSuggestions(inputEl, onSelect) {
     positionSuggestionList(listEl, inputEl);
   };
 
-  inputEl.addEventListener("input", render);
+  inputEl.addEventListener("input", debounce(render, 200));
   inputEl.addEventListener("focus", render);
   inputEl.addEventListener("keydown", (event) => {
     const items = Array.from(listEl.querySelectorAll("li"));

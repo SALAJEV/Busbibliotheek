@@ -382,6 +382,31 @@ html.preload .app-shell {
   --button-bg-active: #991b1b;
 }
 
+:root[data-color-theme="neon"] {
+  --bg: #0a0a0a;
+  --bg-gradient-top: #1a0a1a;
+  --bg-gradient-bottom: #0a1a1a;
+  --bg-glow-a: rgba(255, 0, 255, 0.15);
+  --bg-glow-b: rgba(0, 255, 255, 0.12);
+  --bg-glow-c: rgba(255, 255, 0, 0.08);
+  --accent: #ff00ff;
+  --accent-2: #00ffff;
+  --accent-soft: rgba(255, 0, 255, 0.2);
+  --bg-pattern:
+    radial-gradient(circle at 20% 20%, rgba(255, 0, 255, 0.08), transparent 25%),
+    radial-gradient(circle at 80% 80%, rgba(0, 255, 255, 0.08), transparent 25%),
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 0, 0.06), transparent 20%),
+    linear-gradient(45deg, rgba(255, 0, 255, 0.03), rgba(0, 255, 255, 0.03));
+  --bg-pattern-size: auto, auto, auto, 100% 100%;
+  --bg-pattern-opacity: 0.8;
+  --button-border: #ff00ff;
+  --button-bg: #ff00ff;
+  --button-bg-hover: #ff33ff;
+  --button-bg-active: #cc00cc;
+  --text-shadow: 0 0 8px rgba(255, 0, 255, 0.5);
+  --glow-effect: 0 0 20px rgba(255, 0, 255, 0.3);
+}
+
 :root[data-theme="dark"][data-color-theme="classic"] {
   --bg: #0a1020;
   --bg-gradient-top: #131a37;
@@ -492,6 +517,31 @@ html.preload .app-shell {
   --button-bg: #dc2626;
   --button-bg-hover: #ef4444;
   --button-bg-active: #b91c1c;
+}
+
+:root[data-theme="dark"][data-color-theme="neon"] {
+  --bg: #000000;
+  --bg-gradient-top: #0a000a;
+  --bg-gradient-bottom: #000a0a;
+  --bg-glow-a: rgba(255, 0, 255, 0.25);
+  --bg-glow-b: rgba(0, 255, 255, 0.2);
+  --bg-glow-c: rgba(255, 255, 0, 0.15);
+  --accent: #ff33ff;
+  --accent-2: #33ffff;
+  --accent-soft: rgba(255, 0, 255, 0.3);
+  --bg-pattern:
+    radial-gradient(circle at 20% 20%, rgba(255, 0, 255, 0.12), transparent 30%),
+    radial-gradient(circle at 80% 80%, rgba(0, 255, 255, 0.12), transparent 30%),
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 0, 0.1), transparent 25%),
+    linear-gradient(45deg, rgba(255, 0, 255, 0.05), rgba(0, 255, 255, 0.05));
+  --bg-pattern-size: auto, auto, auto, 100% 100%;
+  --bg-pattern-opacity: 1;
+  --button-border: #ff33ff;
+  --button-bg: #ff33ff;
+  --button-bg-hover: #ff66ff;
+  --button-bg-active: #cc33cc;
+  --text-shadow: 0 0 12px rgba(255, 0, 255, 0.7);
+  --glow-effect: 0 0 30px rgba(255, 0, 255, 0.4);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -605,6 +655,31 @@ html.preload .app-shell {
     --button-bg: #dc2626;
     --button-bg-hover: #ef4444;
     --button-bg-active: #b91c1c;
+  }
+
+  :root:not([data-theme="light"])[data-color-theme="neon"] {
+    --bg: #000000;
+    --bg-gradient-top: #0a000a;
+    --bg-gradient-bottom: #000a0a;
+    --bg-glow-a: rgba(255, 0, 255, 0.25);
+    --bg-glow-b: rgba(0, 255, 255, 0.2);
+    --bg-glow-c: rgba(255, 255, 0, 0.15);
+    --accent: #ff33ff;
+    --accent-2: #33ffff;
+    --accent-soft: rgba(255, 0, 255, 0.3);
+    --bg-pattern:
+      radial-gradient(circle at 20% 20%, rgba(255, 0, 255, 0.12), transparent 30%),
+      radial-gradient(circle at 80% 80%, rgba(0, 255, 255, 0.12), transparent 30%),
+      radial-gradient(circle at 50% 50%, rgba(255, 255, 0, 0.1), transparent 25%),
+      linear-gradient(45deg, rgba(255, 0, 255, 0.05), rgba(0, 255, 255, 0.05));
+    --bg-pattern-size: auto, auto, auto, 100% 100%;
+    --bg-pattern-opacity: 1;
+    --button-border: #ff33ff;
+    --button-bg: #ff33ff;
+    --button-bg-hover: #ff66ff;
+    --button-bg-active: #cc33cc;
+    --text-shadow: 0 0 12px rgba(255, 0, 255, 0.7);
+    --glow-effect: 0 0 30px rgba(255, 0, 255, 0.4);
   }
 }
 
@@ -1451,6 +1526,38 @@ button:disabled,
 
 #installBtn.show {
   display: inline-flex;
+}
+
+/* Neon theme button glow effects */
+:root[data-color-theme="neon"] .btn,
+:root[data-color-theme="neon"] button {
+  box-shadow: var(--glow-effect), var(--button-shadow);
+  text-shadow: var(--text-shadow);
+}
+
+:root[data-color-theme="neon"] .btn:hover,
+:root[data-color-theme="neon"] button:hover {
+  box-shadow: 0 0 25px rgba(255, 0, 255, 0.5), var(--button-shadow-hover);
+}
+
+:root[data-color-theme="neon"] .btn:active,
+:root[data-color-theme="neon"] button:active {
+  box-shadow: 0 0 15px rgba(255, 0, 255, 0.3), inset 0 2px 4px rgba(0, 0, 0, 0.12), 0 6px 16px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+/* Neon theme text glow effects */
+:root[data-color-theme="neon"] h1,
+:root[data-color-theme="neon"] h2,
+:root[data-color-theme="neon"] h3,
+:root[data-color-theme="neon"] h4,
+:root[data-color-theme="neon"] h5,
+:root[data-color-theme="neon"] h6 {
+  text-shadow: var(--text-shadow);
+}
+
+:root[data-color-theme="neon"] .vehicle-id,
+:root[data-color-theme="neon"] .vehicle-name {
+  text-shadow: 0 0 6px rgba(0, 255, 255, 0.4);
 }
 
 .search-row {
@@ -2743,8 +2850,9 @@ body.platform-android-tv .inline-suggestion-list {
 }
 
 .card:hover {
-  border-color: color-mix(in srgb, var(--accent) 22%, var(--stroke));
+  border-color: color-mix(in srgb, var(--accent) 12%, var(--stroke));
   box-shadow: var(--panel-shadow);
+  transform: none;
 }
 
 .card h2 {
@@ -4340,6 +4448,12 @@ body.offline-active {
   border-color: color-mix(in srgb, var(--accent) 26%, var(--stroke));
 }
 
+:root[data-theme="dark"] .card:hover {
+  box-shadow: var(--panel-shadow);
+  border-color: color-mix(in srgb, var(--accent) 12%, var(--stroke));
+  transform: none;
+}
+
 :root[data-theme="dark"] .search-row {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.05),
@@ -5933,8 +6047,13 @@ button:not(.title-home-btn):not(.footer-link-btn):active,
 .weather-card-link:hover,
 .weather-card-link:focus-visible,
 .favorite-item:hover {
-  transform: translateY(-2px);
   box-shadow: var(--shadow-strong) !important;
+}
+
+.card:hover {
+  transform: none;
+  box-shadow: var(--shadow-card) !important;
+  border-color: color-mix(in srgb, var(--accent) 10%, var(--stroke)) !important;
 }
 
 .weather-card,
@@ -6373,6 +6492,14 @@ button.weather-card.weather-card-link:focus-visible {
     border-radius: 22px !important;
   }
 
+  #favoritesPanel.menu-sheet {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+
+  #favoritesPanel .more-panel-header {
+    padding-top: 0.1rem;
+  }
+
   .footer-links {
     flex-direction: column;
     align-items: flex-start;
@@ -6734,7 +6861,7 @@ body.platform-android .vehicle-photo-meta-card {
     max-width: 470px;
     height: min(calc(var(--app-height) - 2rem), calc(100dvh - 2rem));
     max-height: min(calc(var(--app-height) - 2rem), calc(100dvh - 2rem));
-    padding: 1.06rem 1rem 1rem;
+    padding: 1.16rem 1rem 1rem;
     border-radius: 28px !important;
     border-color: color-mix(in srgb, var(--stroke-strong) 88%, white 12%) !important;
     background: linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 99%, white 1%), color-mix(in srgb, var(--surface) 98%, white 2%)) !important;
@@ -6742,6 +6869,7 @@ body.platform-android .vehicle-photo-meta-card {
       0 24px 56px rgba(15, 23, 42, 0.14),
       inset 0 1px 0 rgba(255, 255, 255, 0.52) !important;
     overflow-y: auto;
+    scroll-padding-top: 6.5rem;
   }
 
   #favoritesPanel.more-panel {
@@ -6750,13 +6878,17 @@ body.platform-android .vehicle-photo-meta-card {
 
   #favoritesPanel .more-panel-header {
     position: sticky;
-    top: -0.2rem;
-    z-index: 3;
+    top: 0;
+    z-index: 8;
     align-items: flex-start;
-    margin: -0.02rem 0 0;
-    padding: 0.02rem 0 0.86rem;
+    margin: 0;
+    padding: 0.12rem 0 0.92rem;
     border-bottom: 1px solid color-mix(in srgb, var(--stroke-soft) 88%, transparent);
-    background: linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 100%, white 0%), color-mix(in srgb, var(--surface-strong) 96%, transparent));
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 100%, white 0%) 0%, color-mix(in srgb, var(--surface-strong) 99%, white 1%) 70%, color-mix(in srgb, var(--surface-strong) 95%, white 5%) 100%);
+    box-shadow:
+      0 10px 22px rgba(15, 23, 42, 0.06),
+      0 1px 0 color-mix(in srgb, var(--stroke-soft) 72%, transparent);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
@@ -7457,6 +7589,14 @@ footer > *,
   max-width: 56ch;
 }
 
+.search-help {
+  margin: 0.62rem 0 0;
+  color: color-mix(in srgb, var(--muted) 84%, var(--text) 16%);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  font-weight: 600;
+}
+
 #appTitle {
   margin: 0;
   font-size: clamp(2.35rem, 4vw, 3.55rem);
@@ -7606,9 +7746,11 @@ footer > *,
 }
 
 .header-visual-grid,
+.header-visual-line,
 .header-visual-orbit,
 .header-visual-stop,
-.header-visual-card {
+.header-visual-card,
+.header-visual-copy {
   position: absolute;
   display: block;
 }
@@ -7618,6 +7760,17 @@ footer > *,
   background-image: radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--accent) 12%, transparent) 1px, transparent 1.7px);
   background-size: 22px 22px;
   opacity: 0.56;
+}
+
+.header-visual-line {
+  left: 72px;
+  right: 124px;
+  top: 94px;
+  height: 2px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 18%, transparent), color-mix(in srgb, var(--accent-2) 38%, transparent) 46%, color-mix(in srgb, var(--accent) 20%, transparent));
+  opacity: 0.92;
 }
 
 .header-visual-orbit {
@@ -7658,6 +7811,34 @@ footer > *,
   bottom: 38px;
 }
 
+.header-visual-copy {
+  top: 22px;
+  left: 22px;
+  max-width: 220px;
+  display: grid;
+  gap: 0.28rem;
+  padding: 0.86rem 0.94rem;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--accent) 14%, var(--stroke-strong));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 94%, white 6%), color-mix(in srgb, var(--surface) 88%, transparent));
+  box-shadow: 0 14px 28px color-mix(in srgb, var(--accent-soft) 14%, rgba(15, 23, 42, 0.08));
+}
+
+.header-visual-kicker {
+  color: color-mix(in srgb, var(--accent) 72%, var(--text) 28%);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.header-visual-copy strong {
+  color: var(--text);
+  font-size: 0.98rem;
+  line-height: 1.35;
+  font-weight: 800;
+}
+
 .header-visual-card {
   border-radius: 18px;
   border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--stroke-strong));
@@ -7678,24 +7859,57 @@ footer > *,
   bottom: 24px;
   width: 174px;
   height: 90px;
+  padding: 0.88rem 1rem;
   background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 84%, white 16%), color-mix(in srgb, var(--accent-2) 30%, var(--accent) 70%));
   transform: rotate(-8deg);
+  display: grid;
+  align-content: center;
+  gap: 0.26rem;
+  color: #fffdf8;
 }
 
 .header-visual-card--primary::before {
-  top: 18px;
-  left: 18px;
-  right: 18px;
-  height: 14px;
-  background: rgba(255, 255, 255, 0.72);
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.34);
 }
 
 .header-visual-card--primary::after {
-  left: 18px;
-  bottom: 18px;
-  width: 58%;
-  height: 9px;
-  background: rgba(255, 255, 255, 0.42);
+  left: 16px;
+  right: 16px;
+  bottom: 14px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.header-visual-card-route,
+.header-visual-card-destination {
+  position: relative;
+  z-index: 1;
+}
+
+.header-visual-card-route {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-width: 2.45rem;
+  padding: 0.22rem 0.52rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  font-size: 0.98rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.header-visual-card-destination {
+  max-width: 10ch;
+  font-size: 0.92rem;
+  line-height: 1.25;
+  font-weight: 700;
 }
 
 .results-wrap {
@@ -8253,4 +8467,355 @@ body.overlay-compat-mode .funny-modal-card button {
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
     0 12px 28px color-mix(in srgb, var(--accent-soft) 28%, transparent) !important;
   transform: translateY(0);
+}
+
+/* ===============================
+   PERFORMANCE OPTIMIZATIONS
+================================ */
+
+/* Optimize animations with will-change */
+.btn,
+.photo-card,
+.vehicle-photo-image,
+.menu-sheet,
+.floating-suggestion-list {
+  will-change: transform, opacity, box-shadow;
+}
+
+/* Use CSS containment for better performance */
+.vehicle-card,
+.photo-card,
+.menu-sheet,
+.favorites-panel {
+  contain: layout style paint;
+}
+
+/* Optimize transitions with better timing */
+:root {
+  --transition-fast: 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Optimize font loading */
+@font-face {
+  font-family: "Source Sans 3";
+  font-display: swap;
+}
+
+/* Optimize image loading */
+img {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* Better focus management */
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Optimize scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--stroke);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--stroke-strong);
+}
+
+/* ===============================
+   CONSISTENT UI CLEANUP
+================================ */
+
+:root {
+  --ui-radius: 18px;
+  --ui-radius-sm: 14px;
+  --ui-surface: color-mix(in srgb, var(--surface-strong) 96%, white 4%);
+  --ui-surface-soft: color-mix(in srgb, var(--surface) 97%, white 3%);
+  --ui-border: color-mix(in srgb, var(--stroke) 88%, white 12%);
+  --ui-border-strong: color-mix(in srgb, var(--accent) 14%, var(--stroke-strong));
+  --ui-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+  --ui-shadow-soft: 0 6px 18px rgba(15, 23, 42, 0.05);
+}
+
+body {
+  background:
+    radial-gradient(circle at top, color-mix(in srgb, var(--accent-soft) 55%, transparent), transparent 36%),
+    linear-gradient(180deg, var(--bg-gradient-top), var(--bg-gradient-bottom)) !important;
+}
+
+.header-bar,
+.card,
+.pdf-modal-card,
+.menu-sheet,
+.settings-card,
+.dashboard-panel,
+footer,
+.search-row,
+.vehicle-photo-frame,
+#map,
+#lastUpdate,
+#favoritesPanel .settings-grid > .settings-card {
+  border-radius: var(--ui-radius) !important;
+  border: 1px solid var(--ui-border) !important;
+  background: var(--ui-surface) !important;
+  box-shadow: var(--ui-shadow) !important;
+  backdrop-filter: none !important;
+}
+
+.header-bar,
+.card,
+.pdf-modal-card,
+.menu-sheet,
+.dashboard-panel,
+footer {
+  overflow: hidden;
+}
+
+.header-bar::before,
+.header-bar::after,
+.card::before,
+footer::before,
+footer::after {
+  opacity: 0.35 !important;
+}
+
+.header-visual,
+.header-visual-card,
+.header-visual-grid,
+.header-visual-line,
+.header-visual-orbit,
+.header-visual-stop {
+  filter: none !important;
+  box-shadow: none !important;
+}
+
+.header-visual {
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--button-bg) 14%, var(--ui-surface)), color-mix(in srgb, var(--accent-soft) 70%, var(--ui-surface))) !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: var(--ui-radius) !important;
+}
+
+button:not(.title-home-btn):not(.vehicle-favorite-btn),
+.btn,
+#searchBtn,
+.search-menu-btn,
+.icon-btn,
+.more-secondary-btn,
+.settings-close-btn,
+.photo-nav-btn,
+#offlineRetryBtn,
+#funnyModalCloseBtn,
+.footer-link-btn {
+  min-height: 44px !important;
+  border-radius: var(--ui-radius-sm) !important;
+  transition:
+    background-color var(--transition-normal),
+    border-color var(--transition-normal),
+    color var(--transition-normal),
+    box-shadow var(--transition-normal),
+    transform var(--transition-fast) !important;
+}
+
+.btn,
+#searchBtn,
+.vehicle-photo-upload-btn,
+.review-mobile-fallback .btn,
+.photo-upload-modal-copy .btn,
+.pdf-modal-actions .btn,
+#dashboardToggleBtn,
+#halteSearchToggleBtn,
+#haltecodeSearchBtn {
+  border: 1px solid var(--button-border) !important;
+  background: var(--button-bg) !important;
+  color: var(--button-text) !important;
+  box-shadow: var(--ui-shadow-soft) !important;
+}
+
+.btn:hover,
+#searchBtn:hover,
+.vehicle-photo-upload-btn:hover,
+.review-mobile-fallback .btn:hover,
+.photo-upload-modal-copy .btn:hover,
+.pdf-modal-actions .btn:hover,
+#dashboardToggleBtn:hover,
+#halteSearchToggleBtn:hover,
+#haltecodeSearchBtn:hover {
+  background: var(--button-bg-hover) !important;
+  border-color: var(--button-bg-hover) !important;
+  box-shadow: var(--ui-shadow) !important;
+  transform: translateY(-1px);
+}
+
+.btn:active,
+#searchBtn:active,
+.vehicle-photo-upload-btn:active,
+.review-mobile-fallback .btn:active,
+.photo-upload-modal-copy .btn:active,
+.pdf-modal-actions .btn:active,
+#dashboardToggleBtn:active,
+#halteSearchToggleBtn:active,
+#haltecodeSearchBtn:active {
+  background: var(--button-bg-active) !important;
+  border-color: var(--button-bg-active) !important;
+  box-shadow: var(--ui-shadow-soft) !important;
+  transform: translateY(0);
+}
+
+.icon-btn,
+.more-secondary-btn,
+.settings-close-btn,
+.photo-nav-btn,
+.footer-link-btn,
+.pdf-modal-actions > button:not(.btn),
+.settings-actions > button:not(.btn),
+#compareModalCancelBtn,
+#dashboardSetupCancelBtn,
+#infoModalOkBtn:not(.btn),
+#appDialogCancelBtn {
+  border: 1px solid var(--ui-border-strong) !important;
+  background: var(--ui-surface-soft) !important;
+  color: var(--text) !important;
+  box-shadow: none !important;
+}
+
+.icon-btn:hover,
+.more-secondary-btn:hover,
+.settings-close-btn:hover,
+.photo-nav-btn:hover,
+.footer-link-btn:hover,
+.pdf-modal-actions > button:not(.btn):hover,
+.settings-actions > button:not(.btn):hover,
+#compareModalCancelBtn:hover,
+#dashboardSetupCancelBtn:hover,
+#infoModalOkBtn:not(.btn):hover,
+#appDialogCancelBtn:hover {
+  background: color-mix(in srgb, var(--accent-soft) 45%, var(--ui-surface-soft)) !important;
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--stroke-strong)) !important;
+  color: var(--text) !important;
+}
+
+.settings-close-btn {
+  width: 44px !important;
+  min-width: 44px !important;
+  padding: 0 !important;
+  font-size: 1.35rem !important;
+  line-height: 1 !important;
+}
+
+.footer-link-btn {
+  padding: 0.7rem 1rem !important;
+  font-weight: 700 !important;
+}
+
+.btn::before,
+.icon-btn::before,
+.settings-close-btn::before,
+#searchBtn::before,
+.footer-link-btn::before {
+  opacity: 0.9 !important;
+}
+
+.search-row {
+  min-height: 58px !important;
+  padding: 0.35rem !important;
+  gap: 0.5rem !important;
+}
+
+.search-row input,
+.suggestion-input-shell input,
+#haltecodeInput,
+#compareVehicleInput,
+select {
+  min-height: 44px;
+  border-radius: var(--ui-radius-sm) !important;
+  border: 1px solid var(--ui-border) !important;
+  background: color-mix(in srgb, var(--theme-input-bg) 94%, white 6%) !important;
+  box-shadow: none !important;
+}
+
+.settings-card,
+.dashboard-tv-setting,
+.pdf-theme-field,
+.dashboard-setup-grid > * {
+  border-radius: var(--ui-radius-sm) !important;
+  border: 1px solid var(--ui-border) !important;
+  background: var(--ui-surface-soft) !important;
+  box-shadow: none !important;
+}
+
+.card h2,
+.pdf-modal-header h3,
+.more-panel-header h3,
+footer h3 {
+  letter-spacing: -0.015em !important;
+}
+
+.dashboard-panel-header,
+.compare-card-header,
+.pdf-modal-header,
+.more-panel-header {
+  border-bottom: 1px solid color-mix(in srgb, var(--stroke) 80%, transparent) !important;
+}
+
+.results-wrap,
+.results-toolbar,
+.grid,
+.settings-grid,
+.more-action-grid,
+.pdf-modal-actions,
+.footer-links {
+  gap: 0.8rem !important;
+}
+
+.card:hover,
+.dashboard-card:hover,
+.favorite-item:hover,
+.weather-card-link:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.1) !important;
+}
+
+@media (max-width: 640px) {
+  .header-bar,
+  .card,
+  .pdf-modal-card,
+  .menu-sheet,
+  .dashboard-panel,
+  footer {
+    border-radius: 16px !important;
+  }
+
+  .search-row,
+  #searchBtn,
+  .search-menu-btn,
+  .icon-btn,
+  .settings-close-btn,
+  .btn {
+    border-radius: 14px !important;
+  }
 }

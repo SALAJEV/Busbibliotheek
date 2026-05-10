@@ -15,6 +15,11 @@
 <link rel="shortcut icon" href="media/favicon.ico">
 <link rel="apple-touch-icon" href="media/logo.png">
 <link rel="manifest" href="manifest.json">
+<!-- Preload critical resources -->
+<link rel="preload" href="media/logo.png" as="image">
+<link rel="preload" href="media/navicon.png" as="image">
+<link rel="dns-prefetch" href="//fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <title>Busbibliotheek</title>
 <script>
   (function () {
@@ -52,6 +57,7 @@
 <div class="container">
   <div class="header-bar">
     <div class="header-intro">
+      <div class="app-context-line">Live tracker voor voertuigen van De Lijn</div>
       <button id="appTitleBtn" class="title-home-btn" type="button">
         <h1 id="appTitle">Busbibliotheek</h1>
       </button>
@@ -69,6 +75,7 @@
           </button>
         </div>
         <ul id="suggestielijst" hidden></ul>
+        <p class="search-help">Zoek op voertuignummer, nummerplaat of intern nummer.</p>
       </div>
     </div>
     <div class="header-side">
@@ -86,12 +93,20 @@
       </div>
       <div class="header-visual" aria-hidden="true">
         <span class="header-visual-grid"></span>
+        <span class="header-visual-line"></span>
         <span class="header-visual-orbit header-visual-orbit--primary"></span>
         <span class="header-visual-orbit header-visual-orbit--secondary"></span>
         <span class="header-visual-stop header-visual-stop--a"></span>
         <span class="header-visual-stop header-visual-stop--b"></span>
         <span class="header-visual-stop header-visual-stop--c"></span>
-        <span class="header-visual-card header-visual-card--primary"></span>
+        <div class="header-visual-copy">
+          <span class="header-visual-kicker">Realtime overzicht</span>
+          <strong>Open meteen de juiste bus en volg de rit live.</strong>
+        </div>
+        <span class="header-visual-card header-visual-card--primary">
+          <span class="header-visual-card-route">41</span>
+          <span class="header-visual-card-destination">Station - Centrum</span>
+        </span>
       </div>
     </div>
   </div>
@@ -246,6 +261,7 @@
             <option value="orange" id="colorOrangeOpt">Oranje</option>
             <option value="red" id="colorRedOpt">Rood</option>
             <option value="purple" id="colorPurpleOpt">Paars</option>
+            <option value="neon" id="colorNeonOpt">Neon</option>
           </select>
         </div>
         <div class="settings-card">
@@ -351,6 +367,7 @@
             <option value="orange" id="dashboardColorOrangeOpt">Oranje</option>
             <option value="red" id="dashboardColorRedOpt">Rood</option>
             <option value="purple" id="dashboardColorPurpleOpt">Paars</option>
+            <option value="neon" id="dashboardColorNeonOpt">Neon</option>
           </select>
         </label>
       </div>
