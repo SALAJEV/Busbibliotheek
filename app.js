@@ -330,6 +330,9 @@ const lastUpdateEl = document.getElementById("lastUpdate");
 const appTitleBtnEl = document.getElementById("appTitleBtn");
 const appTitleEl = document.getElementById("appTitle");
 const appSubtitleEl = document.getElementById("appSubtitle");
+const searchHelpTextEl = document.getElementById("searchHelpText");
+const headerVisualKickerEl = document.getElementById("headerVisualKicker");
+const headerVisualTitleEl = document.getElementById("headerVisualTitle");
 const headerVisualRouteEl = document.querySelector(".header-visual-card-route");
 const headerVisualDestinationEl = document.querySelector(".header-visual-card-destination");
 const splashTitleEl = document.getElementById("splashTitle");
@@ -380,6 +383,30 @@ const installGuideSummaryEl = document.getElementById("installGuideSummary");
 const installGuideBodyEl = document.getElementById("installGuideBody");
 const installGuideCloseBtn = document.getElementById("installGuideCloseBtn");
 const installGuideOkBtn = document.getElementById("installGuideOkBtn");
+const firstRunModalEl = document.getElementById("firstRunModal");
+const firstRunTitleEl = document.getElementById("firstRunTitle");
+const firstRunSummaryEl = document.getElementById("firstRunSummary");
+const firstRunIntroTitleEl = document.getElementById("firstRunIntroTitle");
+const firstRunDescriptionEl = document.getElementById("firstRunDescription");
+const firstRunLanguageLabelEl = document.getElementById("firstRunLanguageLabel");
+const firstRunLanguageSelectEl = document.getElementById("firstRunLanguageSelect");
+const firstRunThemeLabelEl = document.getElementById("firstRunThemeLabel");
+const firstRunThemeSelectEl = document.getElementById("firstRunThemeSelect");
+const firstRunThemeAutoOptEl = document.getElementById("firstRunThemeAutoOpt");
+const firstRunThemeLightOptEl = document.getElementById("firstRunThemeLightOpt");
+const firstRunThemeDarkOptEl = document.getElementById("firstRunThemeDarkOpt");
+const firstRunColorThemeLabelEl = document.getElementById("firstRunColorThemeLabel");
+const firstRunColorThemeSelectEl = document.getElementById("firstRunColorThemeSelect");
+const firstRunColorClassicOptEl = document.getElementById("firstRunColorClassicOpt");
+const firstRunColorBlueOptEl = document.getElementById("firstRunColorBlueOpt");
+const firstRunColorGreenOptEl = document.getElementById("firstRunColorGreenOpt");
+const firstRunColorYellowOptEl = document.getElementById("firstRunColorYellowOpt");
+const firstRunColorOrangeOptEl = document.getElementById("firstRunColorOrangeOpt");
+const firstRunColorRedOptEl = document.getElementById("firstRunColorRedOpt");
+const firstRunColorPurpleOptEl = document.getElementById("firstRunColorPurpleOpt");
+const firstRunColorNeonOptEl = document.getElementById("firstRunColorNeonOpt");
+const firstRunSkipBtnEl = document.getElementById("firstRunSkipBtn");
+const firstRunConfirmBtnEl = document.getElementById("firstRunConfirmBtn");
 const appDialogModalEl = document.getElementById("appDialogModal");
 const appDialogCardEl = document.getElementById("appDialogCard");
 const appDialogTitleEl = document.getElementById("appDialogTitle");
@@ -566,10 +593,14 @@ let routesLoadPromise = null;
 let stopsLoadPromise = null;
 let lastVerifiedInternetAt = 0;
 let lastVerifiedInternetState = true;
+let internetVerificationPromise = null;
 let realtimeRequestToken = 0;
 let dashboardRequestToken = 0;
 let latestSearchToken = 0;
 let weatherRequestToken = 0;
+let realtimeFeedCacheData = null;
+let realtimeFeedCacheFetchedAt = 0;
+let realtimeFeedCachePromise = null;
 let lastWeatherCacheKey = "";
 let lastWeatherData = null;
 let lastWeatherCoordinates = null;
@@ -894,6 +925,7 @@ function registerOverlayModal(modalEl) {
   dashboardSetupModalEl,
   infoModalEl,
   installGuideModalEl,
+  firstRunModalEl,
   appDialogModalEl,
   halteSearchModalEl,
   reviewModalEl,
@@ -1234,12 +1266,15 @@ let leafletLoadPromise = null;
 let busIcon = null;
 let androidViewportSyncInitialized = false;
 let androidKeyboardFocusHandle = 0;
+let hasStoredSettings = false;
+let pageLoadingActive = false;
 let settings = {
   intervalMs: 10000,
   theme: "auto",
   colorTheme: "classic",
   language: "nl",
-  dashboardVehicleIds: []
+  dashboardVehicleIds: [],
+  hasCompletedOnboarding: false
 };
 const HALTE_CODE_REGEX = /^[1-5]\d{5}$/;
 const HALTE_SEARCH_LIMIT = 8;
@@ -1254,10 +1289,12 @@ const delayLexicon = translationsConfig.delayLexicon || {};
 
 const DEFAULT_LANG = "nl";
 const FALLBACK_LANG = "en";
+const ALLOWED_LANGUAGES = ["nl", "fr", "en", "de", "pl", "es", "ru"];
 const ALLOWED_COLOR_THEMES = ["classic", "blue", "green", "yellow", "orange", "red", "purple", "neon"];
 const ALLOWED_UPDATE_INTERVALS = [10000, 15000, 30000];
 const REQUEST_TIMEOUT_MS = 12000;
 const REALTIME_FETCH_TIMEOUT_MS = 10000;
+const REALTIME_FEED_CACHE_MS = 4000;
 const VEHICLE_DISPLAY_FIELD_MAP = {
   vehicle_id: "Voertuignummer",
   bus: "Type",
@@ -1560,6 +1597,45 @@ function showInstallGuideModal() {
 
 function hideInstallGuideModal() {
   closeOverlayModal(installGuideModalEl);
+}
+
+function showFirstRunSetupModal() {
+  if (!firstRunModalEl) return;
+  syncFirstRunSetupControls();
+  openOverlayModal(firstRunModalEl, {
+    focusTarget: firstRunLanguageSelectEl || firstRunConfirmBtnEl,
+    closeMenu: false
+  });
+}
+
+function hideFirstRunSetupModal() {
+  closeOverlayModal(firstRunModalEl, { restoreFocus: false });
+}
+
+function completeFirstRunSetup(options = {}) {
+  const { useSuggestedDefaults = false } = options;
+  if (useSuggestedDefaults) {
+    settings = {
+      ...settings,
+      ...createDefaultSettings(detectPreferredLanguage()),
+      hasCompletedOnboarding: true
+    };
+  } else if (firstRunLanguageSelectEl && firstRunThemeSelectEl && firstRunColorThemeSelectEl) {
+    settings.language = normalizeLanguage(firstRunLanguageSelectEl.value);
+    settings.theme = normalizeTheme(firstRunThemeSelectEl.value);
+    settings.colorTheme = normalizeColorTheme(firstRunColorThemeSelectEl.value);
+    settings.hasCompletedOnboarding = true;
+  } else {
+    settings.hasCompletedOnboarding = true;
+  }
+
+  window.settings = settings;
+  syncPrimarySettingsControls();
+  applyTheme(settings.theme);
+  applyColorTheme(settings.colorTheme);
+  applyTranslations();
+  saveSettings();
+  hideFirstRunSetupModal();
 }
 
 function resolveAppDialog(result = false) {
@@ -2449,8 +2525,7 @@ async function refreshDashboardPanel(options = {}) {
     if (routes.length === 0) await laadRoutes();
     if (stopsById.size === 0) await laadStops();
 
-    const res = await fetchWithTimeout(API_URL);
-    const data = await res.json();
+    const data = await fetchRealtimeFeed();
     if (requestToken !== dashboardRequestToken || dashboardPanelEl.hidden) return;
     const entities = Array.isArray(data.entity) ? data.entity : [];
 
@@ -3718,13 +3793,9 @@ function updateVehiclePhotoNavigation() {
   if (vehiclePhotoPrevBtn) vehiclePhotoPrevBtn.hidden = !hasMultiplePhotos;
   if (vehiclePhotoNextBtn) vehiclePhotoNextBtn.hidden = !hasMultiplePhotos;
   if (vehiclePhotoCounterEl) {
-    if (!hasMultiplePhotos) {
-      vehiclePhotoCounterEl.hidden = true;
-      vehiclePhotoCounterEl.textContent = "";
-    } else {
-      vehiclePhotoCounterEl.hidden = false;
-      vehiclePhotoCounterEl.textContent = `${currentVehiclePhotoIndex + 1} / ${currentVehiclePhotoEntries.length}`;
-    }
+    vehiclePhotoCounterEl.hidden = true;
+    vehiclePhotoCounterEl.textContent = "";
+    vehiclePhotoCounterEl.setAttribute("aria-hidden", "true");
   }
 }
 
@@ -3781,10 +3852,18 @@ function renderActiveVehiclePhoto() {
 
 function setPageLoading(active) {
   if (!pageLoadingOverlayEl || !pageLoadingTextEl) return;
+  const nextState = !!active;
+  if (pageLoadingActive === nextState && pageLoadingOverlayEl.hidden === !nextState) {
+    if (pageLoadingTextEl.textContent !== t("loading")) {
+      pageLoadingTextEl.textContent = t("loading");
+    }
+    return;
+  }
+  pageLoadingActive = nextState;
   pageLoadingTextEl.textContent = t("loading");
-  pageLoadingOverlayEl.hidden = !active;
-  pageLoadingOverlayEl.setAttribute("aria-hidden", String(!active));
-  document.body.classList.toggle("page-loading", !!active);
+  pageLoadingOverlayEl.hidden = !nextState;
+  pageLoadingOverlayEl.setAttribute("aria-hidden", String(!nextState));
+  document.body.classList.toggle("page-loading", nextState);
 }
 
 function setOfflineOverlayVisible(visible) {
@@ -3822,11 +3901,20 @@ async function verifyInternetConnection(force = false) {
     setOfflineOverlayVisible(!lastVerifiedInternetState);
     return lastVerifiedInternetState;
   }
-  const online = await hasVerifiedInternetConnection();
-  lastVerifiedInternetAt = now;
-  lastVerifiedInternetState = online;
-  setOfflineOverlayVisible(!online);
-  return online;
+  if (internetVerificationPromise) {
+    return internetVerificationPromise;
+  }
+  internetVerificationPromise = hasVerifiedInternetConnection()
+    .then((online) => {
+      lastVerifiedInternetAt = Date.now();
+      lastVerifiedInternetState = online;
+      setOfflineOverlayVisible(!online);
+      return online;
+    })
+    .finally(() => {
+      internetVerificationPromise = null;
+    });
+  return internetVerificationPromise;
 }
 
 function startInternetChecks() {
@@ -4194,15 +4282,41 @@ function loadSettings() {
     if (!window.localStorage) return;
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (!raw) return;
+    hasStoredSettings = true;
     const parsed = JSON.parse(raw);
     settings = { ...settings, ...parsed };
     settings.theme = settings.theme === "light" || settings.theme === "dark" || settings.theme === "auto" ? settings.theme : "auto";
     settings.colorTheme = normalizeColorTheme(settings.colorTheme);
+    settings.language = normalizeLanguage(settings.language);
     settings.dashboardVehicleIds = normalizeDashboardVehicleIds(settings.dashboardVehicleIds);
+    settings.hasCompletedOnboarding = typeof parsed.hasCompletedOnboarding === "boolean" ? parsed.hasCompletedOnboarding : true;
     window.settings = settings;
   } catch (e) {
     console.warn("Settings laden mislukt", e);
   }
+}
+
+async function fetchRealtimeFeed(force = false) {
+  const now = Date.now();
+  if (!force && realtimeFeedCacheData && now - realtimeFeedCacheFetchedAt < REALTIME_FEED_CACHE_MS) {
+    return realtimeFeedCacheData;
+  }
+  if (!force && realtimeFeedCachePromise) {
+    return realtimeFeedCachePromise;
+  }
+
+  realtimeFeedCachePromise = fetchWithTimeout(API_URL, { cache: "no-store" }, REALTIME_FETCH_TIMEOUT_MS)
+    .then((response) => response.json())
+    .then((data) => {
+      realtimeFeedCacheData = data;
+      realtimeFeedCacheFetchedAt = Date.now();
+      return data;
+    })
+    .finally(() => {
+      realtimeFeedCachePromise = null;
+    });
+
+  return realtimeFeedCachePromise;
 }
 
 function saveSettings() {
@@ -4217,6 +4331,71 @@ function saveSettings() {
 
 function normalizeTheme(theme) {
   return theme === "light" || theme === "dark" || theme === "auto" ? theme : "auto";
+}
+
+function normalizeLanguage(language) {
+  const normalized = (language || "").toString().trim().toLowerCase();
+  const baseLanguage = normalized.split(/[-_]/)[0] || "";
+  return ALLOWED_LANGUAGES.includes(baseLanguage) ? baseLanguage : DEFAULT_LANG;
+}
+
+function detectPreferredLanguage() {
+  const candidates = [
+    ...(Array.isArray(window.navigator.languages) ? window.navigator.languages : []),
+    window.navigator.language,
+    window.navigator.userLanguage,
+    window.navigator.browserLanguage
+  ];
+
+  for (const candidate of candidates) {
+    const normalizedLanguage = normalizeLanguage(candidate);
+    if (normalizedLanguage && ALLOWED_LANGUAGES.includes(normalizedLanguage)) {
+      return normalizedLanguage;
+    }
+  }
+
+  return DEFAULT_LANG;
+}
+
+function createDefaultSettings(language = DEFAULT_LANG) {
+  return {
+    intervalMs: 10000,
+    theme: "auto",
+    colorTheme: "classic",
+    language: normalizeLanguage(language),
+    dashboardVehicleIds: [],
+    hasCompletedOnboarding: false
+  };
+}
+
+function syncPrimarySettingsControls() {
+  if (intervalSelect) intervalSelect.value = String(settings.intervalMs);
+  if (themeSelect) themeSelect.value = settings.theme;
+  if (colorThemeSelect) colorThemeSelect.value = settings.colorTheme;
+  if (languageSelect) languageSelect.value = settings.language;
+}
+
+function syncFirstRunSetupControls() {
+  if (firstRunLanguageSelectEl) firstRunLanguageSelectEl.value = normalizeLanguage(settings.language);
+  if (firstRunThemeSelectEl) firstRunThemeSelectEl.value = getEffectiveThemeSetting(settings.theme, settings.colorTheme);
+  if (firstRunColorThemeSelectEl) firstRunColorThemeSelectEl.value = normalizeColorTheme(settings.colorTheme);
+}
+
+function shouldShowFirstRunSetup() {
+  return !settings.hasCompletedOnboarding;
+}
+
+function applyFirstRunPreviewSettings() {
+  if (!firstRunLanguageSelectEl || !firstRunThemeSelectEl || !firstRunColorThemeSelectEl) return;
+  settings.language = normalizeLanguage(firstRunLanguageSelectEl.value);
+  settings.theme = normalizeTheme(firstRunThemeSelectEl.value);
+  settings.colorTheme = normalizeColorTheme(firstRunColorThemeSelectEl.value);
+  window.settings = settings;
+  syncPrimarySettingsControls();
+  applyTheme(settings.theme);
+  applyColorTheme(settings.colorTheme);
+  applyTranslations();
+  syncFirstRunSetupControls();
 }
 
 function isNeonThemeActive(colorTheme = settings.colorTheme) {
@@ -4237,7 +4416,10 @@ function syncThemeControlState() {
     [themeDarkOptEl, true],
     [dashboardThemeAutoOptEl, !neonThemeActive],
     [dashboardThemeLightOptEl, !neonThemeActive],
-    [dashboardThemeDarkOptEl, true]
+    [dashboardThemeDarkOptEl, true],
+    [firstRunThemeAutoOptEl, !neonThemeActive],
+    [firstRunThemeLightOptEl, !neonThemeActive],
+    [firstRunThemeDarkOptEl, true]
   ];
 
   themeOptionBindings.forEach(([optionEl, isEnabled]) => {
@@ -4248,6 +4430,7 @@ function syncThemeControlState() {
 
   if (themeSelect) themeSelect.value = visibleThemeValue;
   if (dashboardThemeSelectEl) dashboardThemeSelectEl.value = visibleThemeValue;
+  if (firstRunThemeSelectEl) firstRunThemeSelectEl.value = visibleThemeValue;
 }
 
 function applyTheme(theme) {
@@ -4320,7 +4503,10 @@ function applyTranslations() {
   appTitleEl.textContent = getLabel("appTitle", "Busbibliotheek");
   if (splashTitleEl) splashTitleEl.textContent = getLabel("appTitle", "Busbibliotheek");
   appSubtitleEl.textContent = t("subtitle").replace(/\.\s*$/, "");
+  if (searchHelpTextEl) searchHelpTextEl.textContent = getLabel("searchHelp", "Zoek op voertuignummer, nummerplaat of intern nummer.");
   if (splashCreditEl) splashCreditEl.textContent = getLabel("madeBy", "Made by @delijn_busspotter");
+  if (headerVisualKickerEl) headerVisualKickerEl.textContent = getLabel("headerVisualKicker", "Realtime overzicht");
+  if (headerVisualTitleEl) headerVisualTitleEl.textContent = getLabel("headerVisualTitle", "Open meteen de juiste bus en volg de rit live.");
   if (installBtn) installBtn.textContent = t("install");
   const moreLabel = getLabel("more", "Meer");
   const menuLabel = getLabel("menu", "Menu");
@@ -4440,6 +4626,26 @@ function applyTranslations() {
   if (installGuideSummaryEl) installGuideSummaryEl.textContent = getLabel("installGuideSummary", "Voeg Busbibliotheek toe aan je beginscherm via het deelmenu van Safari.");
   if (installGuideCloseBtn) installGuideCloseBtn.setAttribute("aria-label", getLabel("close", "Sluiten"));
   if (installGuideOkBtn) installGuideOkBtn.textContent = getLabel("close", "Sluiten");
+  if (firstRunTitleEl) firstRunTitleEl.textContent = getLabel("firstRunTitle", "Welkom bij Busbibliotheek");
+  if (firstRunSummaryEl) firstRunSummaryEl.textContent = getLabel("firstRunSummary", "Kies je taal en uiterlijk voor je start. Je kan dit later altijd wijzigen in Instellingen.");
+  if (firstRunIntroTitleEl) firstRunIntroTitleEl.textContent = getLabel("firstRunIntroTitle", "Volg voertuigen van De Lijn in realtime.");
+  if (firstRunDescriptionEl) firstRunDescriptionEl.textContent = getLabel("firstRunDescription", "Busbibliotheek helpt je snel een voertuig terugvinden, live volgen en extra info bekijken zoals foto's, favorieten en vergelijking.");
+  if (firstRunLanguageLabelEl) firstRunLanguageLabelEl.textContent = t("language");
+  if (firstRunThemeLabelEl) firstRunThemeLabelEl.textContent = t("theme");
+  if (firstRunThemeAutoOptEl) firstRunThemeAutoOptEl.textContent = t("themeAuto");
+  if (firstRunThemeLightOptEl) firstRunThemeLightOptEl.textContent = t("themeLight");
+  if (firstRunThemeDarkOptEl) firstRunThemeDarkOptEl.textContent = t("themeDark");
+  if (firstRunColorThemeLabelEl) firstRunColorThemeLabelEl.textContent = t("colorTheme");
+  if (firstRunColorClassicOptEl) firstRunColorClassicOptEl.textContent = t("colorClassic");
+  if (firstRunColorBlueOptEl) firstRunColorBlueOptEl.textContent = t("colorBlue");
+  if (firstRunColorGreenOptEl) firstRunColorGreenOptEl.textContent = t("colorGreen");
+  if (firstRunColorYellowOptEl) firstRunColorYellowOptEl.textContent = t("colorYellow");
+  if (firstRunColorOrangeOptEl) firstRunColorOrangeOptEl.textContent = t("colorOrange");
+  if (firstRunColorRedOptEl) firstRunColorRedOptEl.textContent = t("colorRed");
+  if (firstRunColorPurpleOptEl) firstRunColorPurpleOptEl.textContent = t("colorPurple");
+  if (firstRunColorNeonOptEl) firstRunColorNeonOptEl.textContent = t("colorNeon");
+  if (firstRunSkipBtnEl) firstRunSkipBtnEl.textContent = getLabel("firstRunSkip", "Standaard gebruiken");
+  if (firstRunConfirmBtnEl) firstRunConfirmBtnEl.textContent = getLabel("firstRunConfirm", "Busbibliotheek starten");
   if (appDialogTitleEl && appDialogModalEl?.hidden) appDialogTitleEl.textContent = getLabel("dialogInfoTitle", "Melding");
   if (appDialogCloseBtn) appDialogCloseBtn.setAttribute("aria-label", getLabel("close", "Sluiten"));
   if (appDialogCancelBtn) appDialogCancelBtn.textContent = getLabel("cancel", "Annuleren");
@@ -4917,6 +5123,9 @@ function closeInteractiveOverlay(overlayEl) {
     hideInstallGuideModal();
     return true;
   }
+  if (overlayEl === firstRunModalEl) {
+    return false;
+  }
   if (overlayEl === appDialogModalEl) {
     closeAppDialog(false);
     return true;
@@ -5054,13 +5263,8 @@ async function resetSiteData() {
 
   favorites = [];
   dashboardVehicleIds = [];
-  settings = {
-    intervalMs: 10000,
-    theme: "auto",
-    colorTheme: "classic",
-    language: "nl",
-    dashboardVehicleIds: []
-  };
+  hasStoredSettings = false;
+  settings = createDefaultSettings(DEFAULT_LANG);
   window.settings = settings;
 
   try {
@@ -5304,6 +5508,12 @@ function initInactivityMonitor() {
 
 function initAppPreferences() {
   loadSettings();
+  if (!hasStoredSettings) {
+    settings = {
+      ...settings,
+      ...createDefaultSettings(detectPreferredLanguage())
+    };
+  }
   window.settings = settings;
   initializeRouteHistory();
   syncPlatformBodyClasses();
@@ -5313,11 +5523,9 @@ function initAppPreferences() {
   settings.intervalMs = normalizeUpdateIntervalMs(settings.intervalMs);
   updateIntervalMs = settings.intervalMs;
   dashboardVehicleIds = normalizeDashboardVehicleIds(settings.dashboardVehicleIds);
-  intervalSelect.value = String(updateIntervalMs);
-  themeSelect.value = settings.theme;
+  settings.language = normalizeLanguage(settings.language);
   settings.colorTheme = normalizeColorTheme(settings.colorTheme);
-  colorThemeSelect.value = settings.colorTheme;
-  languageSelect.value = settings.language;
+  syncPrimarySettingsControls();
   applyTheme(settings.theme);
   applyColorTheme(settings.colorTheme);
   applyTranslations();
@@ -5337,6 +5545,7 @@ function initAppPreferences() {
 
   syncInstallButtonVisibility();
   initInactivityMonitor();
+  if (shouldShowFirstRunSetup()) showFirstRunSetupModal();
 }
 
 searchBtn.addEventListener("click", zoekAlles);
@@ -5648,6 +5857,11 @@ installGuideOkBtn?.addEventListener("click", hideInstallGuideModal);
 installGuideModalEl?.addEventListener("click", (event) => {
   if (event.target === installGuideModalEl) hideInstallGuideModal();
 });
+firstRunLanguageSelectEl?.addEventListener("change", applyFirstRunPreviewSettings);
+firstRunThemeSelectEl?.addEventListener("change", applyFirstRunPreviewSettings);
+firstRunColorThemeSelectEl?.addEventListener("change", applyFirstRunPreviewSettings);
+firstRunSkipBtnEl?.addEventListener("click", () => completeFirstRunSetup({ useSuggestedDefaults: true }));
+firstRunConfirmBtnEl?.addEventListener("click", () => completeFirstRunSetup());
 appDialogCloseBtn?.addEventListener("click", () => closeAppDialog(false));
 appDialogCancelBtn?.addEventListener("click", () => closeAppDialog(false));
 appDialogConfirmBtn?.addEventListener("click", () => closeAppDialog(true));
@@ -6420,6 +6634,7 @@ function renderSuggestionList(listEl, inputEl, onSelect) {
     return;
   }
 
+  const fragment = document.createDocumentFragment();
   results.forEach((vehicle) => {
     const secondaryLabel = buildSuggestionLabel(vehicle);
     const visibleVehicleId = buildSuggestionDisplayLabel(vehicle);
@@ -6481,8 +6696,9 @@ function renderSuggestionList(listEl, inputEl, onSelect) {
         hideSuggestionList(listEl);
       }
     });
-    listEl.appendChild(li);
+    fragment.appendChild(li);
   });
+  listEl.appendChild(fragment);
 
   listEl.hidden = false;
   if (isAndroidTvPlatform) {
@@ -6492,7 +6708,7 @@ function renderSuggestionList(listEl, inputEl, onSelect) {
 
 function setSuggestionActiveItem(listEl, nextIndex) {
   if (!listEl) return;
-  const items = Array.from(listEl.querySelectorAll("li"));
+  const items = Array.from(listEl.children);
   if (!items.length) {
     listEl.dataset.activeIndex = "-1";
     return;
@@ -6575,7 +6791,7 @@ function bindVehicleSuggestions(inputEl, onSelect) {
   inputEl.addEventListener("input", debounce(render, 200));
   inputEl.addEventListener("focus", render);
   inputEl.addEventListener("keydown", (event) => {
-    const items = Array.from(listEl.querySelectorAll("li"));
+    const items = Array.from(listEl.children);
     if (!items.length || listEl.hidden) return;
     const currentIndex = Number(listEl.dataset.activeIndex || -1);
     if (event.key === "ArrowDown") {
@@ -6620,8 +6836,8 @@ function bindVehicleSuggestions(inputEl, onSelect) {
     if (listEl.hidden) return;
     positionSuggestionList(listEl, inputEl);
   };
-  window.addEventListener("resize", syncFloatingListPosition);
-  window.addEventListener("scroll", syncFloatingListPosition, true);
+  window.addEventListener("resize", syncFloatingListPosition, { passive: true });
+  window.addEventListener("scroll", syncFloatingListPosition, { capture: true, passive: true });
 }
 
 async function laadVoertuigen() {
@@ -6738,8 +6954,6 @@ window.requestAnimationFrame(clearInitialHeaderButtonFocus);
 window.addEventListener("load", () => {
   window.requestAnimationFrame(clearInitialHeaderButtonFocus);
 }, { once: true });
-
-window.addEventListener("resize", syncHeaderActionPlacement);
 
 async function maybeAutoStartDashboardForAndroidTv() {
   if (!isAndroidTvPlatform || dashboardAutoStarted || window.location.search.includes("bus=")) return;
@@ -7472,8 +7686,7 @@ async function updateRealtime(id){
     return;
   }
   try{
-    const res = await fetchWithTimeout(API_URL, {}, REALTIME_FETCH_TIMEOUT_MS);
-    const data = await res.json();
+    const data = await fetchRealtimeFeed();
     if (requestToken !== realtimeRequestToken || id !== currentVehicleId) return;
     dataLoadTimestamps.realtime = Date.now();
     const entities = Array.isArray(data.entity) ? data.entity : [];

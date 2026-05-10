@@ -66,7 +66,10 @@ nl: {
   story44xx: "Het verhaal van 44xx",
   feedCurrentUntil: "Gegevens actueel tot {date}.",
   disclaimerTitle: "Disclaimer",
-  disclaimerText: "De informatie op deze website wordt verstrekt zonder garanties. Busbibliotheek is niet aansprakelijk voor vertragingen, fouten of onnauwkeurigheden in realtimegegevens. Gebruik is op eigen risico. Raadpleeg voor officiële ritinformatie de bevoegde vervoersmaatschappij."
+  disclaimerText: "De informatie op deze website wordt verstrekt zonder garanties. Busbibliotheek is niet aansprakelijk voor vertragingen, fouten of onnauwkeurigheden in realtimegegevens. Gebruik is op eigen risico. Raadpleeg voor officiële ritinformatie de bevoegde vervoersmaatschappij.",
+  searchHelp: "Zoek op voertuignummer, nummerplaat of intern nummer.",
+  headerVisualKicker: "Realtime overzicht",
+  headerVisualTitle: "Open meteen de juiste bus en volg de rit live."
 },
 
 fr: {
@@ -126,7 +129,10 @@ fr: {
   story44xx: "L’histoire de 44xx",
   feedCurrentUntil: "Données à jour jusqu’au {date}.",
   disclaimerTitle: "Avertissement",
-  disclaimerText: "Les informations de ce site sont fournies sans garantie. Busbibliotheek ne peut être tenu responsable des retards, erreurs ou inexactitudes des données en temps réel. L’utilisation se fait à vos propres risques. Pour des informations officielles sur les trajets, veuillez consulter l’opérateur de transport compétent."
+  disclaimerText: "Les informations de ce site sont fournies sans garantie. Busbibliotheek ne peut être tenu responsable des retards, erreurs ou inexactitudes des données en temps réel. L’utilisation se fait à vos propres risques. Pour des informations officielles sur les trajets, veuillez consulter l’opérateur de transport compétent.",
+  searchHelp: "Recherchez par numéro de véhicule, plaque d’immatriculation ou numéro interne.",
+  headerVisualKicker: "Aperçu en temps réel",
+  headerVisualTitle: "Ouvrez immédiatement le bon bus et suivez le trajet en direct."
 },
 
 en: {
@@ -195,7 +201,10 @@ en: {
   story44xx: "The story of 44xx",
   feedCurrentUntil: "Data updated until {date}.",
   disclaimerTitle: "Disclaimer",
-  disclaimerText: "The information on this website is provided without guarantees. Busbibliotheek is not liable for delays, errors, or inaccuracies in real-time data. Use at your own risk. For official trip information, please consult the relevant transport operator."
+  disclaimerText: "The information on this website is provided without guarantees. Busbibliotheek is not liable for delays, errors, or inaccuracies in real-time data. Use at your own risk. For official trip information, please consult the relevant transport operator.",
+  searchHelp: "Search by vehicle number, license plate, or internal number.",
+  headerVisualKicker: "Realtime overview",
+  headerVisualTitle: "Open the right bus right away and follow the trip live."
 },
 
 
@@ -256,7 +265,10 @@ de: {
   story44xx: "Die Geschichte von 44xx",
   feedCurrentUntil: "Daten aktuell bis {date}.",
   disclaimerTitle: "Haftungsausschluss",
-  disclaimerText: "Die Informationen auf dieser Website werden ohne Gewähr bereitgestellt. Busbibliotheek haftet nicht für Verspätungen, Fehler oder Ungenauigkeiten in den Echtzeitdaten. Die Nutzung erfolgt auf eigenes Risiko. Für offizielle Fahrtdaten wenden Sie sich bitte an den zuständigen Verkehrsbetreiber."
+  disclaimerText: "Die Informationen auf dieser Website werden ohne Gewähr bereitgestellt. Busbibliotheek haftet nicht für Verspätungen, Fehler oder Ungenauigkeiten in den Echtzeitdaten. Die Nutzung erfolgt auf eigenes Risiko. Für offizielle Fahrtdaten wenden Sie sich bitte an den zuständigen Verkehrsbetreiber.",
+  searchHelp: "Suche nach Fahrzeugnummer, Kennzeichen oder interner Nummer.",
+  headerVisualKicker: "Echtzeitübersicht",
+  headerVisualTitle: "Öffne sofort den richtigen Bus und verfolge die Fahrt live."
 },
 
 
@@ -317,7 +329,10 @@ pl: {
   story44xx: "Historia 44xx",
   feedCurrentUntil: "Dane aktualne do {date}.",
   disclaimerTitle: "Zastrzeżenie",
-  disclaimerText: "Informacje na tej stronie są udostępniane bez gwarancji. Busbibliotheek nie ponosi odpowiedzialności za opóźnienia, błędy ani nieścisłości w danych w czasie rzeczywistym. Korzystanie odbywa się na własne ryzyko. W celu uzyskania oficjalnych informacji o kursach skontaktuj się z przewoźnikiem."
+  disclaimerText: "Informacje na tej stronie są udostępniane bez gwarancji. Busbibliotheek nie ponosi odpowiedzialności za opóźnienia, błędy ani nieścisłości w danych w czasie rzeczywistym. Korzystanie odbywa się na własne ryzyko. W celu uzyskania oficjalnych informacji o kursach skontaktuj się z przewoźnikiem.",
+  searchHelp: "Szukaj według numeru pojazdu, tablicy rejestracyjnej lub numeru wewnętrznego.",
+  headerVisualKicker: "Podgląd na żywo",
+  headerVisualTitle: "Otwórz od razu właściwy autobus i śledź kurs na żywo."
 },
 
 
@@ -378,7 +393,10 @@ es: {
   story44xx: "La historia de 44xx",
   feedCurrentUntil: "Datos actualizados hasta {date}.",
   disclaimerTitle: "Aviso legal",
-  disclaimerText: "La información de este sitio se ofrece sin garantías. Busbibliotheek no se hace responsable de retrasos, errores o inexactitudes en los datos en tiempo real. El uso es bajo tu propio riesgo. Para obtener información oficial del servicio, consulta al operador de transporte correspondiente."
+  disclaimerText: "La información de este sitio se ofrece sin garantías. Busbibliotheek no se hace responsable de retrasos, errores o inexactitudes en los datos en tiempo real. El uso es bajo tu propio riesgo. Para obtener información oficial del servicio, consulta al operador de transporte correspondiente.",
+  searchHelp: "Busca por número de vehículo, matrícula o número interno.",
+  headerVisualKicker: "Resumen en tiempo real",
+  headerVisualTitle: "Abre enseguida el autobús correcto y sigue el trayecto en directo."
 },
 
 
@@ -439,7 +457,10 @@ ru: {
   story44xx: "История 44xx",
   feedCurrentUntil: "Данные актуальны до {date}",
   disclaimerTitle: "Отказ от ответственности",
-  disclaimerText: "Информация на этом сайте предоставляется без гарантий. Busbibliotheek не несёт ответственности за задержки, ошибки или неточности в данных в реальном времени. Использование осуществляется на ваш собственный риск."
+  disclaimerText: "Информация на этом сайте предоставляется без гарантий. Busbibliotheek не несёт ответственности за задержки, ошибки или неточности в данных в реальном времени. Использование осуществляется на ваш собственный риск.",
+  searchHelp: "Ищите по номеру транспорта, госномеру или внутреннему номеру.",
+  headerVisualKicker: "Обзор в реальном времени",
+  headerVisualTitle: "Сразу откройте нужный автобус и следите за рейсом вживую."
 }
   },
 
@@ -1196,6 +1217,12 @@ Object.assign(window.BB_TRANSLATIONS.i18n.nl, {
   dialogConfirmTitle: "Bevestiging",
   dialogInfoTitle: "Melding",
   dialogOk: "OK",
+  firstRunTitle: "Welkom bij Busbibliotheek",
+  firstRunSummary: "Kies je taal en uiterlijk voor je start. Je kan dit later altijd wijzigen in Instellingen.",
+  firstRunIntroTitle: "Volg voertuigen van De Lijn in realtime.",
+  firstRunDescription: "Busbibliotheek helpt je snel een voertuig terugvinden, live volgen en extra info bekijken zoals foto's, favorieten en vergelijking.",
+  firstRunSkip: "Standaard gebruiken",
+  firstRunConfirm: "Busbibliotheek starten",
   footerReview: "Feedback achterlaten",
   footerTerms: "Gebruiksvoorwaarden",
   haltCodePlaceholder: "Haltecode of naam",
@@ -1285,6 +1312,54 @@ Object.assign(window.BB_TRANSLATIONS.i18n.nl, {
   weatherThunderHail: "Onweer met hagel",
   weatherUnknown: "Weer",
   weatherWind: "Wind"
+});
+Object.assign(window.BB_TRANSLATIONS.i18n.fr, {
+  firstRunTitle: "Bienvenue sur Busbibliotheek",
+  firstRunSummary: "Choisissez votre langue et votre apparence pour commencer. Vous pourrez toujours modifier cela plus tard dans les paramètres.",
+  firstRunIntroTitle: "Suivez les véhicules de De Lijn en temps réel.",
+  firstRunDescription: "Busbibliotheek vous aide à retrouver rapidement un véhicule, à le suivre en direct et à consulter des informations supplémentaires comme des photos, des favoris et des comparaisons.",
+  firstRunSkip: "Utiliser par défaut",
+  firstRunConfirm: "Ouvrir Busbibliotheek"
+});
+Object.assign(window.BB_TRANSLATIONS.i18n.en, {
+  firstRunTitle: "Welcome to Busbibliotheek",
+  firstRunSummary: "Choose your language and appearance to get started. You can always change this later in Settings.",
+  firstRunIntroTitle: "Follow De Lijn vehicles in realtime.",
+  firstRunDescription: "Busbibliotheek helps you quickly find a vehicle, follow it live, and view extra info like photos, favorites, and comparisons.",
+  firstRunSkip: "Use defaults",
+  firstRunConfirm: "Start Busbibliotheek"
+});
+Object.assign(window.BB_TRANSLATIONS.i18n.de, {
+  firstRunTitle: "Willkommen bei Busbibliotheek",
+  firstRunSummary: "Wähle deine Sprache und Darstellung für den Start. Du kannst das später jederzeit in den Einstellungen ändern.",
+  firstRunIntroTitle: "Verfolge Fahrzeuge von De Lijn in Echtzeit.",
+  firstRunDescription: "Busbibliotheek hilft dir, schnell ein Fahrzeug zu finden, es live zu verfolgen und zusätzliche Infos wie Fotos, Favoriten und Vergleiche anzusehen.",
+  firstRunSkip: "Standard verwenden",
+  firstRunConfirm: "Busbibliotheek starten"
+});
+Object.assign(window.BB_TRANSLATIONS.i18n.pl, {
+  firstRunTitle: "Witaj w Busbibliotheek",
+  firstRunSummary: "Wybierz język i wygląd na start. Zawsze możesz to później zmienić w ustawieniach.",
+  firstRunIntroTitle: "Śledź pojazdy De Lijn w czasie rzeczywistym.",
+  firstRunDescription: "Busbibliotheek pomaga szybko znaleźć pojazd, śledzić go na żywo i przeglądać dodatkowe informacje, takie jak zdjęcia, ulubione i porównania.",
+  firstRunSkip: "Użyj domyślnych",
+  firstRunConfirm: "Uruchom Busbibliotheek"
+});
+Object.assign(window.BB_TRANSLATIONS.i18n.es, {
+  firstRunTitle: "Bienvenido a Busbibliotheek",
+  firstRunSummary: "Elige tu idioma y apariencia para empezar. Siempre podrás cambiarlo más tarde en Ajustes.",
+  firstRunIntroTitle: "Sigue los vehículos de De Lijn en tiempo real.",
+  firstRunDescription: "Busbibliotheek te ayuda a encontrar rápidamente un vehículo, seguirlo en directo y ver información extra como fotos, favoritos y comparaciones.",
+  firstRunSkip: "Usar valores predeterminados",
+  firstRunConfirm: "Iniciar Busbibliotheek"
+});
+Object.assign(window.BB_TRANSLATIONS.i18n.ru, {
+  firstRunTitle: "Добро пожаловать в Busbibliotheek",
+  firstRunSummary: "Выберите язык и оформление для начала. Позже это всегда можно изменить в настройках.",
+  firstRunIntroTitle: "Следите за транспортом De Lijn в реальном времени.",
+  firstRunDescription: "Busbibliotheek помогает быстро найти транспорт, следить за ним вживую и смотреть дополнительную информацию, такую как фотографии, избранное и сравнение.",
+  firstRunSkip: "Использовать по умолчанию",
+  firstRunConfirm: "Открыть Busbibliotheek"
 });
 Object.assign(window.BB_TRANSLATIONS.i18n.de, { menu: "Menü" });
 Object.assign(window.BB_TRANSLATIONS.i18n.pl, { menu: "Menu" });

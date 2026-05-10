@@ -1567,20 +1567,30 @@ body.dialog-fallback .funny-modal-card {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 0.48rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 .halte-module-form .suggestion-input-shell {
   min-width: 0;
-  z-index: 2;
+  z-index: 6;
+  isolation: isolate;
 }
 
 .halte-module-form input {
   margin: 0;
+  min-height: var(--button-height);
+  height: var(--button-height);
+  padding: 0 0.92rem;
+  box-sizing: border-box;
 }
 
 .halte-module-form .btn {
   min-width: 9.5rem;
+  margin-top: 0;
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .halte-module-error {
@@ -1933,7 +1943,7 @@ button:disabled,
 
 #suggestielijst li,
 .inline-suggestion-list li {
-  padding: 0.56rem 0.78rem;
+  padding: 0.68rem 0.82rem;
   cursor: pointer;
   background: transparent;
   color: var(--text);
@@ -2432,6 +2442,61 @@ body.funny-open {
   margin-top: 0.8rem;
 }
 
+.first-run-modal-card {
+  width: min(640px, calc(100vw - 2rem));
+}
+
+.first-run-modal-header {
+  margin-bottom: 0.4rem;
+}
+
+.first-run-modal-body {
+  gap: 0.95rem;
+}
+
+.first-run-intro {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.9rem 0.95rem;
+  border-radius: calc(var(--panel-radius-sm) + 2px);
+  border: 1px solid color-mix(in srgb, var(--accent) 12%, var(--stroke));
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--accent-soft) 24%, transparent), transparent 40%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-alt) 98%, white 2%), color-mix(in srgb, var(--surface) 96%, transparent));
+}
+
+.first-run-intro strong {
+  color: var(--text);
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+
+.first-run-settings-grid {
+  gap: 0.7rem;
+}
+
+.first-run-settings-grid > .settings-card {
+  padding: 0.72rem 0.78rem;
+}
+
+.first-run-modal-actions {
+  justify-content: space-between;
+}
+
+@media (max-width: 640px) {
+  .first-run-modal-card {
+    width: min(100vw - 1rem, 640px);
+  }
+
+  .first-run-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .first-run-modal-actions > button {
+    width: 100%;
+  }
+}
+
 body.pdf-modal-open {
   overflow: hidden;
 }
@@ -2924,6 +2989,12 @@ body.platform-android-tv .inline-suggestion-list {
 .halte-search-modal-card .inline-suggestion-list {
   top: calc(100% + 0.32rem);
   max-height: min(220px, 34vh);
+  z-index: 2200;
+  border-radius: calc(var(--radius-md) + 4px);
+  border-color: color-mix(in srgb, var(--accent) 18%, var(--stroke));
+  box-shadow: 0 22px 44px rgba(15, 23, 42, 0.22);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 .info-list {
@@ -3671,11 +3742,26 @@ tr + tr td {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
+.vehicle-photo-frame.is-loading::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(115deg, transparent 0%, rgba(255, 255, 255, 0.04) 22%, rgba(255, 255, 255, 0.24) 50%, rgba(255, 255, 255, 0.06) 78%, transparent 100%),
+    radial-gradient(circle at 18% 24%, color-mix(in srgb, var(--accent-soft) 34%, transparent), transparent 34%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-strong) 94%, transparent), color-mix(in srgb, var(--surface-alt) 92%, transparent));
+  background-size: 220% 100%, auto, auto;
+  animation: vehiclePhotoShimmer 1.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
 .vehicle-photo-frame.is-loading::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(15, 23, 42, 0.08));
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(15, 23, 42, 0.16));
   pointer-events: none;
 }
 
@@ -3686,6 +3772,12 @@ tr + tr td {
   aspect-ratio: 16 / 9;
   object-fit: cover;
   transition: transform 0.24s ease;
+}
+
+.vehicle-photo-frame.is-loading .vehicle-photo-image {
+  opacity: 0.22;
+  filter: blur(10px) saturate(0.7);
+  transform: scale(1.03);
 }
 
 .vehicle-photo-frame.is-portrait {
@@ -3727,21 +3819,39 @@ tr + tr td {
 
 .vehicle-photo-loader {
   position: absolute;
-  inset: auto 1rem 1rem 1rem;
+  left: 1rem;
+  right: 1rem;
+  bottom: 1rem;
   z-index: 3;
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 0.7rem;
-  width: fit-content;
-  max-width: calc(100% - 2rem);
-  padding: 0.75rem 0.9rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(15, 23, 42, 0.72);
+  width: min(100%, 25rem);
+  padding: 0.82rem 0.96rem;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background:
+    linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.72)),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--accent-soft) 34%, transparent), transparent 48%);
   color: #fff;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 14px 28px rgba(2, 8, 23, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 18px 34px rgba(2, 8, 23, 0.28);
+}
+
+.vehicle-photo-loader::after {
+  content: "";
+  grid-column: 2;
+  height: 0.38rem;
+  width: min(100%, 11rem);
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.14));
+  opacity: 0.9;
+  animation: vehiclePhotoLoaderPulse 1.2s ease-in-out infinite;
 }
 
 .vehicle-photo-loader[hidden] {
@@ -3761,6 +3871,26 @@ tr + tr td {
   font-size: 0.88rem;
   font-weight: 700;
   line-height: 1.2;
+}
+
+@keyframes vehiclePhotoShimmer {
+  0% {
+    background-position: 160% 0, 0 0, 0 0;
+  }
+  100% {
+    background-position: -80% 0, 0 0, 0 0;
+  }
+}
+
+@keyframes vehiclePhotoLoaderPulse {
+  0%, 100% {
+    opacity: 0.42;
+    transform: scaleX(0.94);
+  }
+  50% {
+    opacity: 0.98;
+    transform: scaleX(1);
+  }
 }
 
 .photo-nav-btn {
@@ -5261,6 +5391,20 @@ body.platform-phone.platform-ios .instagram-help-text {
 
   .header-intro {
     padding-right: 0;
+  }
+
+  .header-copy {
+    gap: 0.22rem;
+  }
+
+  .search-shell {
+    width: 100%;
+    max-width: none;
+  }
+
+  .search-help {
+    max-width: 100%;
+    margin-top: 0.4rem;
   }
 
   .header-actions {
@@ -7297,7 +7441,7 @@ body::before {
 
 .vehicle-photo-info {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
   gap: 0.9rem;
   width: 100%;
@@ -7305,22 +7449,12 @@ body::before {
 }
 
 .vehicle-photo-counter {
-  justify-self: end;
-  align-self: start;
-  padding: 0.65rem 0.95rem;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--stroke-soft) 80%, transparent);
-  background: color-mix(in srgb, var(--surface-strong) 92%, transparent);
-  color: var(--accent);
-  font-size: 0.95rem;
-  font-weight: 700;
-  line-height: 1;
-  white-space: nowrap;
+  display: none !important;
 }
 
 .vehicle-photo-meta {
   justify-self: start;
-  width: auto;
+  width: 100%;
   max-width: min(100%, 34rem);
   min-width: 0;
 }
@@ -8373,6 +8507,10 @@ footer {
   overflow: hidden;
 }
 
+.results-wrap.show ~ footer {
+  margin-top: 1.35rem !important;
+}
+
 footer::before {
   content: "";
   position: absolute;
@@ -8518,8 +8656,42 @@ button:hover,
 }
 
 @media (max-width: 560px) {
+  .container {
+    padding:
+      max(0.58rem, env(safe-area-inset-top))
+      0.58rem
+      max(0.9rem, env(safe-area-inset-bottom))
+      0.58rem;
+  }
+
   .header-visual {
     display: none;
+  }
+
+  .header-bar {
+    gap: 0.72rem !important;
+  }
+
+  .header-intro {
+    gap: 0.62rem !important;
+  }
+
+  .search-row {
+    gap: 0.44rem !important;
+    padding: 0.32rem !important;
+  }
+
+  .search-row input {
+    padding-inline: 0.92rem 0.72rem !important;
+    font-size: 0.98rem !important;
+  }
+
+  .first-run-modal-card {
+    width: min(calc(100vw - 0.75rem), 640px);
+  }
+
+  .first-run-intro {
+    padding: 0.8rem 0.82rem;
   }
 
   .header-side {

@@ -74,7 +74,7 @@
           </button>
         </div>
         <ul id="suggestielijst" hidden></ul>
-        <p class="search-help">Zoek op voertuignummer, nummerplaat of intern nummer.</p>
+        <p id="searchHelpText" class="search-help">Zoek op voertuignummer, nummerplaat of intern nummer.</p>
       </div>
     </div>
     <div class="header-side">
@@ -99,8 +99,8 @@
         <span class="header-visual-stop header-visual-stop--b"></span>
         <span class="header-visual-stop header-visual-stop--c"></span>
         <div class="header-visual-copy">
-          <span class="header-visual-kicker">Realtime overzicht</span>
-          <strong>Open meteen de juiste bus en volg de rit live.</strong>
+          <span id="headerVisualKicker" class="header-visual-kicker">Realtime overzicht</span>
+          <strong id="headerVisualTitle">Open meteen de juiste bus en volg de rit live.</strong>
         </div>
         <span class="header-visual-card header-visual-card--primary">
           <span class="header-visual-card-route">2</span>
@@ -408,6 +408,62 @@
     <div id="installGuideBody" class="pdf-modal-body legal-modal-body"></div>
     <div class="pdf-modal-actions">
       <button id="installGuideOkBtn" class="btn" type="button">Sluiten</button>
+    </div>
+  </div>
+</div>
+
+<div id="firstRunModal" class="pdf-modal" hidden role="dialog" aria-modal="true" aria-labelledby="firstRunTitle">
+  <div class="pdf-modal-card first-run-modal-card">
+    <div class="pdf-modal-header first-run-modal-header">
+      <div>
+        <h3 id="firstRunTitle">Welkom bij Busbibliotheek</h3>
+        <p id="firstRunSummary" class="pdf-modal-summary">Kies je taal en uiterlijk voor je start. Je kan dit later altijd wijzigen in Instellingen.</p>
+      </div>
+    </div>
+    <div class="pdf-modal-body first-run-modal-body">
+      <div class="first-run-intro">
+        <strong id="firstRunIntroTitle">Volg voertuigen van De Lijn in realtime.</strong>
+        <p id="firstRunDescription" class="pdf-modal-note">Busbibliotheek helpt je snel een voertuig terugvinden, live volgen en extra info bekijken zoals foto's, favorieten en vergelijking.</p>
+      </div>
+      <div class="settings-grid first-run-settings-grid">
+        <div class="settings-card">
+          <label for="firstRunLanguageSelect" id="firstRunLanguageLabel">Taal</label>
+          <select id="firstRunLanguageSelect">
+            <option value="nl">Nederlands</option>
+            <option value="fr">Français</option>
+            <option value="en">English</option>
+            <option value="de">Deutsch</option>
+            <option value="pl">Polski</option>
+            <option value="es">Español</option>
+            <option value="ru">Русский</option>
+          </select>
+        </div>
+        <div class="settings-card">
+          <label for="firstRunThemeSelect" id="firstRunThemeLabel">Thema</label>
+          <select id="firstRunThemeSelect">
+            <option value="auto" id="firstRunThemeAutoOpt">Automatisch</option>
+            <option value="light" id="firstRunThemeLightOpt">Licht</option>
+            <option value="dark" id="firstRunThemeDarkOpt">Donker</option>
+          </select>
+        </div>
+        <div class="settings-card">
+          <label for="firstRunColorThemeSelect" id="firstRunColorThemeLabel">Kleurthema</label>
+          <select id="firstRunColorThemeSelect">
+            <option value="classic" id="firstRunColorClassicOpt">Standaard</option>
+            <option value="blue" id="firstRunColorBlueOpt">Blauw</option>
+            <option value="green" id="firstRunColorGreenOpt">Groen</option>
+            <option value="yellow" id="firstRunColorYellowOpt">Geel</option>
+            <option value="orange" id="firstRunColorOrangeOpt">Oranje</option>
+            <option value="red" id="firstRunColorRedOpt">Rood</option>
+            <option value="purple" id="firstRunColorPurpleOpt">Paars</option>
+            <option value="neon" id="firstRunColorNeonOpt">Neon</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="pdf-modal-actions first-run-modal-actions">
+      <button id="firstRunSkipBtn" type="button">Standaard gebruiken</button>
+      <button id="firstRunConfirmBtn" class="btn" type="button">Busbibliotheek starten</button>
     </div>
   </div>
 </div>
