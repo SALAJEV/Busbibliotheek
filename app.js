@@ -1761,7 +1761,8 @@ function updateHeaderVisualRoutePresentation(routeShort = "2", destinationText =
     headerVisualRouteEl.style.setProperty("--header-banner-line-border", routeColor || "#E40521");
   }
   if (headerVisualDestinationEl) {
-    headerVisualDestinationEl.textContent = cleanText(destinationText) || "Erasmuslaan";
+    const displayDestination = destinationText == null ? "Erasmuslaan" : cleanText(destinationText);
+    headerVisualDestinationEl.textContent = displayDestination;
   }
 }
 
@@ -1770,16 +1771,28 @@ function normalizeRouteColor(value, fallback) {
   return raw.length === 6 ? `#${raw}` : fallback;
 }
 
+function getRandomRouteHeadsign(routeId) {
+  const normalizedRouteId = normalize(routeId);
+  if (!normalizedRouteId || !tripsByRouteId.has(normalizedRouteId)) return "";
+  const routeTrips = tripsByRouteId.get(normalizedRouteId) || [];
+  const validHeadsigns = routeTrips
+    .map((trip) => cleanText(trip.trip_headsign))
+    .filter((headsign) => headsign && headsign.length <= 15);
+  if (!validHeadsigns.length) return "";
+  return validHeadsigns[Math.floor(Math.random() * validHeadsigns.length)];
+}
+
 function getRandomHeaderVisualRouteData() {
   if (!routes?.length) return null;
   const availableRoutes = routes.filter((route) => {
     if (!route) return false;
-    return !!pickFirstText(route.route_short_name, route.route_id, route.route_long_name, route.route_desc);
+    const routeShort = pickFirstText(route.route_short_name, route.route_id);
+    return !!routeShort && !!getRandomRouteHeadsign(route.route_id);
   });
   if (!availableRoutes.length) return null;
   const routeData = availableRoutes[Math.floor(Math.random() * availableRoutes.length)];
   const routeShort = pickFirstText(routeData.route_short_name, routeData.route_id, "?");
-  const destinationText = pickFirstText(routeData.route_long_name, routeData.route_desc, `Naar ${routeShort}`);
+  const destinationText = getRandomRouteHeadsign(routeData.route_id);
   return {
     routeShort,
     destinationText,
@@ -1792,7 +1805,7 @@ async function setRandomHeaderVisualRouteFromRoutes() {
   let routePresentation = getRandomHeaderVisualRouteData();
   if (!routePresentation) {
     try {
-      await laadRoutes();
+      await Promise.all([laadRoutes(), laadTrips()]);
     } catch {
       // Ignore route loading failures and keep defaults.
     }
