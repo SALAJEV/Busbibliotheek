@@ -9060,6 +9060,14 @@ footer {
   overflow: hidden;
 }
 
+#favoritesPanel.menu-sheet {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
 .header-bar::before,
 .header-bar::after,
 .card::before,
