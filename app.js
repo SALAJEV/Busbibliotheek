@@ -2211,7 +2211,7 @@ function showDashboardSetupModal() {
   dashboardSetupDraftValues = Array.from({ length: DASHBOARD_MAX_VEHICLES }, (_, index) => getVisibleVehicleId(dashboardVehicleIds[index] || ""));
   dashboardSetupDraftResolvedIds = Array.from({ length: DASHBOARD_MAX_VEHICLES }, (_, index) => dashboardVehicleIds[index] || "");
   if (dashboardTvSettingsEl) dashboardTvSettingsEl.hidden = !isAndroidTvPlatform;
-  if (dashboardThemeSelectEl) dashboardThemeSelectEl.value = settings.theme;
+  if (dashboardThemeSelectEl) dashboardThemeSelectEl.value = getEffectiveThemeSetting(settings.theme, settings.colorTheme);
   if (dashboardColorThemeSelectEl) dashboardColorThemeSelectEl.value = settings.colorTheme;
   setDashboardSetupError("");
   renderDashboardSetupInputs();
@@ -4215,17 +4215,54 @@ function saveSettings() {
   }
 }
 
+function normalizeTheme(theme) {
+  return theme === "light" || theme === "dark" || theme === "auto" ? theme : "auto";
+}
+
+function isNeonThemeActive(colorTheme = settings.colorTheme) {
+  return normalizeColorTheme(colorTheme) === "neon";
+}
+
+function getEffectiveThemeSetting(theme = settings.theme, colorTheme = settings.colorTheme) {
+  if (isNeonThemeActive(colorTheme)) return "dark";
+  return normalizeTheme(theme);
+}
+
+function syncThemeControlState() {
+  const neonThemeActive = isNeonThemeActive(settings.colorTheme);
+  const visibleThemeValue = getEffectiveThemeSetting(settings.theme, settings.colorTheme);
+  const themeOptionBindings = [
+    [themeAutoOptEl, !neonThemeActive],
+    [themeLightOptEl, !neonThemeActive],
+    [themeDarkOptEl, true],
+    [dashboardThemeAutoOptEl, !neonThemeActive],
+    [dashboardThemeLightOptEl, !neonThemeActive],
+    [dashboardThemeDarkOptEl, true]
+  ];
+
+  themeOptionBindings.forEach(([optionEl, isEnabled]) => {
+    if (!optionEl) return;
+    optionEl.disabled = !isEnabled;
+    optionEl.hidden = !isEnabled;
+  });
+
+  if (themeSelect) themeSelect.value = visibleThemeValue;
+  if (dashboardThemeSelectEl) dashboardThemeSelectEl.value = visibleThemeValue;
+}
+
 function applyTheme(theme) {
   const root = document.documentElement;
-  const normalizedTheme = theme === "dark" || theme === "light" ? theme : "auto";
+  const normalizedTheme = getEffectiveThemeSetting(theme, settings.colorTheme);
   if (normalizedTheme === "auto") root.removeAttribute("data-theme");
   else root.setAttribute("data-theme", normalizedTheme);
+  syncThemeControlState();
   updateSystemUiThemeColor();
 }
 
 function getResolvedThemeMode() {
-  if (settings.theme === "dark") return "dark";
-  if (settings.theme === "light") return "light";
+  const effectiveTheme = getEffectiveThemeSetting(settings.theme, settings.colorTheme);
+  if (effectiveTheme === "dark") return "dark";
+  if (effectiveTheme === "light") return "light";
   if (isAndroidWebView && (androidHostThemeMode === "dark" || androidHostThemeMode === "light")) {
     return androidHostThemeMode;
   }
@@ -4241,6 +4278,7 @@ function applyColorTheme(colorTheme) {
   const root = document.documentElement;
   const normalized = normalizeColorTheme(colorTheme);
   root.setAttribute("data-color-theme", normalized);
+  syncThemeControlState();
   updateSystemUiThemeColor();
 }
 
@@ -6878,7 +6916,7 @@ async function zoekAlles(options = {}) {
     return;
   }
 
-  realtimeEl.innerHTML = `<span class='spinner'></span><span class='loading'>${t("loading")}</span>`;
+  realtimeEl.innerHTML = `<div class="realtime-loading-inline"><span class="spinner"></span><span class="loading">${t("loading")}</span></div>`;
   routeTrail = [];
   if (trailLine && map) {
     map.removeLayer(trailLine);
