@@ -713,7 +713,7 @@ html.preload .app-shell {
   --stroke-strong: #ad9eff;
 }
 
-:root[data-theme="light"][data-color-theme="neon"],
+:root[data-theme="light"][data-color-theme="neon"] .header-bar,
 :root[data-resolved-theme="light"][data-color-theme="neon"] .header-bar,
 :root[data-theme="light"][data-color-theme="neon"] .card,
 :root[data-resolved-theme="light"][data-color-theme="neon"] .card,
@@ -749,7 +749,7 @@ html.preload .app-shell {
   --ui-shadow-soft: 0 8px 18px rgba(139, 0, 255, 0.06);
 }
 
-:root[data-theme="light"][data-color-theme="neon"],
+:root[data-theme="light"][data-color-theme="neon"] body,
 :root[data-resolved-theme="light"][data-color-theme="neon"] body {
   background:
     radial-gradient(circle at 18% 18%, rgba(255, 0, 255, 0.12), transparent 24%),
