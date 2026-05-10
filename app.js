@@ -20,6 +20,7 @@ document.addEventListener('touchstart', () => hideSplash(150), { once: true });
 
 // Install Prompt (beter gecontroleerde PWA-installatie)
 let deferredPrompt = null;
+const INSTALL_STATE_KEY = "bb_install_state_v1";
 const installBtn = document.getElementById("footerInstallBtn");
 const dashboardToggleBtn = document.getElementById("dashboardToggleBtn");
 const halteSearchToggleBtn = document.getElementById("halteSearchToggleBtn");
@@ -43,25 +44,30 @@ installBtn?.addEventListener("click", async () => {
     return;
   }
   if (isAndroidAbove6) {
-    await confirmAndStartDownload({
+    const started = await confirmAndStartDownload({
       downloadType: "apk",
       fileLabel: "Busbibliotheek.apk",
       onConfirm: () => startApkDownload()
     });
+    if (started) {
+      await showAndroidApkInstallInstructions();
+    }
   } else if (deferredPrompt) {
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     console.log(`Gebruiker antwoord: ${outcome}`);
+    if (outcome === "accepted") {
+      rememberInstalledOnThisDevice();
+    }
     deferredPrompt = null;
   } else if (isIosInstallable()) {
     showInstallGuideModal();
-  } else if (isAndroidPlatform && !isStandaloneDisplayMode()) {
-    await showAppAlert(getLabel("androidInstallHint", "Open het browsermenu op Android en kies 'Installeren' of 'Toevoegen aan startscherm'."));
   }
   syncInstallButtonVisibility();
 });
 window.addEventListener('appinstalled', () => {
   console.log('App succesvol geinstalleerd');
+  rememberInstalledOnThisDevice();
   hideInstallGuideModal();
   deferredPrompt = null;
   syncPlatformBodyClasses();
@@ -218,12 +224,47 @@ function syncPlatformBodyClasses() {
 function syncInstallButtonVisibility() {
   if (!installBtn) return;
   const shouldShow =
+    !hasInstalledOnThisDevice() &&
     !isStandaloneDisplayMode() &&
     !isAndroidWebView &&
     !isAndroidHostApp() &&
     !isAndroidTvPlatform &&
-    (isAndroidAbove6 || Boolean(deferredPrompt) || isIosInstallable());
+    (
+      isIosInstallable() ||
+      isAndroidAbove6 ||
+      Boolean(deferredPrompt)
+    );
   installBtn.hidden = !shouldShow;
+}
+
+function hasInstalledOnThisDevice() {
+  if (isStandaloneDisplayMode()) return true;
+  try {
+    return window.localStorage?.getItem(INSTALL_STATE_KEY) === "1";
+  } catch (_) {
+    return false;
+  }
+}
+
+function rememberInstalledOnThisDevice() {
+  try {
+    window.localStorage?.setItem(INSTALL_STATE_KEY, "1");
+  } catch (_) {
+    // Ignore storage failures.
+  }
+}
+
+async function showAndroidApkInstallInstructions() {
+  await showAppAlert(
+    getLabel(
+      "androidApkInstallInstructions",
+      "De APK-download is gestart. Open daarna je downloads of meldingencentrum, tik op Busbibliotheek.apk en bevestig de installatie. Als Android het vraagt, sta dan installatie van onbekende apps toe voor je browser of bestandsapp."
+    ),
+    {
+      title: getLabel("install", "App installeren"),
+      confirmLabel: getLabel("dialogOk", "OK")
+    }
+  );
 }
 
 function updateAndroidViewportMetrics() {
@@ -2231,7 +2272,7 @@ function getRoutePresentationFromRealtime(id, entities, bus) {
     };
   }
   const normalizedRequestedId = cleanText(id);
-  const gpsEntity = [...entities].reverse().find((entity) => {
+  const gpsEntity = findMostRecentEntity(entities, (entity) => {
     const vehiclePayload = getEntityVehiclePayload(entity);
     if (!vehiclePayload?.position) return false;
     const descriptor =
@@ -4047,6 +4088,10 @@ async function updateWeatherForCoordinates(latitude, longitude) {
 function isIosInstallable() {
   const isStandalone = isStandaloneDisplayMode();
   return isIosPlatform && !isStandalone;
+}
+
+if (isStandaloneDisplayMode()) {
+  rememberInstalledOnThisDevice();
 }
 
 function loadSettings() {
@@ -5989,7 +6034,6 @@ function renderRealtimeUnavailableState(vehicleId = "", options = {}) {
 
   realtimeEl.innerHTML = `
     <div class="realtime-empty-state">
-      <p class="realtime-empty-text">${escapeHtml(message)}</p>
       <p class="realtime-empty-help">${escapeHtml(helperText)}</p>
       <a class="btn realtime-empty-link" href="${escapeHtml(DE_LIJN_VEHICLE_TRACKING_URL)}" target="_blank" rel="noopener noreferrer">${escapeHtml(getLabel("realtimeTrackerCta", "Zoek op vehicletracking.delijn.be"))}</a>
     </div>
@@ -6895,12 +6939,107 @@ function getVehicleIdFromTripUpdate(tripUpdate) {
   return getVehicleDescriptorId(descriptor);
 }
 
+function normalizeRealtimeTimestamp(value) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value > 1e12 ? value : value * 1000;
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return Number.NaN;
+    if (/^\d+$/.test(trimmed)) {
+      const numericValue = Number(trimmed);
+      return Number.isFinite(numericValue)
+        ? (numericValue > 1e12 ? numericValue : numericValue * 1000)
+        : Number.NaN;
+    }
+    const parsed = Date.parse(trimmed);
+    return Number.isFinite(parsed) ? parsed : Number.NaN;
+  }
+  return Number.NaN;
+}
+
+function getRealtimeTimestampCandidates(source) {
+  if (!source || typeof source !== "object") return [];
+  return [
+    source.time,
+    source.timestamp,
+    source.updatedAt,
+    source.updated_at,
+    source.lastUpdated,
+    source.last_updated,
+    source.position?.time,
+    source.position?.timestamp,
+    source.trip?.time,
+    source.trip?.timestamp,
+    source.vehicle?.time,
+    source.vehicle?.timestamp,
+    source.vehiclePosition?.time,
+    source.vehiclePosition?.timestamp,
+    source.vehicle_position?.time,
+    source.vehicle_position?.timestamp
+  ];
+}
+
+function getEntityRealtimeTimestamp(entity) {
+  const payloadCandidates = [
+    entity,
+    getEntityVehiclePayload(entity),
+    getEntityTripUpdatePayload(entity)
+  ];
+  let bestTimestamp = Number.NaN;
+  payloadCandidates.forEach((candidate) => {
+    getRealtimeTimestampCandidates(candidate).forEach((value) => {
+      const timestamp = normalizeRealtimeTimestamp(value);
+      if (!Number.isFinite(timestamp)) return;
+      if (!Number.isFinite(bestTimestamp) || timestamp > bestTimestamp) {
+        bestTimestamp = timestamp;
+      }
+    });
+  });
+  return bestTimestamp;
+}
+
+function formatRealtimeTimestampForUi(timestamp) {
+  if (!Number.isFinite(timestamp)) return "";
+  return new Date(timestamp).toLocaleTimeString(localeForLanguage(settings.language));
+}
+
+function findMostRecentEntity(entities, predicate) {
+  if (!Array.isArray(entities)) return null;
+  let bestEntity = null;
+  let bestTimestamp = Number.NEGATIVE_INFINITY;
+  let bestIndex = -1;
+
+  entities.forEach((entity, index) => {
+    if (!predicate(entity, index)) return;
+    const timestamp = getEntityRealtimeTimestamp(entity);
+    if (!Number.isFinite(timestamp)) {
+      if (!bestEntity || (!Number.isFinite(bestTimestamp) && index >= bestIndex)) {
+        bestEntity = entity;
+        bestIndex = index;
+      }
+      return;
+    }
+    if (
+      !Number.isFinite(bestTimestamp) ||
+      timestamp > bestTimestamp ||
+      (timestamp === bestTimestamp && index >= bestIndex)
+    ) {
+      bestTimestamp = timestamp;
+      bestEntity = entity;
+      bestIndex = index;
+    }
+  });
+
+  return bestEntity;
+}
+
 function getTripUpdateForVehicle(entities, vehicleId, tripId = "") {
   const normalizedVehicleId = cleanText(vehicleId);
   const normalizedTripId = cleanText(tripId);
   if (!Array.isArray(entities)) return null;
 
-  const byVehicleId = entities.find((entity) => {
+  const byVehicleId = findMostRecentEntity(entities, (entity) => {
     const tripUpdate = getEntityTripUpdatePayload(entity);
     const descriptor =
       tripUpdate?.vehicle ||
@@ -6917,6 +7056,13 @@ function getTripUpdateForVehicle(entities, vehicleId, tripId = "") {
     });
     if (matchingTripUpdates.length === 1) {
       return getEntityTripUpdatePayload(matchingTripUpdates[0]);
+    }
+
+    if (matchingTripUpdates.length > 1) {
+      const freshestMatchingTripUpdate = findMostRecentEntity(matchingTripUpdates, () => true);
+      if (freshestMatchingTripUpdate) {
+        return getEntityTripUpdatePayload(freshestMatchingTripUpdate);
+      }
     }
 
     const withoutVehicleDescriptor = matchingTripUpdates.find((entity) => {
@@ -6936,7 +7082,7 @@ function getTripUpdateForVehicle(entities, vehicleId, tripId = "") {
 function getTripUpdateForEntityId(entities, entityId) {
   const normalizedEntityId = cleanText(entityId);
   if (!normalizedEntityId || !Array.isArray(entities)) return null;
-  const match = entities.find((entity) => {
+  const match = findMostRecentEntity(entities, (entity) => {
     const currentEntityId = cleanText(entity?.id || entity?.entityId || entity?.entity_id || "");
     return currentEntityId === normalizedEntityId && !!getEntityTripUpdatePayload(entity);
   });
@@ -7027,7 +7173,7 @@ async function updateRealtime(id){
     dataLoadTimestamps.realtime = Date.now();
     const entities = Array.isArray(data.entity) ? data.entity : [];
     const normalizedRequestedId = cleanText(id);
-    const gpsEntity = [...entities].reverse().find((entity) => {
+    const gpsEntity = findMostRecentEntity(entities, (entity) => {
       const vehiclePayload = getEntityVehiclePayload(entity);
       if (!vehiclePayload?.position) return false;
       const descriptor =
@@ -7038,6 +7184,7 @@ async function updateRealtime(id){
       return descriptorId === normalizedRequestedId;
     });
     const gps = gpsEntity ? { vehicle: getEntityVehiclePayload(gpsEntity) } : null;
+    const gpsEntityTimestamp = getEntityRealtimeTimestamp(gpsEntity);
 
     if(!gps){
       renderRealtimeUnavailableState(id, { withTracker: true });
@@ -7168,7 +7315,7 @@ async function updateRealtime(id){
     `;
     void updateWeatherForCoordinates(Number(v.position.latitude), Number(v.position.longitude));
     mapEl.classList.remove("hidden");
-    lastUpdateEl.textContent = `${t("lastUpdate")}: ${new Date().toLocaleTimeString(localeForLanguage(settings.language))}`;
+    lastUpdateEl.textContent = `${t("lastUpdate")}: ${formatRealtimeTimestampForUi(gpsEntityTimestamp) || new Date().toLocaleTimeString(localeForLanguage(settings.language))}`;
     lastUpdateEl.hidden = false;
 
     await initMap(v.position.latitude,v.position.longitude);
