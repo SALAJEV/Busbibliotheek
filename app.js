@@ -1638,6 +1638,10 @@ function showHalteSearchModal() {
 }
 
 function hideHalteSearchModal() {
+  halteSearchRequestToken += 1;
+  if (haltecodeInputEl) haltecodeInputEl.value = "";
+  setHalteStatus("");
+  clearHalteSearchResults();
   closeOverlayModal(halteSearchModalEl);
 }
 
@@ -3961,16 +3965,12 @@ async function resolveVehiclePhotoEntries(vehicleId) {
 
   const suffixes = ["", ...Array.from({ length: 12 }, (_, index) => ` (${index + 1})`)];
   const resolvedEntries = [];
-  let foundAnyPhotos = false;
 
   for (const suffix of suffixes) {
     const nextEntries = await resolvePhotoEntriesFromCandidates(getFallbackPhotoEntries(vehicleId, [suffix]));
     if (nextEntries.length) {
       resolvedEntries.push(...nextEntries);
-      foundAnyPhotos = true;
-      continue;
     }
-    if (foundAnyPhotos) break;
   }
 
   return sortVehiclePhotoEntries(resolvedEntries);

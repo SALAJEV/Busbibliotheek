@@ -1301,11 +1301,12 @@ body.dialog-fallback .funny-modal-card {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 0.48rem;
-  align-items: center;
+  align-items: start;
 }
 
 .halte-module-form .suggestion-input-shell {
   min-width: 0;
+  z-index: 2;
 }
 
 .halte-module-form input {
@@ -2343,6 +2344,10 @@ body.dashboard-open {
     linear-gradient(90deg, color-mix(in srgb, var(--accent-soft) 12%, transparent), transparent 36%);
 }
 
+.dashboard-tv-settings[hidden] {
+  display: none !important;
+}
+
 .dashboard-tv-settings-head {
   display: grid;
   gap: 0.22rem;
@@ -2592,6 +2597,17 @@ body.platform-android-tv .inline-suggestion-list {
 
 .halte-search-modal-card {
   width: min(640px, calc(100vw - 2rem));
+  overflow: visible;
+}
+
+.halte-search-modal-card .pdf-modal-body,
+.halte-search-modal-card .halte-module {
+  overflow: visible;
+}
+
+.halte-search-modal-card .inline-suggestion-list {
+  top: calc(100% + 0.32rem);
+  max-height: min(220px, 34vh);
 }
 
 .info-list {
@@ -7707,7 +7723,7 @@ footer > *,
 
 footer {
   position: relative;
-  margin-top: auto !important;
+  margin-top: 1.25rem !important;
   padding: 1.2rem 1.24rem 1.24rem !important;
   border-radius: 24px;
   border: 1px solid color-mix(in srgb, var(--accent) 12%, var(--stroke-strong));
