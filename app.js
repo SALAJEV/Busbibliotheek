@@ -3868,9 +3868,9 @@ function setPageLoading(active) {
 
 function setOfflineOverlayVisible(visible) {
   if (!offlineOverlayEl) return;
-  offlineOverlayEl.hidden = !visible;
-  offlineOverlayEl.setAttribute("aria-hidden", String(!visible));
-  document.body.classList.toggle("offline-active", !!visible);
+  offlineOverlayEl.hidden = true;
+  offlineOverlayEl.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("offline-active");
 }
 
 async function hasVerifiedInternetConnection() {
@@ -4702,6 +4702,23 @@ function applyTranslations() {
     toonVasteData(currentVehicleId);
     if (!realtimePausedByInactivity) {
       void updateRealtime(currentVehicleId);
+    }
+  }
+}
+
+function refreshVisibleLocalizedState() {
+  if (!weatherBlockEl?.hidden && lastWeatherData && lastWeatherCoordinates) {
+    renderWeatherBlock(lastWeatherData, lastWeatherCoordinates.latitude, lastWeatherCoordinates.longitude);
+  }
+  if (!photoUploadModalEl?.hidden) {
+    updatePhotoUploadCopy(currentPhotoVehicleId);
+  }
+  if (!halteSearchModalEl?.hidden) {
+    const currentQuery = (haltecodeInputEl?.value || "").trim();
+    if (currentQuery) {
+      void updateHalteSuggestions();
+    } else if (!haltSearchResultsListEl?.hidden) {
+      clearHalteSearchResults();
     }
   }
 }
@@ -5716,9 +5733,8 @@ languageSelect.addEventListener("change", () => {
   settings.language = languageSelect.value;
   saveSettings();
   applyTranslations();
+  refreshVisibleLocalizedState();
   renderFavorites();
-  if (currentVehicleId) toonVasteData(currentVehicleId);
-  if (compareVehicleId) renderComparison();
 });
 footerReviewBtn?.addEventListener("click", showReviewModal);
 footerTermsBtn?.addEventListener("click", showTermsModal);
