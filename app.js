@@ -2315,7 +2315,8 @@ function getRoutePresentationFromRealtime(id, entities, bus) {
   const routeData = findRouteDataByRouteId(routeId, tripId);
   const routeShort = pickFirstText(routeData?.route_short_name, descriptor.routeShortName, routeId) || "?";
   const destinationText = pickFirstText(tripData?.trip_headsign, descriptor.headsign, tripData?.trip_short_name) || "-";
-  const currentStopId = getCurrentStopIdFromTripUpdate(tripUpdate);
+  const currentStopContext = getCurrentStopContext(v, tripUpdate);
+  const currentStopId = currentStopContext.stopId;
   const currentStop = getStopByStopId(currentStopId);
   const currentStopName = cleanText(currentStop?.stop_name || currentStopId || "") || getLabel("unknownStop", "Onbekende halte");
   const routeColorRaw = (routeData?.route_color || "").replace(/[^0-9a-fA-F]/g, "").slice(0, 6);
@@ -7111,6 +7112,66 @@ function getDelaySecondsFromTripUpdate(tripUpdate) {
   return best ? best.delay : null;
 }
 
+function normalizeStopSequence(value) {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : Number.NaN;
+}
+
+function extractVehicleCurrentStatus(vehiclePayload = {}) {
+  return cleanText(
+    vehiclePayload?.currentStatus ||
+    vehiclePayload?.current_status ||
+    vehiclePayload?.stopStatus?.currentStatus ||
+    vehiclePayload?.stopStatus?.current_status ||
+    vehiclePayload?.stopStatus?.status ||
+    ""
+  ).toUpperCase();
+}
+
+function extractVehicleCurrentStopSequence(vehiclePayload = {}) {
+  const candidates = [
+    vehiclePayload?.currentStopSequence,
+    vehiclePayload?.current_stop_sequence,
+    vehiclePayload?.stopStatus?.currentStopSequence,
+    vehiclePayload?.stopStatus?.current_stop_sequence,
+    vehiclePayload?.stopStatus?.stopSequence,
+    vehiclePayload?.stopStatus?.stop_sequence,
+    vehiclePayload?.trip?.currentStopSequence,
+    vehiclePayload?.trip?.current_stop_sequence
+  ];
+
+  for (const candidate of candidates) {
+    const sequence = normalizeStopSequence(candidate);
+    if (Number.isFinite(sequence)) return sequence;
+  }
+  return Number.NaN;
+}
+
+function extractDirectCurrentStopId(vehiclePayload = {}) {
+  const candidates = [
+    vehiclePayload?.stopId,
+    vehiclePayload?.stop_id,
+    vehiclePayload?.currentStopId,
+    vehiclePayload?.current_stop_id,
+    vehiclePayload?.assignedStopId,
+    vehiclePayload?.assigned_stop_id,
+    vehiclePayload?.stopStatus?.stopId,
+    vehiclePayload?.stopStatus?.stop_id,
+    vehiclePayload?.stopStatus?.currentStopId,
+    vehiclePayload?.stopStatus?.current_stop_id,
+    vehiclePayload?.stopStatus?.assignedStopId,
+    vehiclePayload?.stopStatus?.assigned_stop_id,
+    vehiclePayload?.trip?.stopId,
+    vehiclePayload?.trip?.stop_id
+  ];
+
+  for (const candidate of candidates) {
+    const stopId = cleanText(candidate);
+    if (stopId) return stopId;
+  }
+  return "";
+}
+
 function getCurrentStopIdFromTripUpdate(tripUpdate) {
   const updates = tripUpdate?.stopTimeUpdate || tripUpdate?.stop_time_update;
   if (!Array.isArray(updates) || updates.length === 0) return "";
@@ -7156,6 +7217,58 @@ function getCurrentStopIdFromTripUpdate(tripUpdate) {
   if (latestPastStop) return latestPastStop.stopId;
 
   return normalizedUpdates[0]?.stopId || "";
+}
+
+function getCurrentStopContext(vehiclePayload, tripUpdate) {
+  const directStopId = extractDirectCurrentStopId(vehiclePayload);
+  if (directStopId) {
+    return { stopId: directStopId, source: "vehicle-stop-id" };
+  }
+
+  const updates = tripUpdate?.stopTimeUpdate || tripUpdate?.stop_time_update;
+  const currentSequence = extractVehicleCurrentStopSequence(vehiclePayload);
+  const currentStatus = extractVehicleCurrentStatus(vehiclePayload);
+
+  if (Array.isArray(updates) && updates.length && Number.isFinite(currentSequence)) {
+    const normalizedBySequence = updates
+      .map((stop, index) => ({
+        stopId: cleanText(stop?.stopId || stop?.stop_id || stop?.assignedStopId || stop?.assigned_stop_id || ""),
+        stopSequence: normalizeStopSequence(stop?.stopSequence ?? stop?.stop_sequence),
+        index
+      }))
+      .filter((stop) => stop.stopId && Number.isFinite(stop.stopSequence))
+      .sort((left, right) => {
+        if (left.stopSequence !== right.stopSequence) return left.stopSequence - right.stopSequence;
+        return left.index - right.index;
+      });
+
+    if (normalizedBySequence.length) {
+      const exactMatch = normalizedBySequence.find((stop) => stop.stopSequence === currentSequence);
+      if (exactMatch) {
+        if (currentStatus === "IN_TRANSIT_TO") {
+          const previousStop = [...normalizedBySequence]
+            .reverse()
+            .find((stop) => stop.stopSequence < currentSequence);
+          if (previousStop) {
+            return { stopId: previousStop.stopId, source: "vehicle-sequence-previous" };
+          }
+        }
+        return { stopId: exactMatch.stopId, source: "vehicle-sequence-exact" };
+      }
+
+      const lowerMatch = [...normalizedBySequence]
+        .reverse()
+        .find((stop) => stop.stopSequence < currentSequence);
+      if (lowerMatch) {
+        return { stopId: lowerMatch.stopId, source: "vehicle-sequence-lower" };
+      }
+    }
+  }
+
+  return {
+    stopId: getCurrentStopIdFromTripUpdate(tripUpdate),
+    source: "trip-update-fallback"
+  };
 }
 
 function getStopByStopId(stopId) {
@@ -7220,7 +7333,8 @@ async function updateRealtime(id){
     const sameVehicleTripUpdate = !!tripUpdate && tripUpdateVehicleId === normalizedRequestedId;
     const sameTripTripUpdate = !!tripUpdate && !!vehicleDescriptor.tripId && !!tripUpdateDescriptor.tripId && vehicleDescriptor.tripId === tripUpdateDescriptor.tripId;
     const canUseTripUpdateStop = sameVehicleTripUpdate || sameTripTripUpdate;
-    const currentStopId = canUseTripUpdateStop ? getCurrentStopIdFromTripUpdate(tripUpdate) : "";
+    const currentStopContext = canUseTripUpdateStop ? getCurrentStopContext(v, tripUpdate) : { stopId: "", source: "unavailable" };
+    const currentStopId = currentStopContext.stopId;
     const currentStop = getStopByStopId(currentStopId);
     const currentStopName = (currentStop?.stop_name || currentStopId || "-").toString().trim() || "-";
     const currentStopUrlRaw = (currentStop?.stop_url || "").toString().trim();
@@ -7255,6 +7369,7 @@ async function updateRealtime(id){
         vehicleId: normalizedRequestedId,
         gpsEntityId: cleanText(gpsEntity?.id || ""),
         currentStopId,
+        currentStopSource: currentStopContext.source,
         canUseTripUpdateStop,
         tripUpdateVehicleId,
         descriptorHeadsign: cleanText(descriptor.headsign),
