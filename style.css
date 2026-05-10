@@ -3305,26 +3305,6 @@ tr + tr td {
   background-position: center;
 }
 
-.btn--pdf {
-  margin-top: 0;
-  border: 1px solid var(--button-border);
-  background: var(--button-bg);
-  color: var(--button-text);
-}
-
-.btn--pdf::before {
-  content: "";
-  width: 1rem;
-  height: 1rem;
-  display: inline-block;
-  flex: 0 0 auto;
-  background-color: transparent;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v12'/%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3Cpath d='M5 21h14'/%3E%3C/svg%3E");
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-}
-
 .btn--compare,
 .btn--story {
   margin-top: 0;
