@@ -5244,7 +5244,7 @@ appTitleBtnEl?.addEventListener("click", () => {
 });
 bindVehicleSuggestions(voertuigInput, () => {
   dismissPrimaryVehicleSearchInput({ closeKeyboard: true });
-  zoekAlles();
+  zoekAlles({ closeKeyboard: true });
 });
 voertuigInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
@@ -5266,7 +5266,7 @@ voertuigInput.addEventListener("keydown", (event) => {
     if (hasActiveSuggestion) return;
     event.preventDefault();
     dismissPrimaryVehicleSearchInput({ closeKeyboard: true });
-    zoekAlles();
+    zoekAlles({ closeKeyboard: true });
   }
 });
 dashboardToggleBtn?.addEventListener("click", () => {
