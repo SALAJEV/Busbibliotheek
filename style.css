@@ -9712,3 +9712,108 @@ footer h3 {
 :root[data-color-theme="neon"] #compareVehicleInput::placeholder {
   color: rgba(222, 240, 255, 0.62) !important;
 }
+
+@media (max-width: 640px) {
+  .results-wrap,
+  #resultsGrid,
+  .results-wrap.show {
+    gap: 0.82rem !important;
+  }
+
+  .card h2,
+  .compare-card-header h2,
+  .dashboard-panel-header h2 {
+    font-size: 1.42rem !important;
+  }
+
+  .vehicle-actions-row,
+  .ig-btn-wrap,
+  .pdf-modal-actions {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 0.58rem !important;
+  }
+
+  .vehicle-inline-btn,
+  .ig-btn-wrap > .btn,
+  .ig-btn-wrap > button,
+  .pdf-modal-actions > button,
+  .pdf-modal-actions > .btn,
+  .footer-link-btn {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .vehicle-theme-picker {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .vehicle-photo-frame {
+    min-height: 220px;
+  }
+
+  .vehicle-photo-info,
+  .vehicle-photo-meta {
+    gap: 0.68rem !important;
+  }
+
+  .vehicle-photo-meta-card {
+    width: 100%;
+    padding: 0.88rem 0.9rem !important;
+  }
+
+  #lastUpdate {
+    font-size: 0.82rem !important;
+    line-height: 1.4 !important;
+    white-space: normal !important;
+  }
+
+  .weather-card,
+  .weather-card-link {
+    min-height: 0;
+  }
+
+  .weather-card-main {
+    gap: 0.72rem !important;
+  }
+
+  .dashboard-map {
+    height: 260px !important;
+  }
+
+  .dashboard-panel-content {
+    gap: 0.82rem !important;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .card:hover,
+  .weather-card-link:hover,
+  .btn:hover,
+  button:hover,
+  .compare-vehicle-pill-btn:hover,
+  .footer-link-btn:hover,
+  .photo-card:hover {
+    transform: none !important;
+    box-shadow: inherit !important;
+    filter: none !important;
+  }
+
+  .menu-sheet,
+  .pdf-modal-card,
+  .funny-modal-card,
+  .weather-card,
+  .weather-card-link {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .btn,
+  button,
+  .search-row input,
+  .menu-sheet,
+  .pdf-modal-card {
+    transition-duration: 0.12s !important;
+  }
+}

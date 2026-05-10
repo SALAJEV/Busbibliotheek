@@ -1947,7 +1947,7 @@ function getVehicleDisplayValue(bus, fieldKey, rawValue) {
   const value = rawValue == null ? "" : rawValue.toString().trim();
   const key = fieldKey.toLowerCase();
   if (key.includes("in dienst")) {
-    if (!value || value === "/") return "Bus nog niet in dienst";
+    if (!value || value === "/") return getLabel("busNotYetInService", "Bus nog niet in dienst");
     return formatDateForUi(value, { year: "numeric", month: "long", day: "numeric" });
   }
   if (key.includes("uit dienst")) {
@@ -1991,7 +1991,7 @@ function formatBusFieldValueForDisplay(bus, fieldKey, rawValue) {
   const key = fieldKey.toLowerCase();
 
   if (key.includes("in dienst")) {
-    if (!value || value === "/") return "Bus nog niet in dienst";
+    if (!value || value === "/") return getLabel("busNotYetInService", "Bus nog niet in dienst");
     return formatDateForUi(value, { year: "numeric", month: "long", day: "numeric" });
   }
 
@@ -4952,6 +4952,10 @@ function applyTranslations() {
 }
 
 function refreshVisibleLocalizedState() {
+  updateVehiclePhotoTexts();
+  if (compareVehicleId && !compareCardEl?.hidden) {
+    renderComparison();
+  }
   if (!weatherBlockEl?.hidden && lastWeatherData && lastWeatherCoordinates) {
     renderWeatherBlock(lastWeatherData, lastWeatherCoordinates.latitude, lastWeatherCoordinates.longitude);
   }
@@ -4964,6 +4968,12 @@ function refreshVisibleLocalizedState() {
       void updateHalteSuggestions();
     } else if (!haltSearchResultsListEl?.hidden) {
       clearHalteSearchResults();
+    }
+  }
+  if (currentVehicleId) {
+    toonVasteData(currentVehicleId);
+    if (!realtimePausedByInactivity) {
+      void updateRealtime(currentVehicleId);
     }
   }
 }
@@ -5009,11 +5019,11 @@ function getHalteRealtimeLink(codes = []) {
 
 function getProvinceForHalteCode(code = "") {
   const firstDigit = String(code || "").trim().charAt(0);
-  if (firstDigit === "1") return "Antwerpen";
-  if (firstDigit === "2") return "Oost-Vlaanderen";
-  if (firstDigit === "3") return "Vlaams-Brabant";
-  if (firstDigit === "4") return "Limburg";
-  if (firstDigit === "5") return "West-Vlaanderen";
+  if (firstDigit === "1") return getLabel("provinceAntwerp", "Antwerpen");
+  if (firstDigit === "2") return getLabel("provinceEastFlanders", "Oost-Vlaanderen");
+  if (firstDigit === "3") return getLabel("provinceFlemishBrabant", "Vlaams-Brabant");
+  if (firstDigit === "4") return getLabel("provinceLimburg", "Limburg");
+  if (firstDigit === "5") return getLabel("provinceWestFlanders", "West-Vlaanderen");
   return "";
 }
 

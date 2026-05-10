@@ -1,14 +1,14 @@
-const CACHE_NAME = 'busbibliotheek-v97';
+const CACHE_NAME = 'busbibliotheek-v99';
 const CORE_ASSETS = [
   '/',
   '/index.html',
   '/app.js',
-  '/app.js?v=20260510-2',
+  '/app.js?v=20260511-2',
   '/manifest.json',
   '/style.css',
   '/style.css?v=20260510-2',
   '/translations.js',
-  '/translations.js?v=20260218-1',
+  '/translations.js?v=20260511-2',
   '/media/logo.png',
   '/media/navicon.png',
   '/media/hansea.png',
@@ -124,7 +124,8 @@ self.addEventListener('fetch', event => {
   const matchLocalAsset = () =>
     caches.match(request).then(cached => {
       if (cached) return cached;
-      if (isSameOriginStaticAsset) {
+      const hasExplicitVersion = url.searchParams.has('v');
+      if (isSameOriginStaticAsset && !hasExplicitVersion) {
         return caches.match(request, { ignoreSearch: true });
       }
       return undefined;

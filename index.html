@@ -620,10 +620,10 @@
 <script>
   document.documentElement.className = document.documentElement.className.replace(/\bpreload\b/g, "").trim();
   var translationsScript = document.createElement("script");
-  translationsScript.src = "translations.js?v=20260218-1";
+  translationsScript.src = "translations.js?v=20260511-2";
   translationsScript.onload = function () {
     var appScript = document.createElement("script");
-    appScript.src = "app.js?v=20260510-2";
+    appScript.src = "app.js?v=20260511-2";
     appScript.defer = true;
     document.body.appendChild(appScript);
   };
