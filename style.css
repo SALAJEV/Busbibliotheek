@@ -8297,6 +8297,9 @@ footer > *,
   background: var(--header-banner-line-bg, #E40521);
   border: 1px solid var(--header-banner-line-border, #E40521);
   color: var(--header-banner-line-fg, #FFFFFF);
+  box-shadow:
+    0 0 0 1px var(--header-banner-line-outline, rgba(255, 255, 255, 0.58)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
   font-size: 0.98rem;
   font-weight: 800;
   letter-spacing: 0.01em;
@@ -8919,13 +8922,17 @@ body.overlay-compat-mode .funny-modal-card button {
    PERFORMANCE OPTIMIZATIONS
 ================================ */
 
-/* Optimize animations with will-change */
-.btn,
-.photo-card,
-.vehicle-photo-image,
+/* Reserve will-change only where it helps, to avoid wasting memory on mobile. */
 .menu-sheet,
 .floating-suggestion-list {
-  will-change: transform, opacity, box-shadow;
+  will-change: transform, opacity;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .photo-card,
+  .vehicle-photo-image {
+    will-change: transform, opacity;
+  }
 }
 
 /* Use CSS containment for better performance */
@@ -9510,6 +9517,11 @@ footer h3 {
 }
 
 @media (max-width: 700px) {
+  .header-bar {
+    position: relative !important;
+    top: auto !important;
+  }
+
   .menu-inline-search .search-row #searchBtn,
   .menu-inline-search .search-row #searchBtn:hover,
   .menu-inline-search .search-row #searchBtn:active,
@@ -9563,6 +9575,35 @@ footer h3 {
     height: 1.05rem !important;
     min-width: 1.05rem !important;
     transform: none !important;
+  }
+
+  .footer-links {
+    display: grid !important;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .footer-link-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (min-width: 1101px) {
+  .header-intro {
+    max-width: none;
+  }
+
+  .search-shell {
+    max-width: 760px;
+  }
+
+  .grid {
+    gap: 1.1rem !important;
+  }
+
+  .footer-links {
+    align-items: center;
   }
 }
 

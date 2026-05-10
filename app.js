@@ -1831,10 +1831,18 @@ function updateDocumentTitle(vehicleId = "") {
 
 function updateHeaderVisualRoutePresentation(routeShort = "2", destinationText = "Erasmuslaan", routeColor = "#E40521", routeTextColor = "#FFFFFF") {
   if (headerVisualRouteEl) {
+    const normalizedRouteColor = normalizeRouteColor(routeColor, "#E40521");
+    const hex = normalizedRouteColor.replace("#", "");
+    const red = Number.parseInt(hex.slice(0, 2), 16) || 0;
+    const green = Number.parseInt(hex.slice(2, 4), 16) || 0;
+    const blue = Number.parseInt(hex.slice(4, 6), 16) || 0;
+    const luminance = ((red * 299) + (green * 587) + (blue * 114)) / 1000;
+    const contrastOutline = luminance >= 168 ? "rgba(15, 23, 42, 0.42)" : "rgba(255, 255, 255, 0.74)";
     headerVisualRouteEl.textContent = cleanText(routeShort) || "2";
-    headerVisualRouteEl.style.setProperty("--header-banner-line-bg", routeColor || "#E40521");
+    headerVisualRouteEl.style.setProperty("--header-banner-line-bg", normalizedRouteColor);
     headerVisualRouteEl.style.setProperty("--header-banner-line-fg", routeTextColor || "#FFFFFF");
-    headerVisualRouteEl.style.setProperty("--header-banner-line-border", routeColor || "#E40521");
+    headerVisualRouteEl.style.setProperty("--header-banner-line-border", normalizedRouteColor);
+    headerVisualRouteEl.style.setProperty("--header-banner-line-outline", contrastOutline);
   }
   if (headerVisualDestinationEl) {
     const displayDestination = destinationText ? cleanText(destinationText) : "Erasmuslaan";
@@ -3752,8 +3760,8 @@ function buildVehiclePhotoMetaMarkup(copy) {
   const locationPending = !!copy?.locationPending && !cleanText(metaFields.place);
   const metaItems = [
     ["maker", getLabel("photoPhotographer", "Fotograaf"), metaFields.maker, metaFields.makerLink],
-    ["place", getLabel("photoPlace", "Plaats"), metaFields.place, metaFields.placeLink],
     ["date", getLabel("photoDate", "Datum"), metaFields.date, ""],
+    ["place", getLabel("photoPlace", "Plaats"), metaFields.place, metaFields.placeLink],
     ["credit", getLabel("photoCredit", "Credits"), metaFields.credit, ""]
   ].filter(([, , value]) => cleanText(value));
 
