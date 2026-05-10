@@ -330,6 +330,8 @@ const lastUpdateEl = document.getElementById("lastUpdate");
 const appTitleBtnEl = document.getElementById("appTitleBtn");
 const appTitleEl = document.getElementById("appTitle");
 const appSubtitleEl = document.getElementById("appSubtitle");
+const headerVisualRouteEl = document.querySelector(".header-visual-card-route");
+const headerVisualDestinationEl = document.querySelector(".header-visual-card-destination");
 const splashTitleEl = document.getElementById("splashTitle");
 const splashCreditEl = document.getElementById("splashCredit");
 const menuToggleTextEl = document.getElementById("menuToggleText");
@@ -1749,6 +1751,18 @@ function updateDocumentTitle(vehicleId = "") {
   document.title = normalizedVehicleId
     ? `${getLabel("vehicleTitlePrefix", "Voertuig")} ${normalizedVehicleId}`
     : "Busbibliotheek";
+}
+
+function updateHeaderVisualRoutePresentation(routeShort = "2", destinationText = "Erasmuslaan", routeColor = "#E40521", routeTextColor = "#FFFFFF") {
+  if (headerVisualRouteEl) {
+    headerVisualRouteEl.textContent = cleanText(routeShort) || "2";
+    headerVisualRouteEl.style.setProperty("--header-banner-line-bg", routeColor || "#E40521");
+    headerVisualRouteEl.style.setProperty("--header-banner-line-fg", routeTextColor || "#FFFFFF");
+    headerVisualRouteEl.style.setProperty("--header-banner-line-border", routeColor || "#E40521");
+  }
+  if (headerVisualDestinationEl) {
+    headerVisualDestinationEl.textContent = cleanText(destinationText) || "Erasmuslaan";
+  }
 }
 
 function getVehicleDisplayValue(bus, fieldKey, rawValue) {
@@ -4282,7 +4296,7 @@ function applyTranslations() {
   updateVehiclePhotoTexts();
   disclaimerTitleEl.textContent = t("disclaimerTitle");
   disclaimerTextEl.textContent = t("disclaimerText");
-  if (footerReviewBtn) footerReviewBtn.textContent = getLabel("footerReview", "Review afleggen");
+  if (footerReviewBtn) footerReviewBtn.textContent = getLabel("footerReview", "Feedback achterlaten");
   if (footerTermsBtn) footerTermsBtn.textContent = getLabel("footerTerms", "Gebruiksvoorwaarden");
   closeBtnEl.title = getLabel("back", "Terug");
   closeBtnEl.setAttribute("aria-label", getLabel("back", "Terug"));
@@ -4337,7 +4351,7 @@ function applyTranslations() {
   if (appDialogCancelBtn) appDialogCancelBtn.textContent = getLabel("cancel", "Annuleren");
   if (appDialogConfirmBtn) appDialogConfirmBtn.textContent = getLabel("dialogOk", "OK");
   if (halteSearchCloseBtn) halteSearchCloseBtn.setAttribute("aria-label", getLabel("close", "Sluiten"));
-  if (reviewModalTitleEl) reviewModalTitleEl.textContent = getLabel("footerReview", "Review afleggen");
+  if (reviewModalTitleEl) reviewModalTitleEl.textContent = getLabel("footerReview", "Feedback achterlaten");
   if (reviewModalSummaryEl) reviewModalSummaryEl.textContent = getLabel("reviewSummary", "Laat weten wat beter kan of wat je goed vindt aan Busbibliotheek.");
   if (reviewModalCloseBtn) reviewModalCloseBtn.setAttribute("aria-label", getLabel("close", "Sluiten"));
   if (reviewModalDoneBtn) reviewModalDoneBtn.textContent = getLabel("close", "Sluiten");
@@ -6882,12 +6896,12 @@ function buildInstagramSearchUrl(bus, vehicleId) {
   const normalizedId = normalize(vehicleId);
   const operatorType = getVehicleOperatorType(bus);
   if (operatorType === "tec") {
-    return "https://www.instagram.com/explore/search/keyword/?q=%23tec";
+    return `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(`#tec ${normalizedId}`)}`;
   }
   if (operatorType === "mivb") {
-    return `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(`#mivb${normalizedId}`)}`;
+    return `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(`#mivb ${normalizedId}`)}`;
   }
-  return "https://www.instagram.com/explore/search/keyword/?q=%23dl";
+  return `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(`#dl ${normalizedId}`)}`;
 }
 
 function isOutOfService(bus) {
