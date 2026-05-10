@@ -8532,6 +8532,7 @@ body.overlay-compat-mode .funny-modal-card button {
 /* Optimize font loading */
 @font-face {
   font-family: "Source Sans 3";
+  src: local("Source Sans 3"), local("SourceSans3");
   font-display: swap;
 }
 
