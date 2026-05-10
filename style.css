@@ -4666,6 +4666,13 @@ footer h3 {
   line-height: 1.55;
 }
 
+body.platform-phone.platform-android .btn--instagram,
+body.platform-phone.platform-android .instagram-help-text,
+body.platform-phone.platform-ios .btn--instagram,
+body.platform-phone.platform-ios .instagram-help-text {
+  display: none !important;
+}
+
 /* ===============================
    MOTION
 ================================ */
