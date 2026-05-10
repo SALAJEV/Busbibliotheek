@@ -1750,6 +1750,7 @@ button:disabled,
   align-items: center;
   justify-content: center;
   min-height: 42px;
+  height: 42px;
   padding: 0.72rem 0.96rem;
   border-radius: 14px;
   border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--stroke));
@@ -1762,6 +1763,7 @@ button:disabled,
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .missing-vehicle-action:hover,
@@ -1783,6 +1785,7 @@ button:disabled,
 
 .missing-vehicle-callout--compact .missing-vehicle-action {
   min-height: 38px;
+  height: 38px;
   padding: 0.62rem 0.82rem;
   font-size: 0.82rem;
 }
