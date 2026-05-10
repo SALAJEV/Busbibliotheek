@@ -6974,6 +6974,18 @@ async function laadStops() {
 
 initAppPreferences();
 
+function clearInitialHeaderButtonFocus() {
+  if (isAndroidTvPlatform || favoritesPanelOpen) return;
+  if (document.activeElement === favoritesToggleBtn) {
+    favoritesToggleBtn.blur();
+  }
+}
+
+window.requestAnimationFrame(clearInitialHeaderButtonFocus);
+window.addEventListener("load", () => {
+  window.requestAnimationFrame(clearInitialHeaderButtonFocus);
+}, { once: true });
+
 window.addEventListener("resize", syncHeaderActionPlacement);
 
 async function maybeAutoStartDashboardForAndroidTv() {

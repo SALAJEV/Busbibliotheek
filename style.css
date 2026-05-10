@@ -1200,6 +1200,9 @@ body.dialog-fallback .funny-modal-card {
 }
 
 .favorite-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 32px;
   min-width: 32px;
   height: 32px;
@@ -1211,6 +1214,8 @@ body.dialog-fallback .funny-modal-card {
   color: #fff;
   font-size: 1rem;
   font-weight: 700;
+  line-height: 1;
+  text-align: center;
   box-shadow: none;
 }
 
@@ -6730,8 +6735,8 @@ body.platform-android .vehicle-photo-meta-card {
   }
 
   #favoritesPanel .settings-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.62rem;
+    grid-template-columns: 1fr !important;
+    gap: 0.72rem;
   }
 
   #favoritesPanel .settings-grid > div {
@@ -6937,6 +6942,7 @@ body::before {
 }
 
 #favoritesPanel .settings-grid {
+  grid-template-columns: 1fr !important;
   gap: 0.62rem !important;
 }
 
@@ -7034,7 +7040,7 @@ body::before {
 
 @media (max-width: 560px) {
   #favoritesPanel .settings-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-columns: 1fr !important;
   }
 }
 
@@ -8032,9 +8038,11 @@ body.overlay-compat-mode .funny-modal-card button {
 .menu-inline-search .search-row #searchBtn,
 .menu-inline-search .search-row #searchBtn:hover,
 .menu-inline-search .search-row #searchBtn:active,
+.menu-inline-search .search-row #searchBtn:focus-visible,
 .menu-inline-search .search-row #favoritesToggleBtn.search-menu-btn,
 .menu-inline-search .search-row #favoritesToggleBtn.search-menu-btn:hover,
 .menu-inline-search .search-row #favoritesToggleBtn.search-menu-btn:active,
+.menu-inline-search .search-row #favoritesToggleBtn.search-menu-btn:focus-visible,
 .menu-inline-search .search-row #favoritesToggleBtn.search-menu-btn.active {
   border: 1px solid color-mix(in srgb, var(--button-border) 88%, white 12%) !important;
   background: linear-gradient(135deg, color-mix(in srgb, var(--button-bg) 88%, white 12%), color-mix(in srgb, var(--accent-2) 84%, var(--button-bg) 16%)) !important;
@@ -8042,6 +8050,7 @@ body.overlay-compat-mode .funny-modal-card button {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
     0 12px 28px color-mix(in srgb, var(--accent-soft) 28%, transparent) !important;
+  outline: none !important;
 }
 
 .menu-inline-search .search-row #searchBtn:hover,
