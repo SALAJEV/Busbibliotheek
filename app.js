@@ -1753,7 +1753,7 @@ function updateDocumentTitle(vehicleId = "") {
     : "Busbibliotheek";
 }
 
-function updateHeaderVisualRoutePresentation(routeShort = "2", destinationText = "", routeColor = "#E40521", routeTextColor = "#FFFFFF") {
+function updateHeaderVisualRoutePresentation(routeShort = "2", destinationText = "Erasmuslaan", routeColor = "#E40521", routeTextColor = "#FFFFFF") {
   if (headerVisualRouteEl) {
     headerVisualRouteEl.textContent = cleanText(routeShort) || "2";
     headerVisualRouteEl.style.setProperty("--header-banner-line-bg", routeColor || "#E40521");
@@ -1761,7 +1761,7 @@ function updateHeaderVisualRoutePresentation(routeShort = "2", destinationText =
     headerVisualRouteEl.style.setProperty("--header-banner-line-border", routeColor || "#E40521");
   }
   if (headerVisualDestinationEl) {
-    const displayDestination = destinationText ? cleanText(destinationText) : "";
+    const displayDestination = destinationText ? cleanText(destinationText) : "Erasmuslaan";
     headerVisualDestinationEl.textContent = displayDestination;
   }
 }
