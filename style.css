@@ -7289,6 +7289,14 @@ button.weather-card.weather-card-link:focus-visible {
     min-width: 0 !important;
     font-size: 1.16rem !important;
   }
+
+  .search-row input,
+  #voertuignummer {
+    font-size: 16px !important;
+    line-height: 1.2;
+    -webkit-user-select: text;
+    user-select: text;
+  }
 }
 
 /* ===============================

@@ -124,7 +124,7 @@ const SETTINGS_KEY = "bb_settings_v1";
 const REALTIME_PERSISTED_CACHE_KEY = "bb_realtime_feed_cache_v1";
 const REALTIME_PERSISTED_MAX_AGE_MS = 3 * 60 * 1000;
 const DASHBOARD_MAX_VEHICLES = 9;
-const TRACKING_STATUS_BANNER_ENABLED = 1;
+const TRACKING_STATUS_BANNER_ENABLED = 0;
 let updateIntervalMs = 10000;
 
 const voertuigInput = document.getElementById("voertuignummer");
@@ -6125,7 +6125,7 @@ function initAppPreferences() {
   if (shouldShowFirstRunSetup()) showFirstRunSetupModal();
 }
 
-searchBtn.addEventListener("click", zoekAlles);
+searchBtn.addEventListener("click", () => zoekAlles({ closeKeyboard: true }));
 closeBtnEl?.addEventListener("click", () => {
   if (getCurrentRouteState().view !== "home") {
     window.history.back();
@@ -6143,22 +6143,27 @@ bindVehicleSuggestions(voertuigInput, () => {
 });
 voertuigInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
-    const shouldOpenZone01 =
-      !!suggestieLijst &&
-      !suggestieLijst.hidden &&
-      suggestieLijst.dataset.mode === "missing-vehicle" &&
-      !!suggestieLijst.dataset.zone01Url;
+    const query = clampPrimaryVehicleQuery(voertuigInput.value).trim();
+    const resolved = query ? resolveVehicleQuery(query, getVehicleInputResolvedId(voertuigInput)) : { bus: null, vehicleId: "" };
+    const hasResolvedVehicle = !!resolved.bus;
     const hasActiveSuggestion =
       !!suggestieLijst &&
       !suggestieLijst.hidden &&
       Number(suggestieLijst.dataset.activeIndex || -1) >= 0;
-    if (shouldOpenZone01) {
+    const shouldOpenZone01 =
+      !hasResolvedVehicle &&
+      !!query &&
+      !isSpecialVehicleCommand(query) &&
+      !!suggestieLijst?.dataset.zone01Url;
+    if (hasResolvedVehicle) {
       event.preventDefault();
+      setVehicleInputResolvedId(voertuigInput, resolved.vehicleId || normalize(query));
+      voertuigInput.value = getVehicleDisplayId(resolved.vehicleId || query);
       dismissPrimaryVehicleSearchInput({ closeKeyboard: true });
-      openExternalUrl(suggestieLijst.dataset.zone01Url, { forceSameTab: true });
+      zoekAlles({ queryOverride: resolved.vehicleId || query, openZone01OnMissing: false, closeKeyboard: true });
       return;
     }
-    if (hasActiveSuggestion) {
+    if (hasActiveSuggestion && suggestieLijst?.dataset.mode !== "missing-vehicle") {
       event.preventDefault();
       const activeIndex = Number(suggestieLijst.dataset.activeIndex || -1);
       const activeSuggestionEl = suggestieLijst.querySelector(`[data-index="${activeIndex}"]`);
@@ -6166,6 +6171,12 @@ voertuigInput.addEventListener("keydown", (event) => {
         activeSuggestionEl.click();
         return;
       }
+    }
+    if (shouldOpenZone01) {
+      event.preventDefault();
+      dismissPrimaryVehicleSearchInput({ closeKeyboard: true });
+      openExternalUrl(suggestieLijst.dataset.zone01Url, { forceSameTab: true });
+      return;
     }
     event.preventDefault();
     dismissPrimaryVehicleSearchInput({ closeKeyboard: true });
@@ -6185,12 +6196,20 @@ dashboardCloseBtn?.addEventListener("click", () => {
   }
   closeDashboardPanel({ historyMode: "replace" });
 });
-voertuigInput.addEventListener("input", debounce(() => {
+voertuigInput.addEventListener("input", () => {
   const clampedValue = clampPrimaryVehicleQuery(voertuigInput.value);
   if (voertuigInput.value !== clampedValue) {
+    const selectionStart = voertuigInput.selectionStart;
     voertuigInput.value = clampedValue;
+    if (typeof selectionStart === "number") {
+      const nextCaret = Math.min(selectionStart, clampedValue.length);
+      voertuigInput.setSelectionRange(nextCaret, nextCaret);
+    }
   }
-}, 150));
+  if (getVehicleInputResolvedId(voertuigInput) && voertuigInput.value.trim() !== getVehicleDisplayId(getVehicleInputResolvedId(voertuigInput))) {
+    setVehicleInputResolvedId(voertuigInput, "");
+  }
+});
 voertuigInput.addEventListener("input", debounce(updateFavoriteButtonState, 150));
 favoritesToggleBtn.addEventListener("click", (event) => {
   event.stopPropagation();
@@ -7113,14 +7132,6 @@ function dismissPrimaryVehicleSearchInput(options = {}) {
   hideSuggestionList(suggestieLijst);
   if (!voertuigInput || !closeKeyboard) return;
 
-  const shouldForceKeyboardDismiss = isTouchPlatform() || isAndroidPlatform;
-  if (shouldForceKeyboardDismiss && !voertuigInput.readOnly) {
-    voertuigInput.readOnly = true;
-    window.setTimeout(() => {
-      voertuigInput.readOnly = false;
-    }, 140);
-  }
-
   voertuigInput.blur();
   if (document.activeElement instanceof HTMLElement) {
     document.activeElement.blur();
@@ -7219,14 +7230,14 @@ function renderSuggestionList(listEl, inputEl, onSelect) {
   }
 
   const fragment = document.createDocumentFragment();
-  results.forEach((vehicle) => {
+  results.forEach((vehicle, index) => {
     const secondaryLabel = buildSuggestionLabel(vehicle);
     const visibleVehicleId = buildSuggestionDisplayLabel(vehicle);
     const actualVehicleId = normalize(vehicle.Voertuignummer);
     const li = document.createElement("li");
     li.className = "vehicle-suggestion-item";
     li.dataset.id = actualVehicleId;
-    li.dataset.index = String(listEl.children.length);
+    li.dataset.index = String(index);
     li.tabIndex = isAndroidTvPlatform ? 0 : -1;
     li.setAttribute("role", "option");
     li.setAttribute("aria-selected", "false");
@@ -7372,7 +7383,7 @@ function bindVehicleSuggestions(inputEl, onSelect) {
     positionSuggestionList(listEl, inputEl);
   };
 
-  inputEl.addEventListener("input", debounce(render, 200));
+  inputEl.addEventListener("input", debounce(render, 90));
   inputEl.addEventListener("focus", render);
   inputEl.addEventListener("keydown", (event) => {
     const items = Array.from(listEl.children);
@@ -7639,12 +7650,6 @@ async function zoekAlles(options = {}) {
     voertuigInput.value = query;
   }
   if(!query) return;
-  const hasInternet = await verifyInternetConnection();
-  if (searchToken !== latestSearchToken) return;
-  if (!hasInternet) {
-    suggestieLijst.innerHTML = "";
-    return;
-  }
   setPageLoading(true);
   setFavoritesPanel(false);
   if (query.toLowerCase() === "python") {
