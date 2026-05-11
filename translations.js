@@ -69,7 +69,8 @@ nl: {
   disclaimerText: "De informatie op deze website wordt verstrekt zonder garanties. Busbibliotheek is niet aansprakelijk voor vertragingen, fouten of onnauwkeurigheden in realtimegegevens. Gebruik is op eigen risico. Raadpleeg voor officiële ritinformatie de bevoegde vervoersmaatschappij.",
   searchHelp: "Zoek op voertuignummer, nummerplaat of intern nummer.",
   headerVisualKicker: "Realtime overzicht",
-  headerVisualTitle: "Open meteen de juiste bus en volg de rit live."
+  headerVisualTitle: "Open meteen de juiste bus en volg de rit live.",
+  trackingStatusBanner: "Trackinginformatie is tijdelijk niet beschikbaar."
 },
 
 fr: {
@@ -132,7 +133,8 @@ fr: {
   disclaimerText: "Les informations de ce site sont fournies sans garantie. Busbibliotheek ne peut être tenu responsable des retards, erreurs ou inexactitudes des données en temps réel. L’utilisation se fait à vos propres risques. Pour des informations officielles sur les trajets, veuillez consulter l’opérateur de transport compétent.",
   searchHelp: "Recherchez par numéro de véhicule, plaque d’immatriculation ou numéro interne.",
   headerVisualKicker: "Aperçu en temps réel",
-  headerVisualTitle: "Ouvrez immédiatement le bon bus et suivez le trajet en direct."
+  headerVisualTitle: "Ouvrez immédiatement le bon bus et suivez le trajet en direct.",
+  trackingStatusBanner: "Les informations de suivi sont temporairement indisponibles."
 },
 
 en: {
@@ -204,7 +206,8 @@ en: {
   disclaimerText: "The information on this website is provided without guarantees. Busbibliotheek is not liable for delays, errors, or inaccuracies in real-time data. Use at your own risk. For official trip information, please consult the relevant transport operator.",
   searchHelp: "Search by vehicle number, license plate, or internal number.",
   headerVisualKicker: "Realtime overview",
-  headerVisualTitle: "Open the right bus right away and follow the trip live."
+  headerVisualTitle: "Open the right bus right away and follow the trip live.",
+  trackingStatusBanner: "Tracking information is temporarily unavailable."
 },
 
 
@@ -262,6 +265,7 @@ de: {
   notOutOfService: "Im Dienst",
   outOfServiceNoRealtime: "Echtzeitposition nicht verfügbar: Fahrzeug außer Dienst.",
   realtimeError: "Fehler beim Abrufen der Echtzeitdaten.",
+  trackingStatusBanner: "Tracking-Informationen sind vorübergehend nicht verfügbar.",
   story44xx: "Die Geschichte von 44xx",
   feedCurrentUntil: "Daten aktuell bis {date}.",
   disclaimerTitle: "Haftungsausschluss",
@@ -326,6 +330,7 @@ pl: {
   notOutOfService: "W eksploatacji",
   outOfServiceNoRealtime: "Pozycja w czasie rzeczywistym niedostępna: pojazd poza eksploatacją.",
   realtimeError: "Błąd podczas pobierania danych w czasie rzeczywistym.",
+  trackingStatusBanner: "Informacje o śledzeniu są tymczasowo niedostępne.",
   story44xx: "Historia 44xx",
   feedCurrentUntil: "Dane aktualne do {date}.",
   disclaimerTitle: "Zastrzeżenie",
@@ -390,6 +395,7 @@ es: {
   notOutOfService: "En servicio",
   outOfServiceNoRealtime: "Ubicación en tiempo real no disponible: el vehículo está fuera de servicio.",
   realtimeError: "Error al obtener los datos en tiempo real.",
+  trackingStatusBanner: "La información de seguimiento no está disponible temporalmente.",
   story44xx: "La historia de 44xx",
   feedCurrentUntil: "Datos actualizados hasta {date}.",
   disclaimerTitle: "Aviso legal",
@@ -454,6 +460,7 @@ ru: {
   notOutOfService: "В эксплуатации",
   outOfServiceNoRealtime: "Местоположение в реальном времени недоступно: транспорт вне эксплуатации.",
   realtimeError: "Ошибка при получении данных в реальном времени.",
+  trackingStatusBanner: "Информация об отслеживании временно недоступна.",
   story44xx: "История 44xx",
   feedCurrentUntil: "Данные актуальны до {date}",
   disclaimerTitle: "Отказ от ответственности",

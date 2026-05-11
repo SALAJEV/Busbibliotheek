@@ -21,6 +21,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <title>Busbibliotheek</title>
 <link rel="stylesheet" href="style.css?v=20260511-3">
+<script>
+  window.BB_SITE_ENABLED = 1;
+  window.BB_ASSET_VERSION = "20260511-3";
+</script>
 </head>
 <body>
 <div class="app-shell">
@@ -32,6 +36,9 @@
   <p id="splashCredit" class="splash-credit">Made by Busspotter 95</p>
 </div>
 <div class="container">
+  <div id="trackingStatusBanner" class="tracking-status-banner" hidden aria-hidden="true" role="status">
+    <span id="trackingStatusBannerText" class="tracking-status-banner__text">Trackinginformatie is tijdelijk niet beschikbaar.</span>
+  </div>
   <div class="header-bar">
     <div class="header-intro">
       <button id="appTitleBtn" class="title-home-btn" type="button">
@@ -594,7 +601,40 @@
 </div>
 </div>
 
-<script defer src="translations.js?v=20260511-3"></script>
-<script defer src="app.js?v=20260511-3"></script>
+<script>
+  (function () {
+    var assetVersion = window.BB_ASSET_VERSION || "20260511-3";
+
+    function renderSiteDisabled() {
+      document.body.classList.add("site-disabled");
+      document.body.innerHTML = [
+        '<div class="site-disabled-shell">',
+        '  <div class="site-disabled-card" role="alert" aria-live="assertive">',
+        '    <span class="site-disabled-badge">Tijdelijk uitgeschakeld</span>',
+        '    <h1>Busbibliotheek is tijdelijk niet beschikbaar</h1>',
+        '    <p>De website is momenteel uitgeschakeld. Zet de schakelaar terug op 1 om de site opnieuw te laden.</p>',
+        '  </div>',
+        '</div>'
+      ].join("");
+    }
+
+    function loadScript(src, onload) {
+      var script = document.createElement("script");
+      script.src = src;
+      script.defer = true;
+      if (typeof onload === "function") script.onload = onload;
+      document.body.appendChild(script);
+    }
+
+    if (window.BB_SITE_ENABLED !== 1) {
+      renderSiteDisabled();
+      return;
+    }
+
+    loadScript("translations.js?v=" + encodeURIComponent(assetVersion), function () {
+      loadScript("app.js?v=" + encodeURIComponent(assetVersion));
+    });
+  })();
+</script>
 </body>
 </html>

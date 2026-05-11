@@ -84,6 +84,19 @@ function syncHeaderActionPlacement() {
   document.body.classList.toggle("menu-inline-search", shouldInlineMenu);
 }
 
+function syncTrackingStatusBanner() {
+  if (!trackingStatusBannerEl || !trackingStatusBannerTextEl) return;
+  const isEnabled = TRACKING_STATUS_BANNER_ENABLED === 1;
+  trackingStatusBannerEl.hidden = !isEnabled;
+  trackingStatusBannerEl.setAttribute("aria-hidden", String(!isEnabled));
+  if (isEnabled) {
+    trackingStatusBannerTextEl.textContent = getLabel(
+      "trackingStatusBanner",
+      "Trackinginformatie is tijdelijk niet beschikbaar."
+    );
+  }
+}
+
 // Constants
 const BASE_URL = "https://pub-611b5bc156eb455ba86d9bcece9aea1c.r2.dev";
 const API_URL = `${window.location.origin}/api`;
@@ -107,6 +120,7 @@ const SETTINGS_KEY = "bb_settings_v1";
 const REALTIME_PERSISTED_CACHE_KEY = "bb_realtime_feed_cache_v1";
 const REALTIME_PERSISTED_MAX_AGE_MS = 3 * 60 * 1000;
 const DASHBOARD_MAX_VEHICLES = 9;
+const TRACKING_STATUS_BANNER_ENABLED = 1;
 let updateIntervalMs = 10000;
 
 const voertuigInput = document.getElementById("voertuignummer");
@@ -330,6 +344,8 @@ window.addEventListener("resize", syncPlatformBodyClasses, { passive: true });
 window.addEventListener("orientationchange", syncPlatformBodyClasses, { passive: true });
 
 const lastUpdateEl = document.getElementById("lastUpdate");
+const trackingStatusBannerEl = document.getElementById("trackingStatusBanner");
+const trackingStatusBannerTextEl = document.getElementById("trackingStatusBannerText");
 const appTitleBtnEl = document.getElementById("appTitleBtn");
 const appTitleEl = document.getElementById("appTitle");
 const appSubtitleEl = document.getElementById("appSubtitle");
@@ -4896,6 +4912,7 @@ function applyTranslations() {
   updateCopyrightText();
   if (metaDescriptionEl) metaDescriptionEl.setAttribute("content", getLabel("metaDescription", "Busbibliotheek voor bussen van De Lijn: zoek een voertuig en volg het live."));
   splash?.setAttribute("aria-label", getLabel("splashAria", "Busbibliotheek laden"));
+  syncTrackingStatusBanner();
   appTitleEl.textContent = getLabel("appTitle", "Busbibliotheek");
   if (splashTitleEl) splashTitleEl.textContent = getLabel("appTitle", "Busbibliotheek");
   appSubtitleEl.textContent = t("subtitle").replace(/\.\s*$/, "");
@@ -8232,7 +8249,7 @@ async function updateRealtime(id){
     return;
   }
   try{
-    const data = await fetchRealtimeFeed({ vehicleId: id });
+    const data = await fetchRealtimeFeed();
     if (requestToken !== realtimeRequestToken || id !== currentVehicleId) return;
     dataLoadTimestamps.realtime = Date.now();
     const derivedData = getRealtimeFeedDerivedData(data);
