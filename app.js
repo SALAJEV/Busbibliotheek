@@ -4388,9 +4388,28 @@ function setRealtimeMapVisibility(visible) {
   if (mapEl) {
     mapEl.classList.toggle("hidden", !visible);
   }
+  if (visible) {
+    refreshRealtimeMapSize();
+  }
   if (!visible) {
     resetWeatherBlock();
   }
+}
+
+function refreshRealtimeMapSize() {
+  if (!map) return;
+  const rerender = () => {
+    if (map) map.invalidateSize(false);
+  };
+  rerender();
+  if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+    window.requestAnimationFrame(() => {
+      rerender();
+      window.requestAnimationFrame(rerender);
+    });
+  }
+  window.setTimeout(rerender, 120);
+  window.setTimeout(rerender, 260);
 }
 
 function setRealtimeMarkup(markup, renderKey = "") {
@@ -7976,14 +7995,7 @@ async function initMap(lat,lon){
       fadeAnimation: true,
       markerZoomAnimation: true
     }).setView([lat,lon],14);
-    
-    // Force map to recalculate its size
-    setTimeout(() => {
-      if(map) {
-        map.invalidateSize(false);
-      }
-    }, 150);
-    
+
     lastRealtimeMapCenter = { latitude: Number(lat), longitude: Number(lon) };
     lastRealtimeMapCenteredAt = Date.now();
 
@@ -7991,7 +8003,7 @@ async function initMap(lat,lon){
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors &amp; <a href="https://carto.com/">CARTO</a>'
     }).addTo(map);
-
+    refreshRealtimeMapSize();
   }
 }
 

@@ -9,7 +9,7 @@ const JSON_HEADERS = {
 const UPSTREAM_TIMEOUT_MS = 6000;
 const REALTIME_EDGE_CACHE_TTL_SECONDS = 25;
 const REALTIME_EDGE_STALE_WINDOW_SECONDS = 300;
-const MAX_RESPONSE_SIZE_BYTES = 3145728; // 3MB limit (smaller to be safe)
+const MAX_RESPONSE_SIZE_BYTES = 8388608; // 8MB limit for realtime data
 const REQUEST_DEDUP_MAP = new Map();
 
 export async function onRequest(context) {
@@ -71,15 +71,23 @@ export async function onRequest(context) {
 
         // Stream response or parse for caching
         if (resource === "realtime") {
-          const payloadText = await readWithSizeLimit(upstreamResponse);
-          const payload = payloadText ? JSON.parse(payloadText) : {};
-          
-          // Cache asynchronously without blocking response
-          if (cacheKey && payloadText.length < 2000000) {
-            context.waitUntil(storeCachedRealtimeResponse(cacheKey, payload));
+          try {
+            const payloadText = await readWithSizeLimit(upstreamResponse);
+            const payload = payloadText ? JSON.parse(payloadText) : {};
+            
+            // Cache asynchronously without blocking response
+            if (cacheKey && payloadText.length < 5000000) { // Cache if < 5MB
+              context.waitUntil(storeCachedRealtimeResponse(cacheKey, payload));
+            }
+            
+            return jsonResponse(payload, 200);
+          } catch (readError) {
+            // If reading fails, try stale cache
+            const staleCache = await getRealtimeFromCache(true);
+            if (staleCache) return staleCache;
+            
+            throw readError;
           }
-          
-          return jsonResponse(payload, 200);
         } else {
           // For other resources, stream directly
           return new Response(upstreamResponse.body, {
@@ -154,29 +162,58 @@ async function readErrorText(response) {
 
 async function readWithSizeLimit(response) {
   try {
+    const contentLength = parseInt(response.headers.get("content-length") || "0", 10);
+    
+    // If server tells us size, check early
+    if (contentLength > 0 && contentLength > MAX_RESPONSE_SIZE_BYTES) {
+      throw new Error(`Response size ${contentLength} exceeds limit`);
+    }
+
+    // For streaming, read in chunks
     const reader = response.body?.getReader();
-    if (!reader) return await response.text();
+    if (!reader) {
+      // Fallback to text() if no readable stream
+      const text = await response.clone().text();
+      if (text.length > MAX_RESPONSE_SIZE_BYTES) {
+        throw new Error(`Response exceeds size limit: ${text.length} bytes`);
+      }
+      return text;
+    }
 
     let received = 0;
     let result = "";
     const decoder = new TextDecoder();
+    const chunks = [];
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      received += value.length;
-      if (received > MAX_RESPONSE_SIZE_BYTES) {
-        reader.cancel();
-        throw new Error("Response exceeds size limit");
+        received += value.length;
+        
+        // Check size after every chunk
+        if (received > MAX_RESPONSE_SIZE_BYTES) {
+          reader.cancel();
+          throw new Error(`Response exceeds size limit: ${received} bytes > ${MAX_RESPONSE_SIZE_BYTES}`);
+        }
+
+        chunks.push(value);
       }
 
-      result += decoder.decode(value, { stream: true });
+      // Combine chunks
+      for (const chunk of chunks) {
+        result += decoder.decode(chunk, { stream: true });
+      }
+      result += decoder.decode(); // Finalize
+      
+      return result;
+    } catch (error) {
+      reader.cancel();
+      throw error;
     }
-
-    return result;
   } catch (error) {
-    throw new Error("Fout bij lezen response: " + (error instanceof Error ? error.message : ""));
+    throw new Error("Fout bij lezen response: " + (error instanceof Error ? error.message : "onbekend"));
   }
 }
 
