@@ -20,10 +20,10 @@
 <link rel="dns-prefetch" href="//fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <title>Busbibliotheek</title>
-<link rel="stylesheet" href="style.css?v=20260511-3">
+<link rel="stylesheet" href="style.css?v=20260511-4">
 <script>
   window.BB_SITE_ENABLED = 1;
-  window.BB_ASSET_VERSION = "20260511-3";
+  window.BB_ASSET_VERSION = "20260511-4";
 </script>
 </head>
 <body>
@@ -152,7 +152,6 @@
             <span id="vehiclePhotoEmptyBadge" class="vehicle-photo-empty-badge">Nog geen foto</span>
             <strong id="vehiclePhotoEmptyTitle" class="vehicle-photo-empty-title">Nog geen foto beschikbaar van dit voertuig.</strong>
             <p id="vehiclePhotoEmptyText" class="vehicle-photo-empty-text">Heb jij wel een foto? Help Busbibliotheek aanvullen via het uploadformulier.</p>
-            <button id="vehiclePhotoUploadBtn" class="btn vehicle-photo-upload-btn" type="button">Jouw foto hier? Upload hier.</button>
           </div>
         </div>
         <div class="vehicle-photo-info">
@@ -160,6 +159,10 @@
           <div id="vehiclePhotoMeta" class="vehicle-photo-meta" hidden aria-hidden="true"></div>
         </div>
         <p id="vehiclePhotoCaption" class="vehicle-photo-caption"></p>
+        <div id="vehiclePhotoUploadCta" class="vehicle-photo-upload-cta" hidden aria-hidden="true">
+          <p id="vehiclePhotoUploadHint" class="vehicle-photo-upload-hint">Heb jij ook een goede foto van dit voertuig? Help Busbibliotheek via het uploadformulier.</p>
+          <button id="vehiclePhotoUploadBtn" class="btn vehicle-photo-upload-btn vehicle-photo-upload-btn--footer" type="button">Open uploadformulier</button>
+        </div>
       </div>
 
       <div id="compareCard" class="card compare-card" hidden aria-hidden="true">
@@ -603,7 +606,100 @@
 
 <script>
   (function () {
-    var assetVersion = window.BB_ASSET_VERSION || "20260511-3";
+    var assetVersion = window.BB_ASSET_VERSION || "20260511-4";
+    var compatibilityCopy = {
+      nl: {
+        badge: "Browser update nodig",
+        title: "Busbibliotheek is niet beschikbaar op dit toestel",
+        body: "Je browser of Android-versie is te oud voor deze website. Update je browser of toestel en probeer opnieuw."
+      },
+      fr: {
+        badge: "Mise à jour du navigateur requise",
+        title: "Busbibliotheek n'est pas disponible sur cet appareil",
+        body: "Votre navigateur ou votre version d'Android est trop ancien pour ce site. Mettez votre navigateur ou votre appareil à jour puis réessayez."
+      },
+      en: {
+        badge: "Browser update required",
+        title: "Busbibliotheek is not available on this device",
+        body: "Your browser or Android version is too old for this website. Update your browser or device and try again."
+      },
+      de: {
+        badge: "Browser-Update erforderlich",
+        title: "Busbibliotheek ist auf diesem Gerät nicht verfügbar",
+        body: "Ihr Browser oder Ihre Android-Version ist für diese Website zu alt. Aktualisieren Sie Ihren Browser oder Ihr Gerät und versuchen Sie es erneut."
+      },
+      pl: {
+        badge: "Wymagana aktualizacja przeglądarki",
+        title: "Busbibliotheek nie jest dostępny na tym urządzeniu",
+        body: "Twoja przeglądarka lub wersja Androida jest zbyt stara dla tej strony. Zaktualizuj przeglądarkę lub urządzenie i spróbuj ponownie."
+      },
+      es: {
+        badge: "Se requiere actualizar el navegador",
+        title: "Busbibliotheek no está disponible en este dispositivo",
+        body: "Tu navegador o versión de Android es demasiado antiguo para este sitio web. Actualiza tu navegador o dispositivo e inténtalo de nuevo."
+      },
+      ru: {
+        badge: "Требуется обновление браузера",
+        title: "Busbibliotheek недоступен на этом устройстве",
+        body: "Ваш браузер или версия Android слишком устарели для этого сайта. Обновите браузер или устройство и попробуйте снова."
+      }
+    };
+
+    function normalizeLanguage(language) {
+      var normalized = String(language || "").toLowerCase().replace(/_/g, "-");
+      var base = normalized.split("-")[0];
+      return compatibilityCopy[base] ? base : "nl";
+    }
+
+    function getPreferredLanguage() {
+      var candidates = [];
+      if (window.navigator && window.navigator.languages && window.navigator.languages.length) {
+        candidates = candidates.concat(window.navigator.languages);
+      }
+      candidates.push(window.navigator.language, window.navigator.userLanguage, window.navigator.browserLanguage);
+      for (var i = 0; i < candidates.length; i += 1) {
+        var language = normalizeLanguage(candidates[i]);
+        if (compatibilityCopy[language]) {
+          return language;
+        }
+      }
+      return "nl";
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function supportsModernBrowser() {
+      var ua = window.navigator && window.navigator.userAgent ? window.navigator.userAgent : "";
+      var androidMatch = ua.match(/Android\s+(\d+(?:\.\d+)?)/i);
+      var androidVersion = androidMatch ? parseFloat(androidMatch[1]) : NaN;
+      if (!isNaN(androidVersion) && androidVersion < 7) {
+        return false;
+      }
+      return !!(
+        window.Promise &&
+        window.fetch &&
+        window.Map &&
+        window.URL &&
+        window.URLSearchParams &&
+        window.localStorage &&
+        window.matchMedia &&
+        window.requestAnimationFrame &&
+        window.CSS &&
+        typeof window.CSS.supports === "function" &&
+        window.Element &&
+        window.Element.prototype &&
+        window.Element.prototype.closest &&
+        window.Element.prototype.classList &&
+        Array.prototype.includes
+      );
+    }
 
     function renderSiteDisabled() {
       document.body.classList.add("site-disabled");
@@ -613,6 +709,22 @@
         '    <span class="site-disabled-badge">Tijdelijk uitgeschakeld</span>',
         '    <h1>Busbibliotheek is tijdelijk niet beschikbaar</h1>',
         '    <p>De website is momenteel uitgeschakeld. Zet de schakelaar terug op 1 om de site opnieuw te laden.</p>',
+        '  </div>',
+        '</div>'
+      ].join("");
+    }
+
+    function renderCompatibilityDisabled() {
+      var language = getPreferredLanguage();
+      var copy = compatibilityCopy[language] || compatibilityCopy.nl;
+      document.documentElement.lang = language;
+      document.body.classList.add("site-disabled");
+      document.body.innerHTML = [
+        '<div class="site-disabled-shell">',
+        '  <div class="site-disabled-card" role="alert" aria-live="assertive">',
+        '    <span class="site-disabled-badge">' + escapeHtml(copy.badge) + '</span>',
+        '    <h1>' + escapeHtml(copy.title) + '</h1>',
+        '    <p>' + escapeHtml(copy.body) + '</p>',
         '  </div>',
         '</div>'
       ].join("");
@@ -628,6 +740,11 @@
 
     if (window.BB_SITE_ENABLED !== 1) {
       renderSiteDisabled();
+      return;
+    }
+
+    if (!supportsModernBrowser()) {
+      renderCompatibilityDisabled();
       return;
     }
 

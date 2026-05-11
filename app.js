@@ -390,6 +390,8 @@ const vehiclePhotoNextBtn = document.getElementById("vehiclePhotoNextBtn");
 const vehiclePhotoCounterEl = document.getElementById("vehiclePhotoCounter");
 const vehiclePhotoMetaEl = document.getElementById("vehiclePhotoMeta");
 const vehiclePhotoCaptionEl = document.getElementById("vehiclePhotoCaption");
+const vehiclePhotoUploadCtaEl = document.getElementById("vehiclePhotoUploadCta");
+const vehiclePhotoUploadHintEl = document.getElementById("vehiclePhotoUploadHint");
 const vehiclePhotoEmptyStateEl = document.getElementById("vehiclePhotoEmptyState");
 const vehiclePhotoEmptyBadgeEl = document.getElementById("vehiclePhotoEmptyBadge");
 const vehiclePhotoEmptyTitleEl = document.getElementById("vehiclePhotoEmptyTitle");
@@ -586,6 +588,8 @@ let lastRealtimeMapCenteredAt = 0;
 let delayMinutes = 0;
 let currentVehicleId = "";
 let compareVehicleId = "";
+let lastRealtimeRenderKey = "";
+let lastWeatherRenderKey = "";
 let compareEditTarget = "compare";
 let dashboardVehicleIds = [];
 let dashboardRefreshHandle = null;
@@ -623,7 +627,7 @@ let realtimePausedByInactivity = false;
 let deeplinkHandled = false;
 let routeNavigationLocked = false;
 let injectedInitialHomeHistoryState = false;
-const APP_VERSION = "2026.05.11-3";
+const APP_VERSION = "2026.05.11-4";
 const dataLoadTimestamps = {
   realtime: 0
 };
@@ -2637,10 +2641,12 @@ async function refreshDashboardPanel(options = {}) {
       return;
     }
 
-    if (voertuigen.length === 0) await laadVoertuigen();
-    if (trips.length === 0) await laadTrips();
-    if (routes.length === 0) await laadRoutes();
-    if (stopsById.size === 0) await laadStops();
+    await Promise.all([
+      voertuigen.length === 0 ? laadVoertuigen() : Promise.resolve(),
+      trips.length === 0 ? laadTrips() : Promise.resolve(),
+      routes.length === 0 ? laadRoutes() : Promise.resolve(),
+      stopsById.size === 0 ? laadStops() : Promise.resolve()
+    ]);
 
     const data = await fetchRealtimeFeed();
     if (requestToken !== dashboardRequestToken || dashboardPanelEl.hidden) return;
@@ -2759,7 +2765,12 @@ function updatePhotoUploadCopy(vehicleId = currentPhotoVehicleId) {
       ? fillTemplate(getLabel("photoUploadEmptyText", "Heb jij wel een goede foto van voertuig {id}? Help Busbibliotheek aanvullen via het uploadformulier."), visibleVehicleId)
       : getLabel("photoUploadEmptyTextGeneric", "Heb jij wel een goede foto? Help Busbibliotheek aanvullen via het uploadformulier.");
   }
-  if (vehiclePhotoUploadBtn) vehiclePhotoUploadBtn.textContent = getLabel("photoUploadCta", "Jouw foto hier? Upload hier.");
+  if (vehiclePhotoUploadHintEl) {
+    vehiclePhotoUploadHintEl.textContent = hasSpecificVehicleId
+      ? fillTemplate(getLabel("photoUploadSummary", "Help Busbibliotheek aanvullen met een foto van voertuig {id}."), visibleVehicleId)
+      : getLabel("photoUploadSummaryGeneric", "Help Busbibliotheek aanvullen met een foto van dit voertuig.");
+  }
+  if (vehiclePhotoUploadBtn) vehiclePhotoUploadBtn.textContent = getLabel("photoUploadOpen", "Open uploadformulier");
   if (photoUploadModalTitleEl) photoUploadModalTitleEl.textContent = getLabel("photoUploadTitle", "Foto uploaden");
   if (photoUploadModalSummaryEl) {
     photoUploadModalSummaryEl.textContent = hasSpecificVehicleId
@@ -2852,6 +2863,10 @@ function setVehiclePhotoEmptyStateVisible(visible) {
     if (vehiclePhotoCaptionEl) vehiclePhotoCaptionEl.hidden = true;
   }
   if (vehiclePhotoInfoEl) vehiclePhotoInfoEl.hidden = visible;
+  if (vehiclePhotoUploadCtaEl) {
+    vehiclePhotoUploadCtaEl.hidden = false;
+    vehiclePhotoUploadCtaEl.setAttribute("aria-hidden", "false");
+  }
   if (vehiclePhotoEmptyStateEl) {
     vehiclePhotoEmptyStateEl.hidden = !visible;
     vehiclePhotoEmptyStateEl.setAttribute("aria-hidden", String(!visible));
@@ -4079,6 +4094,10 @@ function hideVehiclePhotoCard() {
     vehiclePhotoCounterEl.hidden = true;
     vehiclePhotoCounterEl.textContent = "";
   }
+  if (vehiclePhotoUploadCtaEl) {
+    vehiclePhotoUploadCtaEl.hidden = true;
+    vehiclePhotoUploadCtaEl.setAttribute("aria-hidden", "true");
+  }
   setVehiclePhotoEmptyStateVisible(false);
 }
 
@@ -4096,6 +4115,10 @@ async function updateVehiclePhotoCard(vehicleId) {
   currentVehiclePhotoIndex = 0;
   vehiclePhotoCardEl.hidden = false;
   vehiclePhotoCardEl.setAttribute("aria-hidden", "false");
+  if (vehiclePhotoUploadCtaEl) {
+    vehiclePhotoUploadCtaEl.hidden = false;
+    vehiclePhotoUploadCtaEl.setAttribute("aria-hidden", "false");
+  }
   setVehiclePhotoEmptyStateVisible(false);
   setVehiclePhotoFrameLoading(true, getLabel("photoLoading", "Foto wordt geladen..."));
   clearVehiclePhotoImageElement(true);
@@ -4354,10 +4377,29 @@ function resetWeatherBlock() {
   lastWeatherData = null;
   lastWeatherCoordinates = null;
   lastWeatherFetchedAt = 0;
+  lastWeatherRenderKey = "";
   if (!weatherBlockEl) return;
   weatherBlockEl.hidden = true;
   weatherBlockEl.setAttribute("aria-hidden", "true");
   weatherBlockEl.innerHTML = "";
+}
+
+function setRealtimeMapVisibility(visible) {
+  if (mapEl) {
+    mapEl.classList.toggle("hidden", !visible);
+  }
+  if (!visible) {
+    resetWeatherBlock();
+  }
+}
+
+function setRealtimeMarkup(markup, renderKey = "") {
+  if (!realtimeEl) return;
+  if (renderKey && lastRealtimeRenderKey === renderKey) {
+    return;
+  }
+  realtimeEl.innerHTML = markup;
+  lastRealtimeRenderKey = renderKey || "";
 }
 
 function getWeatherCurrentSnapshot(weatherData) {
@@ -4514,6 +4556,20 @@ function renderWeatherBlock(weatherData, latitude, longitude) {
   }
   const presentation = getWeatherPresentation(current.weather_code, current.is_day);
   const temperature = typeof current.temperature_2m === "number" ? `${Math.round(current.temperature_2m)}°C` : "-";
+  const renderKey = [
+    settings.language,
+    presentation.iconKey,
+    presentation.label,
+    temperature,
+    Math.round(Number(latitude) * 1000) / 1000,
+    Math.round(Number(longitude) * 1000) / 1000
+  ].join("|");
+
+  if (lastWeatherRenderKey === renderKey) {
+    weatherBlockEl.hidden = false;
+    weatherBlockEl.setAttribute("aria-hidden", "false");
+    return;
+  }
 
   weatherBlockEl.innerHTML = `
     <button class="weather-card weather-card-link" type="button" aria-label="${escapeHtml(getLabel("weatherOpenForecast", "Open weerdetails"))}">
@@ -4533,6 +4589,7 @@ function renderWeatherBlock(weatherData, latitude, longitude) {
       </div>
     </button>
   `;
+  lastWeatherRenderKey = renderKey;
   weatherBlockEl.querySelector(".weather-card-link")?.addEventListener("click", showWeatherModal);
   weatherBlockEl.hidden = false;
   weatherBlockEl.setAttribute("aria-hidden", "false");
@@ -6090,6 +6147,7 @@ function initAppPreferences() {
       ...settings,
       ...createDefaultSettings(detectPreferredLanguage())
     };
+    saveSettings();
   }
   window.settings = settings;
   initializeRouteHistory();
@@ -6116,7 +6174,7 @@ function initAppPreferences() {
   resultsWrapEl.classList.remove("show");
   resultsGridEl.classList.remove("show");
   closeBtnEl.style.display = "none";
-  mapEl.classList.add("hidden");
+  setRealtimeMapVisibility(false);
   lastUpdateEl.hidden = true;
   lastUpdateEl.textContent = `${t("lastUpdate")}: -`;
 
@@ -6400,7 +6458,9 @@ compareModalConfirmBtn?.addEventListener("click", async () => {
   }
   compareVehicleId = resolvedId;
   hideCompareModal();
-  renderComparison();
+  if (compareVehicleId) {
+    renderComparison();
+  }
 });
 compareVehicleInputEl?.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
@@ -6981,7 +7041,10 @@ function renderRealtimeUnavailableState(vehicleId = "", options = {}) {
   updateHeaderVisualRoutePresentation();
 
   if (!withTracker) {
-    realtimeEl.innerHTML = `<p class="realtime-empty-text">${escapeHtml(message)}</p>`;
+    setRealtimeMarkup(
+      `<p class="realtime-empty-text">${escapeHtml(message)}</p>`,
+      `empty:${visibleVehicleId}:${message}`
+    );
     return;
   }
 
@@ -6992,13 +7055,13 @@ function renderRealtimeUnavailableState(vehicleId = "", options = {}) {
       )
     : getLabel("realtimeTrackerHelpGeneric", "Geen realtime gevonden. Probeer op de officiële tracker van De Lijn te zoeken.");
 
-  realtimeEl.innerHTML = `
+  setRealtimeMarkup(`
     <div class="realtime-empty-state">
       <p class="realtime-empty-text">${escapeHtml(message)}</p>
       <p class="realtime-empty-help">${escapeHtml(helperText)}</p>
       <a class="btn realtime-empty-link" href="${escapeHtml(DE_LIJN_VEHICLE_TRACKING_URL)}" target="_blank" rel="noopener noreferrer">${escapeHtml(getLabel("realtimeTrackerCta", "Zoek op vehicletracking.delijn.be"))}</a>
     </div>
-  `;
+  `, `tracker:${visibleVehicleId}:${message}:${helperText}`);
 }
 
 function clampPrimaryVehicleQuery(value = "") {
@@ -7718,7 +7781,9 @@ async function zoekAlles(options = {}) {
   updateDocumentTitle(activeVehicleId);
 
   toonVasteData(activeVehicleId);
-  renderComparison();
+  if (compareVehicleId) {
+    renderComparison();
+  }
   lastUpdateEl.hidden = true;
   lastUpdateEl.textContent = `${t("lastUpdate")}: -`;
 
@@ -7727,8 +7792,7 @@ async function zoekAlles(options = {}) {
       withTracker: false,
       reason: getLabel("trackingStatusBanner", "Trackinginformatie is tijdelijk niet beschikbaar.")
     });
-    resetWeatherBlock();
-    mapEl.classList.add("hidden");
+    setRealtimeMapVisibility(false);
     if (refresh) {
       clearInterval(refresh);
       refresh = null;
@@ -7739,7 +7803,7 @@ async function zoekAlles(options = {}) {
 
   if (isOutOfService(bus)) {
     realtimeEl.innerHTML = t("outOfServiceNoRealtime");
-    mapEl.classList.add("hidden");
+    setRealtimeMapVisibility(false);
     routeTrail = [];
     if (trailLine && map) {
       map.removeLayer(trailLine);
@@ -7759,7 +7823,10 @@ async function zoekAlles(options = {}) {
     return;
   }
 
-  realtimeEl.innerHTML = `<div class="realtime-loading-inline"><span class="spinner"></span><span class="loading">${t("loading")}</span></div>`;
+  setRealtimeMarkup(
+    `<div class="realtime-loading-inline"><span class="spinner"></span><span class="loading">${t("loading")}</span></div>`,
+    `loading:${activeVehicleId}:${settings.language}`
+  );
   routeTrail = [];
   if (trailLine && map) {
     map.removeLayer(trailLine);
@@ -7799,7 +7866,7 @@ function terug(options = {}) {
   }
   lastUpdateEl.textContent = `${t("lastUpdate")}: -`;
   lastUpdateEl.hidden = true;
-  mapEl.classList.add("hidden");
+  setRealtimeMapVisibility(false);
   if(marker){ map.removeLayer(marker); marker=null; }
   clearComparison();
   updateFavoriteButtonState();
@@ -8356,8 +8423,7 @@ async function updateRealtime(id){
       withTracker: false,
       reason: getLabel("trackingStatusBanner", "Trackinginformatie is tijdelijk niet beschikbaar.")
     });
-    resetWeatherBlock();
-    mapEl.classList.add("hidden");
+    setRealtimeMapVisibility(false);
     lastUpdateEl.textContent = `${t("lastUpdate")}: -`;
     lastUpdateEl.hidden = true;
     setPageLoading(false);
@@ -8368,8 +8434,7 @@ async function updateRealtime(id){
       withTracker: false,
       reason: getLabel("realtimeUnavailableOperator", "Realtime locatie is niet beschikbaar voor deze vervoersmaatschappij.")
     });
-    resetWeatherBlock();
-    mapEl.classList.add("hidden");
+    setRealtimeMapVisibility(false);
     lastUpdateEl.textContent = `${t("lastUpdate")}: -`;
     lastUpdateEl.hidden = true;
     setPageLoading(false);
@@ -8387,8 +8452,7 @@ async function updateRealtime(id){
 
     if(!gps){
       renderRealtimeUnavailableState(id, { withTracker: true });
-      resetWeatherBlock();
-      mapEl.classList.add("hidden");
+      setRealtimeMapVisibility(false);
       lastUpdateEl.textContent = `${t("lastUpdate")}: -`;
       lastUpdateEl.hidden = true;
       return;
@@ -8411,9 +8475,11 @@ async function updateRealtime(id){
     const tripid = descriptor.tripId;
 
     // Zorg dat trips/routes geladen zijn
-    if(trips.length===0) await laadTrips();
-    if(routes.length===0) await laadRoutes();
-    if(stopsById.size===0) await laadStops();
+    await Promise.all([
+      trips.length === 0 ? laadTrips() : Promise.resolve(),
+      routes.length === 0 ? laadRoutes() : Promise.resolve(),
+      stopsById.size === 0 ? laadStops() : Promise.resolve()
+    ]);
     if (requestToken !== realtimeRequestToken || id !== currentVehicleId) return;
     const tripUpdateVehicleId = getVehicleIdFromTripUpdate(tripUpdate);
     const sameVehicleTripUpdate = !!tripUpdate && tripUpdateVehicleId === normalizedRequestedId;
@@ -8507,7 +8573,7 @@ async function updateRealtime(id){
       ? `<a class="current-stop-link" href="${escapeHtml(currentStopUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(currentStopName)}</a>`
       : `<span class="current-stop-link">${escapeHtml(currentStopName)}</span>`;
 
-    realtimeEl.innerHTML=`
+    const realtimeMarkup = `
       <div class="realtime-summary-card">
         ${routeRowMarkup}
         <div class="realtime-meta-stack">
@@ -8519,12 +8585,21 @@ async function updateRealtime(id){
         </div>
       </div>
     `;
+    setRealtimeMarkup(
+      realtimeMarkup,
+      `live:${normalizedRequestedId}:${routeShort}:${destinationText}:${currentStopName}:${delayClass}:${msgDelay}:${settings.language}`
+    );
     if (canUseLocationForOperator(bus)) {
-      void updateWeatherForCoordinates(Number(v.position.latitude), Number(v.position.longitude));
-      mapEl.classList.remove("hidden");
+      await initMap(v.position.latitude,v.position.longitude);
+      if (requestToken !== realtimeRequestToken || id !== currentVehicleId) return;
+      if (map) {
+        setRealtimeMapVisibility(true);
+        void updateWeatherForCoordinates(Number(v.position.latitude), Number(v.position.longitude));
+      } else {
+        setRealtimeMapVisibility(false);
+      }
     } else {
-      resetWeatherBlock();
-      mapEl.classList.add("hidden");
+      setRealtimeMapVisibility(false);
     }
     lastUpdateEl.textContent = `${t("lastUpdate")}: ${formatRealtimeTimestampForUi(gpsEntityTimestamp) || new Date().toLocaleTimeString(localeForLanguage(settings.language))}`;
     lastUpdateEl.hidden = false;
@@ -8533,8 +8608,8 @@ async function updateRealtime(id){
       return;
     }
 
-    await initMap(v.position.latitude,v.position.longitude);
-    if (requestToken !== realtimeRequestToken || id !== currentVehicleId || !map) return;
+    if (!map) return;
+    if (requestToken !== realtimeRequestToken || id !== currentVehicleId) return;
     const L = window.L;
     routeTrail.push([v.position.latitude, v.position.longitude]);
     if (routeTrail.length > REALTIME_ROUTE_TRAIL_MAX_POINTS) routeTrail.shift();
@@ -8583,8 +8658,7 @@ async function updateRealtime(id){
       ? getLabel("realtimeTimeout", "Realtime laden duurde te lang. Probeer de officiële tracker van De Lijn.")
       : t("realtimeError");
     renderRealtimeUnavailableState(id, { withTracker: true, reason });
-    resetWeatherBlock();
-    mapEl.classList.add("hidden");
+    setRealtimeMapVisibility(false);
     lastUpdateEl.textContent = `${t("lastUpdate")}: -`;
     lastUpdateEl.hidden = true;
   } finally {
