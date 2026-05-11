@@ -682,6 +682,7 @@
       if (!isNaN(androidVersion) && androidVersion < 7) {
         return false;
       }
+      var elementPrototype = window.Element && window.Element.prototype;
       return !!(
         window.Promise &&
         window.fetch &&
@@ -693,10 +694,9 @@
         window.requestAnimationFrame &&
         window.CSS &&
         typeof window.CSS.supports === "function" &&
-        window.Element &&
-        window.Element.prototype &&
-        window.Element.prototype.closest &&
-        window.Element.prototype.classList &&
+        elementPrototype &&
+        typeof elementPrototype.closest === "function" &&
+        "classList" in elementPrototype &&
         Array.prototype.includes
       );
     }
