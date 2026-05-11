@@ -1,63 +1,130 @@
-export async function onRequest(context) {
-  const API_KEY = context.env?.DELIJN_API_KEY;
-  const requestUrl = new URL(context.request.url);
-  const resource = requestUrl.searchParams.get("resource") || "realtime";
+const JSON_HEADERS = {
+  "Content-Type": "application/json; charset=UTF-8",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Ocp-Apim-Subscription-Key",
+  "Cache-Control": "no-store"
+};
 
-  if (resource === "realtime" || resource === "haltes") {
-    if (!API_KEY) {
-      return new Response(JSON.stringify({ error: "Serverconfiguratie mist DELIJN_API_KEY" }), {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-store"
-        }
-      });
-    }
+const UPSTREAM_TIMEOUT_MS = 12000;
+
+export async function onRequest(context) {
+  const { request, env } = context;
+
+  if (request.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: JSON_HEADERS
+    });
+  }
+
+  if (request.method !== "GET") {
+    return jsonResponse(
+      { error: "Methode niet toegestaan" },
+      405
+    );
+  }
+
+  const apiKey = env?.DELIJN_API_KEY?.trim();
+  const requestUrl = new URL(request.url);
+  const resource = normalizeResource(requestUrl.searchParams.get("resource"));
+
+  if ((resource === "realtime" || resource === "haltes") && !apiKey) {
+    return jsonResponse(
+      { error: "Serverconfiguratie mist DELIJN_API_KEY" },
+      500
+    );
   }
 
   try {
     const upstreamUrl = buildUpstreamUrl(requestUrl, resource);
-    const requestHeaders = {
-      "Accept": "application/json"
-    };
+    const upstreamResponse = await fetchUpstream(upstreamUrl, resource, apiKey);
+    const payloadText = await upstreamResponse.text();
 
-    if (resource === "realtime" || resource === "haltes") {
-      requestHeaders["Ocp-Apim-Subscription-Key"] = API_KEY;
+    if (!upstreamResponse.ok) {
+      return jsonResponse(
+        {
+          error: resource === "weather" ? "Fout van weerbron" : "Fout van De Lijn API",
+          status: upstreamResponse.status,
+          upstreamUrl,
+          detail: truncate(payloadText, 240)
+        },
+        upstreamResponse.status
+      );
     }
 
-    const response = await fetch(upstreamUrl, {
-      headers: requestHeaders,
-      cf: { cacheTtl: 0, cacheEverything: false }
-    });
+    const parsedPayload = payloadText ? JSON.parse(payloadText) : {};
+    return jsonResponse(parsedPayload, 200);
+  } catch (error) {
+    const status = error instanceof RequestValidationError
+      ? 400
+      : error instanceof UpstreamUnavailableError
+        ? 503
+        : 500;
 
-    if (!response.ok) {
-      return new Response(JSON.stringify({ error: resource === "weather" ? "Fout van weerbron" : "Fout van De Lijn API", status: response.status }), {
-        status: response.status,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-store"
-        }
-      });
-    }
+    return jsonResponse(
+      {
+        error: error instanceof RequestValidationError
+          ? error.message
+          : error instanceof UpstreamUnavailableError
+            ? error.message
+            : "Fout bij ophalen data",
+        detail: error instanceof Error ? truncate(error.message, 240) : ""
+      },
+      status
+    );
+  }
+}
 
-    const data = await response.json();
+function jsonResponse(payload, status = 200) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: JSON_HEADERS
+  });
+}
 
-    return new Response(JSON.stringify(data), {
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-        "Cache-Control": "no-store"
-      }
+function normalizeResource(value) {
+  const normalized = (value || "realtime").toString().trim().toLowerCase();
+  if (normalized === "weather" || normalized === "haltes" || normalized === "realtime") {
+    return normalized;
+  }
+  throw new RequestValidationError("Onbekende resource");
+}
+
+async function fetchUpstream(url, resource, apiKey) {
+  const requestHeaders = {
+    Accept: "application/json"
+  };
+
+  if (resource === "realtime" || resource === "haltes") {
+    requestHeaders["Ocp-Apim-Subscription-Key"] = apiKey;
+  }
+
+  try {
+    return await fetchWithTimeout(url, {
+      method: "GET",
+      headers: requestHeaders
     });
   } catch (error) {
-    const status = error instanceof RequestValidationError ? 400 : 500;
-    return new Response(JSON.stringify({ error: error instanceof RequestValidationError ? error.message : "Fout bij ophalen data" }), {
-      status,
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": "no-store"
-      }
+    throw new UpstreamUnavailableError(
+      resource === "weather"
+        ? "Weerbron is tijdelijk niet bereikbaar"
+        : "De Lijn API is tijdelijk niet bereikbaar"
+    );
+  }
+}
+
+async function fetchWithTimeout(url, options = {}) {
+  const controller = new AbortController();
+  const timeoutHandle = setTimeout(() => controller.abort("timeout"), UPSTREAM_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal
     });
+  } finally {
+    clearTimeout(timeoutHandle);
   }
 }
 
@@ -107,4 +174,11 @@ function normalizeIntegerParam(value) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
+function truncate(value, maxLength) {
+  const text = (value || "").toString().trim();
+  if (!text || text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength - 1)}…`;
+}
+
 class RequestValidationError extends Error {}
+class UpstreamUnavailableError extends Error {}

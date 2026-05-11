@@ -86,7 +86,7 @@ function syncHeaderActionPlacement() {
 
 // Constants
 const BASE_URL = "https://pub-611b5bc156eb455ba86d9bcece9aea1c.r2.dev";
-const API_URL = "https://busbibliotheek95.pages.dev/api";
+const API_URL = `${window.location.origin}/api`;
 const PYTHON_MAIN_DOWNLOAD_URL = "https://busbibliotheek95.pages.dev/python/script.py";
 const APK_DOWNLOAD_URL = `${window.location.origin}/android/app/release/app-release.apk`;
 const PHOTO_UPLOAD_FORM_URL = "https://forms.gle/MLzezhEKqxg6xagm9";
@@ -97,10 +97,11 @@ const LEAFLET_CSS_URL = "https://unpkg.com/leaflet/dist/leaflet.css";
 const LEAFLET_JS_URL = "https://unpkg.com/leaflet/dist/leaflet.js";
 const NETWORK_CHECK_URL = `${window.location.origin}/manifest.json?network-check=1`;
 const NETWORK_CHECK_TIMEOUT_MS = 5000;
-const NETWORK_CHECK_INTERVAL_MS = 30000;
-const NETWORK_CHECK_CACHE_MS = 20000;
+const NETWORK_CHECK_INTERVAL_MS = 120000;
+const NETWORK_CHECK_CACHE_MS = 60000;
 const PRIMARY_VEHICLE_QUERY_MAX_LENGTH = 10;
 const WEATHER_CACHE_MS = 5 * 60 * 1000;
+const STATIC_DATASET_WARMUP_DELAY_MS = 1200;
 const FAVORITES_KEY = "bb_favorites_v1";
 const SETTINGS_KEY = "bb_settings_v1";
 const DASHBOARD_MAX_VEHICLES = 9;
@@ -617,6 +618,7 @@ let realtimeFeedCacheData = null;
 let realtimeFeedCacheFetchedAt = 0;
 let realtimeFeedCachePromise = null;
 let realtimeFeedDerivedCache = null;
+let staticDatasetsWarmupPromise = null;
 let lastWeatherCacheKey = "";
 let lastWeatherData = null;
 let lastWeatherCoordinates = null;
@@ -7449,7 +7451,29 @@ function warmUpVehiclesAndDeepLinks() {
     .catch((e) => console.warn("Warm-up voertuigen mislukt", e));
 }
 
+function warmUpStaticDatasets() {
+  if (staticDatasetsWarmupPromise) return staticDatasetsWarmupPromise;
+  staticDatasetsWarmupPromise = Promise.allSettled([
+    laadVoertuigen(),
+    laadTrips(),
+    laadRoutes(),
+    laadStops()
+  ]).finally(() => {
+    staticDatasetsWarmupPromise = null;
+  });
+  return staticDatasetsWarmupPromise;
+}
+
+function scheduleStaticDatasetsWarmup() {
+  scheduleNonCriticalTask(() => {
+    void warmUpStaticDatasets().catch((error) => {
+      console.warn("Warm-up statische databestanden mislukt", error);
+    });
+  }, STATIC_DATASET_WARMUP_DELAY_MS);
+}
+
 warmUpVehiclesAndDeepLinks();
+scheduleStaticDatasetsWarmup();
 
 async function zoekAlles(options = {}) {
   const {
@@ -8360,8 +8384,10 @@ if ('serviceWorker' in navigator) {
     .catch(err => console.error('Service Worker registratie mislukt:', err));
 }
 
-verifyInternetConnection(true).catch(() => {});
-startInternetChecks();
+scheduleNonCriticalTask(() => {
+  verifyInternetConnection(true).catch(() => {});
+  startInternetChecks();
+}, 1500);
 
 // Dark scheme preference listener
 const prefersColorScheme = window.matchMedia("(prefers-color-scheme: dark)");
