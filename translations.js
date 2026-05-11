@@ -688,12 +688,13 @@ Object.assign(window.BB_TRANSLATIONS.i18n.nl, {
   compareChooseDifferent: "Kies een ander voertuig om te vergelijken.",
   notLoadedYet: "Nog niet geladen",
   infoWebsiteVersion: "Websiteversie",
-  infoVehicles: "Voertuigen (vehicles.txt)",
+  infoVehicles: "Voertuigen",
   infoTrips: "Ritten (trips.txt)",
   infoRoutes: "Lijnen (routes.txt)",
   infoStops: "Haltes (stops.txt)",
   infoFeed: "Feed-info",
   infoRealtimeApi: "Realtime API",
+  infoGithubProject: "Dit project op GitHub",
   notInServiceYet: "Bus nog niet in dienst"
 });
 Object.assign(window.BB_TRANSLATIONS.i18n.fr, {
@@ -931,12 +932,13 @@ Object.assign(window.BB_TRANSLATIONS.i18n.fr, {
   compareChooseDifferent: "Choisissez un autre véhicule à comparer.",
   notLoadedYet: "Pas encore chargé",
   infoWebsiteVersion: "Version du site",
-  infoVehicles: "Véhicules (vehicles.txt)",
+  infoVehicles: "Véhicules",
   infoTrips: "Trajets (trips.txt)",
   infoRoutes: "Lignes (routes.txt)",
   infoStops: "Arrêts (stops.txt)",
   infoFeed: "Infos du feed",
   infoRealtimeApi: "API temps réel",
+  infoGithubProject: "Ce projet sur GitHub",
   notInServiceYet: "Bus pas encore en service"
 });
 
@@ -1000,12 +1002,13 @@ Object.assign(window.BB_TRANSLATIONS.i18n.en, {
   compareChooseDifferent: "Choose a different vehicle to compare.",
   notLoadedYet: "Not loaded yet",
   infoWebsiteVersion: "Website version",
-  infoVehicles: "Vehicles (vehicles.txt)",
+  infoVehicles: "Vehicles",
   infoTrips: "Trips (trips.txt)",
   infoRoutes: "Routes (routes.txt)",
   infoStops: "Stops (stops.txt)",
   infoFeed: "Feed info",
   infoRealtimeApi: "Realtime API",
+  infoGithubProject: "This project on GitHub",
   notInServiceYet: "Bus not yet in service"
 });
 
@@ -1069,12 +1072,13 @@ Object.assign(window.BB_TRANSLATIONS.i18n.de, {
   compareChooseDifferent: "Wähle ein anderes Fahrzeug zum Vergleichen.",
   notLoadedYet: "Noch nicht geladen",
   infoWebsiteVersion: "Website-Version",
-  infoVehicles: "Fahrzeuge (vehicles.txt)",
+  infoVehicles: "Fahrzeuge",
   infoTrips: "Fahrten (trips.txt)",
   infoRoutes: "Linien (routes.txt)",
   infoStops: "Haltestellen (stops.txt)",
   infoFeed: "Feed-Info",
   infoRealtimeApi: "Echtzeit-API",
+  infoGithubProject: "Dieses Projekt auf GitHub",
   notInServiceYet: "Bus noch nicht im Dienst"
 });
 
@@ -1138,12 +1142,13 @@ Object.assign(window.BB_TRANSLATIONS.i18n.pl, {
   compareChooseDifferent: "Wybierz inny pojazd do porównania.",
   notLoadedYet: "Jeszcze nie załadowano",
   infoWebsiteVersion: "Wersja strony",
-  infoVehicles: "Pojazdy (vehicles.txt)",
+  infoVehicles: "Pojazdy",
   infoTrips: "Kursy (trips.txt)",
   infoRoutes: "Linie (routes.txt)",
   infoStops: "Przystanki (stops.txt)",
   infoFeed: "Informacje feedu",
   infoRealtimeApi: "API realtime",
+  infoGithubProject: "Ten projekt na GitHubie",
   notInServiceYet: "Autobus jeszcze nie jest w służbie"
 });
 
@@ -1207,12 +1212,13 @@ Object.assign(window.BB_TRANSLATIONS.i18n.es, {
   compareChooseDifferent: "Elige otro vehículo para comparar.",
   notLoadedYet: "Aún no cargado",
   infoWebsiteVersion: "Versión del sitio",
-  infoVehicles: "Vehículos (vehicles.txt)",
+  infoVehicles: "Vehículos",
   infoTrips: "Viajes (trips.txt)",
   infoRoutes: "Líneas (routes.txt)",
   infoStops: "Paradas (stops.txt)",
   infoFeed: "Información del feed",
   infoRealtimeApi: "API en tiempo real",
+  infoGithubProject: "Este proyecto en GitHub",
   notInServiceYet: "El autobús aún no está en servicio"
 });
 
@@ -1276,12 +1282,13 @@ Object.assign(window.BB_TRANSLATIONS.i18n.ru, {
   compareChooseDifferent: "Выберите другое транспортное средство для сравнения.",
   notLoadedYet: "Еще не загружено",
   infoWebsiteVersion: "Версия сайта",
-  infoVehicles: "Транспорт (vehicles.txt)",
+  infoVehicles: "Транспорт",
   infoTrips: "Рейсы (trips.txt)",
   infoRoutes: "Маршруты (routes.txt)",
   infoStops: "Остановки (stops.txt)",
   infoFeed: "Информация feed",
   infoRealtimeApi: "API реального времени",
+  infoGithubProject: "Этот проект на GitHub",
   notInServiceYet: "Автобус еще не введен в эксплуатацию"
 });
 

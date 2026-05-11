@@ -1611,34 +1611,75 @@ function formatInfoTimestamp(timestamp) {
 }
 
 function parseVehiclesSourceUpdatedAt(text = "") {
-  const firstLine = text.split(/\r?\n/, 1)[0]?.trim() || "";
-  if (!firstLine.startsWith("#")) return "";
-  const rawDate = firstLine.slice(1).trim();
-  if (!rawDate) return "";
-  return formatDateForUi(rawDate, {
-    day: "numeric",
-    month: "long",
-    year: "numeric"
-  });
+  const lines = text.split(/\r?\n/).slice(0, 8);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("#")) continue;
+    const rawValue = trimmed.slice(1).trim();
+    if (!rawValue) continue;
+
+    const isoMatch = rawValue.match(/\b(\d{4}-\d{2}-\d{2})\b/);
+    const slashMatch = rawValue.match(/\b(\d{4}\/\d{2}\/\d{2})\b/);
+    const dottedMatch = rawValue.match(/\b(\d{2}[./-]\d{2}[./-]\d{4})\b/);
+    const detectedValue = isoMatch?.[1] || slashMatch?.[1] || dottedMatch?.[1] || rawValue;
+    const formatted = formatDateForUi(detectedValue, {
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    });
+    if (formatted && formatted !== detectedValue) return formatted;
+  }
+  return "";
 }
 
 function showInfoModal() {
   if (!infoModalEl || !infoModalBodyEl) return;
   const rows = [
-    [getLabel("infoWebsiteVersion", "Websiteversie"), APP_VERSION],
-    [getLabel("infoVehicles", "Voertuiginformatie"), vehiclesSourceUpdatedAt || getLabel("notLoadedYet", "Nog niet geladen")],
-    [getLabel("infoRealtimeApi", "Realtime API"), formatInfoTimestamp(dataLoadTimestamps.realtime)]
+    {
+      label: getLabel("infoWebsiteVersion", "Websiteversie"),
+      value: APP_VERSION
+    },
+    {
+      label: getLabel("infoVehicles", "Voertuigen"),
+      value: vehiclesSourceUpdatedAt || getLabel("notLoadedYet", "Nog niet geladen")
+    },
+    {
+      label: getLabel("infoRealtimeApi", "Realtime API"),
+      value: formatInfoTimestamp(dataLoadTimestamps.realtime)
+    },
+    {
+      label: getLabel("infoGithubProject", "Dit project op GitHub"),
+      value: "SALAJEV/Busbibliotheek",
+      href: "https://github.com/SALAJEV/Busbibliotheek"
+    }
   ];
-  infoModalBodyEl.innerHTML = `
-    <div class="info-list">
-      ${rows.map(([label, value]) => `
-        <div class="info-row">
-          <span class="info-label">${escapeHtml(label)}</span>
-          <span class="info-value">${escapeHtml(value)}</span>
-        </div>
-      `).join("")}
-    </div>
-  `;
+  infoModalBodyEl.textContent = "";
+  const listEl = document.createElement("div");
+  listEl.className = "info-list";
+
+  rows.forEach((row) => {
+    const rowEl = document.createElement("div");
+    rowEl.className = "info-row";
+
+    const labelEl = document.createElement("span");
+    labelEl.className = "info-label";
+    labelEl.textContent = row.label;
+
+    const valueEl = row.href ? document.createElement("a") : document.createElement("span");
+    valueEl.className = "info-value";
+    valueEl.textContent = row.value;
+
+    if (row.href && valueEl instanceof HTMLAnchorElement) {
+      valueEl.href = row.href;
+      valueEl.target = "_blank";
+      valueEl.rel = "noopener noreferrer";
+    }
+
+    rowEl.append(labelEl, valueEl);
+    listEl.appendChild(rowEl);
+  });
+
+  infoModalBodyEl.appendChild(listEl);
   openOverlayModal(infoModalEl, { focusTarget: infoModalCloseBtn });
 }
 
@@ -6406,7 +6447,7 @@ languageSelect.addEventListener("change", () => {
 footerReviewBtn?.addEventListener("click", showReviewModal);
 footerTermsBtn?.addEventListener("click", showTermsModal);
 footerContactBtn?.addEventListener("click", () => {
-  openExternalUrl(CONTACT_PAGE_URL);
+  openExternalUrl(CONTACT_PAGE_URL, { preferSameTab: true });
 });
 reviewModalCloseBtn?.addEventListener("click", hideReviewModal);
 reviewModalDoneBtn?.addEventListener("click", hideReviewModal);
