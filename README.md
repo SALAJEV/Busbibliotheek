@@ -384,7 +384,7 @@ Als je dit project publiek deployt, is het verstandig om ook een expliciete priv
 
 ## Credits
 
-Volgens de UI is het project gemaakt door Busspotter 95.
+Het project is gemaakt door Busspotter 95.
 
 Kaart- en databronnen die in de app genoemd worden:
 
