@@ -199,7 +199,19 @@ function buildUpstreamUrl(requestUrl, resource) {
     return upstreamUrl.toString();
   }
 
-  return "https://api.delijn.be/gtfs/v3/realtime?json=true&delay=true&position=true";
+  const upstreamUrl = new URL("https://api.delijn.be/gtfs/v3/realtime");
+  upstreamUrl.searchParams.set("json", "true");
+  upstreamUrl.searchParams.set("delay", "true");
+  upstreamUrl.searchParams.set("position", "true");
+
+  const canceled = requestUrl.searchParams.get("canceled");
+  const vehicleId = requestUrl.searchParams.get("vehicleid")?.trim();
+  const tripId = requestUrl.searchParams.get("tripid")?.trim();
+
+  if (canceled === "true") upstreamUrl.searchParams.set("canceled", "true");
+  if (vehicleId) upstreamUrl.searchParams.set("vehicleid", vehicleId);
+  if (tripId) upstreamUrl.searchParams.set("tripid", tripId);
+  return upstreamUrl.toString();
 }
 
 function normalizeIntegerParam(value) {

@@ -104,6 +104,8 @@ const WEATHER_CACHE_MS = 5 * 60 * 1000;
 const STATIC_DATASET_WARMUP_DELAY_MS = 1200;
 const FAVORITES_KEY = "bb_favorites_v1";
 const SETTINGS_KEY = "bb_settings_v1";
+const REALTIME_PERSISTED_CACHE_KEY = "bb_realtime_feed_cache_v1";
+const REALTIME_PERSISTED_MAX_AGE_MS = 3 * 60 * 1000;
 const DASHBOARD_MAX_VEHICLES = 9;
 let updateIntervalMs = 10000;
 
@@ -4529,28 +4531,90 @@ function loadSettings() {
   }
 }
 
-async function fetchRealtimeFeed(force = false) {
+async function fetchRealtimeFeed(options = {}) {
+  const {
+    force = false,
+    vehicleId = "",
+    tripId = ""
+  } = options;
   const now = Date.now();
-  if (!force && realtimeFeedCacheData && now - realtimeFeedCacheFetchedAt < REALTIME_FEED_CACHE_MS) {
+  const normalizedVehicleId = cleanText(vehicleId);
+  const normalizedTripId = cleanText(tripId);
+  const isScopedRequest = !!normalizedVehicleId || !!normalizedTripId;
+
+  if (!isScopedRequest && !force && realtimeFeedCacheData && now - realtimeFeedCacheFetchedAt < REALTIME_FEED_CACHE_MS) {
     return realtimeFeedCacheData;
   }
-  if (!force && realtimeFeedCachePromise) {
+  if (!isScopedRequest && !force && realtimeFeedCachePromise) {
     return realtimeFeedCachePromise;
   }
 
-  realtimeFeedCachePromise = fetchWithTimeout(API_URL, { cache: "no-store" }, REALTIME_FETCH_TIMEOUT_MS)
+  const realtimeUrl = new URL(API_URL, window.location.origin);
+  realtimeUrl.searchParams.set("resource", "realtime");
+  if (normalizedVehicleId) realtimeUrl.searchParams.set("vehicleid", normalizedVehicleId);
+  if (normalizedTripId) realtimeUrl.searchParams.set("tripid", normalizedTripId);
+
+  const requestPromise = fetchWithTimeout(realtimeUrl.toString(), { cache: "no-store" }, REALTIME_FETCH_TIMEOUT_MS)
     .then((response) => response.json())
     .then((data) => {
-      realtimeFeedCacheData = data;
-      realtimeFeedCacheFetchedAt = Date.now();
-      realtimeFeedDerivedCache = null;
+      if (!isScopedRequest) {
+        realtimeFeedCacheData = data;
+        realtimeFeedCacheFetchedAt = Date.now();
+        realtimeFeedDerivedCache = null;
+        persistRealtimeFeedCache(data);
+      }
       return data;
     })
+    .catch((error) => {
+      if (isScopedRequest) throw error;
+      const persistedCache = readPersistedRealtimeFeedCache();
+      if (persistedCache) {
+        realtimeFeedCacheData = persistedCache;
+        realtimeFeedCacheFetchedAt = Date.now();
+        realtimeFeedDerivedCache = null;
+        return persistedCache;
+      }
+      throw error;
+    })
     .finally(() => {
-      realtimeFeedCachePromise = null;
+      if (!isScopedRequest) {
+        realtimeFeedCachePromise = null;
+      }
     });
 
-  return realtimeFeedCachePromise;
+  if (!isScopedRequest) {
+    realtimeFeedCachePromise = requestPromise;
+    return realtimeFeedCachePromise;
+  }
+
+  return requestPromise;
+}
+
+function persistRealtimeFeedCache(data) {
+  try {
+    if (!window.localStorage || !data) return;
+    localStorage.setItem(REALTIME_PERSISTED_CACHE_KEY, JSON.stringify({
+      savedAt: Date.now(),
+      data
+    }));
+  } catch (_) {
+    // Ignore persistence failures.
+  }
+}
+
+function readPersistedRealtimeFeedCache() {
+  try {
+    if (!window.localStorage) return null;
+    const raw = localStorage.getItem(REALTIME_PERSISTED_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    if (!parsed.savedAt || !parsed.data) return null;
+    if (Date.now() - Number(parsed.savedAt) > REALTIME_PERSISTED_MAX_AGE_MS) return null;
+    return parsed.data;
+  } catch (_) {
+    return null;
+  }
 }
 
 function chooseMostRecentEntity(left, right) {
@@ -8168,7 +8232,7 @@ async function updateRealtime(id){
     return;
   }
   try{
-    const data = await fetchRealtimeFeed();
+    const data = await fetchRealtimeFeed({ vehicleId: id });
     if (requestToken !== realtimeRequestToken || id !== currentVehicleId) return;
     dataLoadTimestamps.realtime = Date.now();
     const derivedData = getRealtimeFeedDerivedData(data);
@@ -8363,7 +8427,7 @@ async function updateRealtime(id){
 
   }catch(e){
     if (requestToken !== realtimeRequestToken || id !== currentVehicleId) return;
-    console.error(e);
+    console.warn("Realtime laden mislukt", e);
     const reason = /timeout/i.test(String(e?.message || ""))
       ? getLabel("realtimeTimeout", "Realtime laden duurde te lang. Probeer de officiële tracker van De Lijn.")
       : t("realtimeError");
