@@ -616,6 +616,7 @@ let weatherRequestToken = 0;
 let realtimeFeedCacheData = null;
 let realtimeFeedCacheFetchedAt = 0;
 let realtimeFeedCachePromise = null;
+let realtimeFeedDerivedCache = null;
 let lastWeatherCacheKey = "";
 let lastWeatherData = null;
 let lastWeatherCoordinates = null;
@@ -623,6 +624,9 @@ let lastWeatherFetchedAt = 0;
 let activeVehicleSuggestionInput = null;
 let favoriteDragState = null;
 let favoriteDragSuppressUntil = 0;
+const vehiclePhotoEntriesCache = new Map();
+let scheduledPhotoLoadHandle = null;
+let scheduledPhotoLoadVehicleId = "";
 const overlayModalElements = [];
 const overlayModalRestoreFocusMap = new WeakMap();
 let interactiveOverlayStack = [];
@@ -1784,6 +1788,7 @@ function showReviewModal() {
     return;
   }
 
+  ensureEmbeddedFrameLoaded(reviewFormFrameEl);
   openOverlayModal(reviewModalEl, { focusTarget: reviewModalCloseBtn });
 }
 
@@ -1799,6 +1804,7 @@ function showReportModal() {
     return;
   }
 
+  ensureEmbeddedFrameLoaded(reportFormFrameEl);
   openOverlayModal(reportModalEl, { focusTarget: reportModalCloseBtn || reportModalDoneBtn });
 }
 
@@ -1818,6 +1824,14 @@ function showPhotoUploadModal() {
 
 function hidePhotoUploadModal() {
   closeOverlayModal(photoUploadModalEl);
+}
+
+function ensureEmbeddedFrameLoaded(frameEl) {
+  if (!(frameEl instanceof HTMLIFrameElement)) return;
+  if (frameEl.src) return;
+  const dataSrc = frameEl.dataset.src?.trim();
+  if (!dataSrc) return;
+  frameEl.src = dataSrc;
 }
 
 function renderTermsModalContent() {
@@ -2477,7 +2491,9 @@ function setDashboardLoading(active) {
   }
 }
 
-function getRoutePresentationFromRealtime(id, entities, bus) {
+function getRoutePresentationFromRealtime(id, realtimeSource, bus) {
+  const derivedData = Array.isArray(realtimeSource) ? null : realtimeSource;
+  const entities = Array.isArray(realtimeSource) ? realtimeSource : (derivedData?.entities || []);
   if (isHiddenAlphaVehicleId(id)) {
     return {
       status: "offline",
@@ -2488,16 +2504,18 @@ function getRoutePresentationFromRealtime(id, entities, bus) {
     };
   }
   const normalizedRequestedId = cleanText(id);
-  const gpsEntity = findMostRecentEntity(entities, (entity) => {
-    const vehiclePayload = getEntityVehiclePayload(entity);
-    if (!vehiclePayload?.position) return false;
-    const descriptor =
-      vehiclePayload?.vehicle ||
-      vehiclePayload?.vehicleDescriptor ||
-      vehiclePayload?.vehicle_descriptor;
-    const descriptorId = getVehicleDescriptorId(descriptor);
-    return descriptorId === normalizedRequestedId;
-  });
+  const gpsEntity = derivedData
+    ? (derivedData.gpsEntityByVehicleId.get(normalizedRequestedId) || null)
+    : findMostRecentEntity(entities, (entity) => {
+      const vehiclePayload = getEntityVehiclePayload(entity);
+      if (!vehiclePayload?.position) return false;
+      const descriptor =
+        vehiclePayload?.vehicle ||
+        vehiclePayload?.vehicleDescriptor ||
+        vehiclePayload?.vehicle_descriptor;
+      const descriptorId = getVehicleDescriptorId(descriptor);
+      return descriptorId === normalizedRequestedId;
+    });
   const gps = gpsEntity ? { vehicle: getEntityVehiclePayload(gpsEntity) } : null;
   if (!gps) {
     return {
@@ -2511,10 +2529,14 @@ function getRoutePresentationFromRealtime(id, entities, bus) {
 
   const v = gps.vehicle;
   const vehicleDescriptor = extractTripDescriptor(v);
-  let tripUpdate = getTripUpdateForVehicle(entities, id, vehicleDescriptor.tripId);
+  let tripUpdate = derivedData
+    ? getTripUpdateForVehicleFromDerivedData(derivedData, id, vehicleDescriptor.tripId)
+    : getTripUpdateForVehicle(entities, id, vehicleDescriptor.tripId);
   if (!tripUpdate) {
     const gpsEntityId = cleanText(gpsEntity?.id || gpsEntity?.entityId || gpsEntity?.entity_id || "");
-    tripUpdate = getTripUpdateForEntityId(entities, gpsEntityId);
+    tripUpdate = derivedData
+      ? getTripUpdateForEntityIdFromDerivedData(derivedData, gpsEntityId)
+      : getTripUpdateForEntityId(entities, gpsEntityId);
   }
   const tripUpdateDescriptor = extractTripDescriptor(tripUpdate);
   const descriptor = {
@@ -2582,7 +2604,7 @@ async function refreshDashboardPanel(options = {}) {
 
     const data = await fetchRealtimeFeed();
     if (requestToken !== dashboardRequestToken || dashboardPanelEl.hidden) return;
-    const entities = Array.isArray(data.entity) ? data.entity : [];
+    const derivedData = getRealtimeFeedDerivedData(data);
 
     const snapshots = [];
     const cardsHtml = dashboardVehicleIds.map((id) => {
@@ -2613,7 +2635,7 @@ async function refreshDashboardPanel(options = {}) {
         `;
       }
 
-      const snapshot = getRoutePresentationFromRealtime(id, entities, bus);
+      const snapshot = getRoutePresentationFromRealtime(id, derivedData, bus);
       snapshots.push(snapshot);
       if (snapshot.status !== "live") {
         return `
@@ -3733,25 +3755,9 @@ async function resolveVehiclePhotoEntries(vehicleId) {
   const indexedEntries = getIndexedPhotoEntries(vehicleId);
   if (indexedEntries.length) {
     const resolvedIndexedEntries = await resolvePhotoEntriesFromCandidates(indexedEntries);
-    const indexedSrcSet = new Set(
-      resolvedIndexedEntries
-        .map((entry) => (entry?.src || "").toString())
-        .filter(Boolean)
-    );
-    const supplementalCandidates = getFallbackPhotoEntries(vehicleId).filter(
-      (entry) => entry?.src && !indexedSrcSet.has(entry.src)
-    );
-    if (!supplementalCandidates.length) {
+    if (resolvedIndexedEntries.length) {
       return mergeVehiclePhotoEntries(resolvedIndexedEntries);
     }
-
-    const supplementalEntries = await resolvePhotoEntriesFromCandidates(
-      supplementalCandidates
-    );
-    return mergeVehiclePhotoEntries(
-      resolvedIndexedEntries,
-      supplementalEntries.filter(Boolean)
-    );
   }
 
   const suffixes = ["", ...Array.from({ length: 12 }, (_, index) => ` (${index + 1})`)];
@@ -4033,17 +4039,43 @@ async function updateVehiclePhotoCard(vehicleId) {
     vehiclePhotoCounterEl.textContent = "";
   }
 
-  const photoEntries = await resolveVehiclePhotoEntries(normalizedVehicleId);
+  const photoEntries = vehiclePhotoEntriesCache.get(normalizedVehicleId) || await resolveVehiclePhotoEntries(normalizedVehicleId);
   if (lookupToken !== vehiclePhotoLookupToken) return;
   if (!photoEntries.length) {
     showVehiclePhotoUploadPrompt(normalizedVehicleId);
     return;
   }
 
+  vehiclePhotoEntriesCache.set(normalizedVehicleId, photoEntries);
   currentPhotoVehicleId = normalizedVehicleId;
   currentVehiclePhotoEntries = photoEntries;
   currentVehiclePhotoIndex = 0;
   renderActiveVehiclePhoto();
+}
+
+function scheduleVehiclePhotoCardUpdate(vehicleId) {
+  const normalizedVehicleId = normalize(vehicleId);
+  if (!normalizedVehicleId) {
+    hideVehiclePhotoCard();
+    return;
+  }
+
+  scheduledPhotoLoadVehicleId = normalizedVehicleId;
+  if (scheduledPhotoLoadHandle) return;
+
+  const run = () => {
+    scheduledPhotoLoadHandle = null;
+    const nextVehicleId = scheduledPhotoLoadVehicleId;
+    scheduledPhotoLoadVehicleId = "";
+    if (!nextVehicleId || nextVehicleId !== currentVehicleId) return;
+    void updateVehiclePhotoCard(nextVehicleId);
+  };
+
+  if (typeof window.requestIdleCallback === "function") {
+    scheduledPhotoLoadHandle = window.requestIdleCallback(run, { timeout: 1200 });
+  } else {
+    scheduledPhotoLoadHandle = window.setTimeout(run, 220);
+  }
 }
 
 function parseFlexibleDateParts(rawValue) {
@@ -4509,6 +4541,7 @@ async function fetchRealtimeFeed(force = false) {
     .then((data) => {
       realtimeFeedCacheData = data;
       realtimeFeedCacheFetchedAt = Date.now();
+      realtimeFeedDerivedCache = null;
       return data;
     })
     .finally(() => {
@@ -4516,6 +4549,81 @@ async function fetchRealtimeFeed(force = false) {
     });
 
   return realtimeFeedCachePromise;
+}
+
+function chooseMostRecentEntity(left, right) {
+  if (!left) return right || null;
+  if (!right) return left || null;
+  const leftTimestamp = getEntityRealtimeTimestamp(left);
+  const rightTimestamp = getEntityRealtimeTimestamp(right);
+  if (!Number.isFinite(leftTimestamp)) return right;
+  if (!Number.isFinite(rightTimestamp)) return left;
+  return rightTimestamp >= leftTimestamp ? right : left;
+}
+
+function buildRealtimeFeedDerivedData(data) {
+  const entities = Array.isArray(data?.entity) ? data.entity : [];
+  const gpsEntityByVehicleId = new Map();
+  const tripUpdatesByVehicleId = new Map();
+  const tripUpdatesByTripId = new Map();
+  const tripUpdatesByEntityId = new Map();
+
+  entities.forEach((entity) => {
+    const vehiclePayload = getEntityVehiclePayload(entity);
+    if (vehiclePayload?.position) {
+      const descriptor =
+        vehiclePayload?.vehicle ||
+        vehiclePayload?.vehicleDescriptor ||
+        vehiclePayload?.vehicle_descriptor;
+      const vehicleId = getVehicleDescriptorId(descriptor);
+      if (vehicleId) {
+        gpsEntityByVehicleId.set(
+          vehicleId,
+          chooseMostRecentEntity(gpsEntityByVehicleId.get(vehicleId), entity)
+        );
+      }
+    }
+
+    const tripUpdate = getEntityTripUpdatePayload(entity);
+    if (!tripUpdate) return;
+
+    const entityId = cleanText(entity?.id || entity?.entityId || entity?.entity_id || "");
+    if (entityId) {
+      tripUpdatesByEntityId.set(
+        entityId,
+        chooseMostRecentEntity(tripUpdatesByEntityId.get(entityId), tripUpdate)
+      );
+    }
+
+    const vehicleIdFromTripUpdate = getVehicleIdFromTripUpdate(tripUpdate);
+    if (vehicleIdFromTripUpdate) {
+      tripUpdatesByVehicleId.set(
+        vehicleIdFromTripUpdate,
+        chooseMostRecentEntity(tripUpdatesByVehicleId.get(vehicleIdFromTripUpdate), tripUpdate)
+      );
+    }
+
+    const tripId = extractTripDescriptor(tripUpdate).tripId;
+    if (tripId) {
+      const previous = tripUpdatesByTripId.get(tripId);
+      tripUpdatesByTripId.set(tripId, [...(previous || []), tripUpdate]);
+    }
+  });
+
+  return {
+    entities,
+    gpsEntityByVehicleId,
+    tripUpdatesByVehicleId,
+    tripUpdatesByTripId,
+    tripUpdatesByEntityId
+  };
+}
+
+function getRealtimeFeedDerivedData(data) {
+  if (!realtimeFeedDerivedCache || realtimeFeedCacheData !== data) {
+    realtimeFeedDerivedCache = buildRealtimeFeedDerivedData(data);
+  }
+  return realtimeFeedDerivedCache;
 }
 
 function saveSettings() {
@@ -7175,7 +7283,7 @@ async function laadVoertuigen() {
   if (voertuigen.length) return;
   if (voertuigenLoadPromise) return voertuigenLoadPromise;
   voertuigenLoadPromise = (async () => {
-    const res = await fetchWithTimeout(`${BASE_URL}/vehicles.txt`, { cache: "no-store" });
+    const res = await fetchWithTimeout(`${BASE_URL}/vehicles.txt`, { cache: "default" });
     const text = await res.text();
     vehiclesSourceUpdatedAt = parseVehiclesSourceUpdatedAt(text);
     const { headers, rows } = parseDelimitedTable(text, {
@@ -7202,7 +7310,7 @@ async function laadTrips() {
   if (trips.length) return;
   if (tripsLoadPromise) return tripsLoadPromise;
   tripsLoadPromise = (async () => {
-    const res = await fetchWithTimeout(`${BASE_URL}/trips.txt`, { cache: "no-store" });
+    const res = await fetchWithTimeout(`${BASE_URL}/trips.txt`, { cache: "default" });
     const text = await res.text();
     trips = parseDelimitedTable(text, { sourceLabel: "trips.txt" }).rows;
 
@@ -7229,7 +7337,7 @@ async function laadRoutes() {
   if (routes.length) return;
   if (routesLoadPromise) return routesLoadPromise;
   routesLoadPromise = (async () => {
-    const res = await fetchWithTimeout(`${BASE_URL}/routes.txt`, { cache: "no-store" });
+    const res = await fetchWithTimeout(`${BASE_URL}/routes.txt`, { cache: "default" });
     const text = await res.text();
     routes = parseDelimitedTable(text, { sourceLabel: "routes.txt" }).rows;
 
@@ -7253,7 +7361,7 @@ async function laadStops() {
   if (stopsById.size) return;
   if (stopsLoadPromise) return stopsLoadPromise;
   stopsLoadPromise = (async () => {
-    const res = await fetchWithTimeout(`${BASE_URL}/stops.txt`, { cache: "no-store" });
+    const res = await fetchWithTimeout(`${BASE_URL}/stops.txt`, { cache: "default" });
     const text = await res.text();
     stops = parseDelimitedTable(text, { sourceLabel: "stops.txt" }).rows;
 
@@ -7561,7 +7669,7 @@ function toonVasteData(id){
     return;
   }
 
-  updateVehiclePhotoCard(id);
+  scheduleVehiclePhotoCardUpdate(id);
 
   const favoriteLabel = favorites.includes(id) ? t("favoriteRemove") : t("favoriteAdd");
   const favoriteStateSymbol = favorites.includes(id) ? "\u2605\uFE0E" : "\u2606\uFE0E";
@@ -7814,6 +7922,25 @@ function getTripUpdateForEntityId(entities, entityId) {
   return match ? getEntityTripUpdatePayload(match) : null;
 }
 
+function getTripUpdateForVehicleFromDerivedData(derivedData, vehicleId, tripId = "") {
+  const normalizedVehicleId = cleanText(vehicleId);
+  const normalizedTripId = cleanText(tripId);
+  if (!derivedData) return null;
+
+  const directMatch = derivedData.tripUpdatesByVehicleId.get(normalizedVehicleId);
+  if (directMatch) return directMatch;
+
+  if (!normalizedTripId) return null;
+  const matchingTripUpdates = derivedData.tripUpdatesByTripId.get(normalizedTripId) || [];
+  return matchingTripUpdates.reduce((best, current) => chooseMostRecentEntity(best, current), null);
+}
+
+function getTripUpdateForEntityIdFromDerivedData(derivedData, entityId) {
+  const normalizedEntityId = cleanText(entityId);
+  if (!normalizedEntityId || !derivedData) return null;
+  return derivedData.tripUpdatesByEntityId.get(normalizedEntityId) || null;
+}
+
 function getDelaySecondsFromTripUpdate(tripUpdate) {
   const updates = tripUpdate?.stopTimeUpdate || tripUpdate?.stop_time_update;
   if (!Array.isArray(updates) || updates.length === 0) return null;
@@ -8020,18 +8147,9 @@ async function updateRealtime(id){
     const data = await fetchRealtimeFeed();
     if (requestToken !== realtimeRequestToken || id !== currentVehicleId) return;
     dataLoadTimestamps.realtime = Date.now();
-    const entities = Array.isArray(data.entity) ? data.entity : [];
+    const derivedData = getRealtimeFeedDerivedData(data);
     const normalizedRequestedId = cleanText(id);
-    const gpsEntity = findMostRecentEntity(entities, (entity) => {
-      const vehiclePayload = getEntityVehiclePayload(entity);
-      if (!vehiclePayload?.position) return false;
-      const descriptor =
-        vehiclePayload?.vehicle ||
-        vehiclePayload?.vehicleDescriptor ||
-        vehiclePayload?.vehicle_descriptor;
-      const descriptorId = getVehicleDescriptorId(descriptor);
-      return descriptorId === normalizedRequestedId;
-    });
+    const gpsEntity = derivedData.gpsEntityByVehicleId.get(normalizedRequestedId) || null;
     const gps = gpsEntity ? { vehicle: getEntityVehiclePayload(gpsEntity) } : null;
     const gpsEntityTimestamp = getEntityRealtimeTimestamp(gpsEntity);
 
@@ -8046,10 +8164,10 @@ async function updateRealtime(id){
 
     const v=gps.vehicle;
     const vehicleDescriptor = extractTripDescriptor(v);
-    let tripUpdate = getTripUpdateForVehicle(entities, id, vehicleDescriptor.tripId);
+    let tripUpdate = getTripUpdateForVehicleFromDerivedData(derivedData, id, vehicleDescriptor.tripId);
     if (!tripUpdate) {
       const gpsEntityId = cleanText(gpsEntity?.id || gpsEntity?.entityId || gpsEntity?.entity_id || "");
-      tripUpdate = getTripUpdateForEntityId(entities, gpsEntityId);
+      tripUpdate = getTripUpdateForEntityIdFromDerivedData(derivedData, gpsEntityId);
     }
     const tripUpdateDescriptor = extractTripDescriptor(tripUpdate);
     const descriptor = {

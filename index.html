@@ -21,29 +21,7 @@
 <link rel="dns-prefetch" href="//fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <title>Busbibliotheek</title>
-<script>
-  (function () {
-    document.documentElement.classList.add("preload");
-  })();
-</script>
-<link id="appStylesheet" rel="stylesheet" href="style.css?v=20260510-2">
-<script>
-  (function () {
-    var attachStylesheetFallback = function (id, fallbackHref) {
-      var link = document.getElementById(id);
-      if (!link) return;
-      link.addEventListener("error", function () {
-        if (link.dataset.fallbackApplied === "1") return;
-        link.dataset.fallbackApplied = "1";
-        var fallbackLink = document.createElement("link");
-        fallbackLink.rel = "stylesheet";
-        fallbackLink.href = fallbackHref;
-        document.head.appendChild(fallbackLink);
-      });
-    };
-    attachStylesheetFallback("appStylesheet", "style.css");
-  })();
-</script>
+<link rel="stylesheet" href="style.css?v=20260511-1">
 </head>
 <body>
 <div class="app-shell">
@@ -520,7 +498,7 @@
     </div>
     <div class="pdf-modal-body legal-modal-body">
       <div class="review-embed-shell">
-        <iframe id="reviewFormFrame" class="review-form-frame" src="https://docs.google.com/forms/d/e/1FAIpQLSeuWQPblp0uBjQ2W2EKwd3LH_qVITWjQcS2EQhHQcbubS7KRw/viewform?embedded=true" width="640" height="2843" frameborder="0" marginheight="0" marginwidth="0" title="Busbibliotheek reviewformulier">Laden…</iframe>
+        <iframe id="reviewFormFrame" class="review-form-frame" data-src="https://docs.google.com/forms/d/e/1FAIpQLSeuWQPblp0uBjQ2W2EKwd3LH_qVITWjQcS2EQhHQcbubS7KRw/viewform?embedded=true" width="640" height="2843" frameborder="0" marginheight="0" marginwidth="0" title="Busbibliotheek reviewformulier" loading="lazy">Laden…</iframe>
       </div>
       <div class="review-mobile-fallback">
         <a id="reviewMobileLink" class="btn" href="https://forms.gle/3uKCBA779JwVjN8d7" target="_blank" rel="noopener noreferrer">Open reviewformulier</a>
@@ -543,7 +521,7 @@
     </div>
     <div class="pdf-modal-body legal-modal-body">
       <div class="review-embed-shell">
-        <iframe id="reportFormFrame" class="review-form-frame" src="https://docs.google.com/forms/d/e/1FAIpQLScrSDIN__F9mfOxpuMd2Kvw2GbGB3djKZrao1dB-Ry2-a67TA/viewform?embedded=true" width="640" height="623" frameborder="0" marginheight="0" marginwidth="0" title="Busbibliotheek meldformulier">Laden…</iframe>
+        <iframe id="reportFormFrame" class="review-form-frame" data-src="https://docs.google.com/forms/d/e/1FAIpQLScrSDIN__F9mfOxpuMd2Kvw2GbGB3djKZrao1dB-Ry2-a67TA/viewform?embedded=true" width="640" height="623" frameborder="0" marginheight="0" marginwidth="0" title="Busbibliotheek meldformulier" loading="lazy">Laden…</iframe>
       </div>
       <div class="review-mobile-fallback">
         <a id="reportMobileLink" class="btn" href="https://docs.google.com/forms/d/e/1FAIpQLScrSDIN__F9mfOxpuMd2Kvw2GbGB3djKZrao1dB-Ry2-a67TA/viewform" target="_blank" rel="noopener noreferrer">Open meldformulier</a>
@@ -617,17 +595,7 @@
 </div>
 </div>
 
-<script>
-  document.documentElement.className = document.documentElement.className.replace(/\bpreload\b/g, "").trim();
-  var translationsScript = document.createElement("script");
-  translationsScript.src = "translations.js?v=20260511-2";
-  translationsScript.onload = function () {
-    var appScript = document.createElement("script");
-    appScript.src = "app.js?v=20260511-2";
-    appScript.defer = true;
-    document.body.appendChild(appScript);
-  };
-  document.body.appendChild(translationsScript);
-</script>
+<script defer src="translations.js?v=20260511-2"></script>
+<script defer src="app.js?v=20260511-2"></script>
 </body>
 </html>

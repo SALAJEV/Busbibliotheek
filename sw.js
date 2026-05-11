@@ -1,22 +1,15 @@
-const CACHE_NAME = 'busbibliotheek-v99';
+const CACHE_NAME = 'busbibliotheek-v100';
 const CORE_ASSETS = [
   '/',
   '/index.html',
-  '/app.js',
   '/app.js?v=20260511-2',
   '/manifest.json',
-  '/style.css',
-  '/style.css?v=20260510-2',
-  '/translations.js',
+  '/style.css?v=20260511-1',
   '/translations.js?v=20260511-2',
   '/media/logo.png',
   '/media/navicon.png',
   '/media/hansea.png',
   '/media/favicon.ico'
-];
-const OPTIONAL_ASSETS = [
-  'https://unpkg.com/leaflet/dist/leaflet.css',
-  'https://unpkg.com/leaflet/dist/leaflet.js'
 ];
 
 // Install event: cache essential files
@@ -24,9 +17,8 @@ self.addEventListener('install', event => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(CACHE_NAME);
-      const allAssets = [...CORE_ASSETS, ...OPTIONAL_ASSETS];
       await Promise.allSettled(
-        allAssets.map(async (url) => {
+        CORE_ASSETS.map(async (url) => {
           try {
             await cache.add(url);
           } catch (_) {

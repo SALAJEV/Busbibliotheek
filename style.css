@@ -14,10 +14,6 @@
   flex-direction: column;
 }
 
-html.preload .app-shell {
-  visibility: hidden;
-}
-
 /* ===============================
    DESIGN TOKENS
 ================================ */
