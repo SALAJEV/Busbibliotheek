@@ -32,16 +32,18 @@ export async function onRequest(context) {
   }
 
   try {
+    const upstreamUrl = buildUpstreamUrl(requestUrl, resource);
+
     // Check cache FIRST for realtime data
     if (resource === "realtime") {
       const cached = await getRealtimeFromCache();
       if (cached) return cached;
     }
 
-    const cacheKey = resource === "realtime" ? buildRealtimeCacheKey(requestUrl) : null;
+    const cacheKey = resource === "realtime" ? buildRealtimeCacheKey() : null;
     
     // Deduplicate concurrent requests to same resource
-    const dedupKey = `${resource}:${buildUpstreamUrl(requestUrl, resource)}`;
+    const dedupKey = `${resource}:${upstreamUrl}`;
     if (REQUEST_DEDUP_MAP.has(dedupKey)) {
       return await REQUEST_DEDUP_MAP.get(dedupKey);
     }
@@ -49,7 +51,6 @@ export async function onRequest(context) {
     // Create promise for this request
     const requestPromise = (async () => {
       try {
-        const upstreamUrl = buildUpstreamUrl(requestUrl, resource);
         const upstreamResponse = await fetchUpstream(upstreamUrl, resource, apiKey);
 
         if (!upstreamResponse.ok) {
@@ -138,7 +139,6 @@ async function getRealtimeFromCache(allowStale = false) {
     const cached = await cache.match(cacheKey);
     if (!cached) return null;
 
-    const cacheControl = cached.headers.get("Cache-Control") || "";
     const isStale = cached.headers.get("X-Busbibliotheek-Realtime-Cache") === "stale";
     
     if (isStale && !allowStale) return null;
@@ -183,7 +183,6 @@ async function readWithSizeLimit(response) {
     let received = 0;
     let result = "";
     const decoder = new TextDecoder();
-    const chunks = [];
 
     try {
       while (true) {
@@ -198,13 +197,9 @@ async function readWithSizeLimit(response) {
           throw new Error(`Response exceeds size limit: ${received} bytes > ${MAX_RESPONSE_SIZE_BYTES}`);
         }
 
-        chunks.push(value);
+        result += decoder.decode(value, { stream: true });
       }
 
-      // Combine chunks
-      for (const chunk of chunks) {
-        result += decoder.decode(chunk, { stream: true });
-      }
       result += decoder.decode(); // Finalize
       
       return result;
@@ -353,4 +348,3 @@ function wait(ms) {
 }
 
 class RequestValidationError extends Error {}
-

@@ -1,16 +1,22 @@
-const CACHE_NAME = 'busbibliotheek-v102';
+const CACHE_NAME = 'busbibliotheek-v103';
+const APP_SHELL_CACHE_KEY = '/index.html';
 const CORE_ASSETS = [
   '/',
-  '/index.html',
-  '/app.js?v=20260511-4',
+  APP_SHELL_CACHE_KEY,
+  '/app.js?v=20260511-5',
   '/manifest.json',
-  '/style.css?v=20260511-4',
-  '/translations.js?v=20260511-4',
+  '/style.css?v=20260511-5',
+  '/translations.js?v=20260511-5',
   '/media/logo.png',
   '/media/navicon.png',
   '/media/hansea.png',
   '/media/favicon.ico'
 ];
+
+async function putInCache(requestOrUrl, response) {
+  const cache = await caches.open(CACHE_NAME);
+  await cache.put(requestOrUrl, response);
+}
 
 // Install event: cache essential files
 self.addEventListener('install', event => {
@@ -81,14 +87,14 @@ self.addEventListener('fetch', event => {
   // HTML navigation: network first with cached index fallback
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
+      fetch(request, { cache: 'no-store' })
         .then(response => {
           const cloned = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(request, cloned));
+          putInCache(APP_SHELL_CACHE_KEY, cloned);
           return response;
         })
         .catch(async () => {
-          const cachedIndex = await caches.match('/index.html', { ignoreSearch: true });
+          const cachedIndex = await caches.match(APP_SHELL_CACHE_KEY, { ignoreSearch: true });
           return cachedIndex || offlineTextResponse;
         })
     );
@@ -131,7 +137,7 @@ self.addEventListener('fetch', event => {
           // Cache successful responses
           if (response && response.status === 200) {
             const clonedResponse = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(request, clonedResponse));
+            putInCache(request, clonedResponse);
           }
           return response;
         })
@@ -147,7 +153,7 @@ self.addEventListener('fetch', event => {
           .then(response => {
             if (response && response.status === 200) {
               const clone = response.clone();
-              caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
+              putInCache(request, clone);
             }
             return response;
           })

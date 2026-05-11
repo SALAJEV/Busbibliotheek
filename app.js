@@ -108,6 +108,7 @@ const PYTHON_MAIN_DOWNLOAD_URL = "https://busbibliotheek95.pages.dev/python/scri
 const APK_DOWNLOAD_URL = `${window.location.origin}/android/app/release/app-release.apk`;
 const PHOTO_UPLOAD_FORM_URL = "https://forms.gle/MLzezhEKqxg6xagm9";
 const REPORT_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScrSDIN__F9mfOxpuMd2Kvw2GbGB3djKZrao1dB-Ry2-a67TA/viewform";
+const CONTACT_PAGE_URL = "https://sites.google.com/view/delijn-busspotter/contact";
 const ZONE01_HERCULES_SEARCH_URL = "https://www.zone01.be/hercules/resultaten";
 const DE_LIJN_VEHICLE_TRACKING_URL = "https://vehicletracking.delijn.be";
 const LEAFLET_CSS_URL = "https://unpkg.com/leaflet/dist/leaflet.css";
@@ -401,6 +402,7 @@ const disclaimerTitleEl = document.getElementById("disclaimerTitle");
 const disclaimerTextEl = document.getElementById("disclaimerText");
 const footerReviewBtn = document.getElementById("footerReviewBtn");
 const footerTermsBtn = document.getElementById("footerTermsBtn");
+const footerContactBtn = document.getElementById("footerContactBtn");
 const currentYearEl = document.getElementById("currentYear");
 const infoModalEl = document.getElementById("infoModal");
 const infoModalTitleEl = document.getElementById("infoModalTitle");
@@ -627,7 +629,7 @@ let realtimePausedByInactivity = false;
 let deeplinkHandled = false;
 let routeNavigationLocked = false;
 let injectedInitialHomeHistoryState = false;
-const APP_VERSION = "2026.05.11-4";
+const APP_VERSION = "2026.05.11-5";
 const dataLoadTimestamps = {
   realtime: 0
 };
@@ -5129,6 +5131,7 @@ function applyTranslations() {
   disclaimerTextEl.textContent = t("disclaimerText");
   if (footerReviewBtn) footerReviewBtn.textContent = getLabel("footerReview", "Feedback achterlaten");
   if (footerTermsBtn) footerTermsBtn.textContent = getLabel("footerTerms", "Gebruiksvoorwaarden");
+  if (footerContactBtn) footerContactBtn.textContent = getLabel("footerContact", "Contact opnemen");
   closeBtnEl.title = getLabel("back", "Terug");
   closeBtnEl.setAttribute("aria-label", getLabel("back", "Terug"));
   if (closeBtnTextEl) closeBtnTextEl.textContent = getLabel("back", "Terug");
@@ -6402,6 +6405,9 @@ languageSelect.addEventListener("change", () => {
 });
 footerReviewBtn?.addEventListener("click", showReviewModal);
 footerTermsBtn?.addEventListener("click", showTermsModal);
+footerContactBtn?.addEventListener("click", () => {
+  openExternalUrl(CONTACT_PAGE_URL);
+});
 reviewModalCloseBtn?.addEventListener("click", hideReviewModal);
 reviewModalDoneBtn?.addEventListener("click", hideReviewModal);
 reviewModalEl?.addEventListener("click", (event) => {
