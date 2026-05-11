@@ -6,19 +6,17 @@ const JSON_HEADERS = {
   "Cache-Control": "no-store"
 };
 
-const UPSTREAM_TIMEOUT_MS = 8000;
-const REALTIME_EDGE_CACHE_TTL_SECONDS = 20;
-const REALTIME_EDGE_STALE_WINDOW_SECONDS = 180;
-const MAX_RESPONSE_SIZE_BYTES = 5242880; // 5MB limit
+const UPSTREAM_TIMEOUT_MS = 6000;
+const REALTIME_EDGE_CACHE_TTL_SECONDS = 25;
+const REALTIME_EDGE_STALE_WINDOW_SECONDS = 300;
+const MAX_RESPONSE_SIZE_BYTES = 3145728; // 3MB limit (smaller to be safe)
+const REQUEST_DEDUP_MAP = new Map();
 
 export async function onRequest(context) {
   const { request, env } = context;
 
   if (request.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: JSON_HEADERS
-    });
+    return new Response(null, { status: 204, headers: JSON_HEADERS });
   }
 
   if (request.method !== "GET") {
@@ -34,72 +32,84 @@ export async function onRequest(context) {
   }
 
   try {
-    const upstreamUrl = buildUpstreamUrl(requestUrl, resource);
-    const cache = resource === "realtime" ? caches.default : null;
+    // Check cache FIRST for realtime data
+    if (resource === "realtime") {
+      const cached = await getRealtimeFromCache();
+      if (cached) return cached;
+    }
+
     const cacheKey = resource === "realtime" ? buildRealtimeCacheKey(requestUrl) : null;
-    const upstreamResponse = await fetchUpstream(upstreamUrl, resource, apiKey);
     
-    // Check Content-Length header first
-    const contentLength = parseInt(upstreamResponse.headers.get("content-length") || "0", 10);
-    if (contentLength > MAX_RESPONSE_SIZE_BYTES) {
-      return jsonResponse(
-        { error: "Response te groot van upstream server" },
-        413
-      );
+    // Deduplicate concurrent requests to same resource
+    const dedupKey = `${resource}:${buildUpstreamUrl(requestUrl, resource)}`;
+    if (REQUEST_DEDUP_MAP.has(dedupKey)) {
+      return await REQUEST_DEDUP_MAP.get(dedupKey);
     }
 
-    const payloadText = await upstreamResponse.text();
-    
-    // Check actual response size
-    if (payloadText.length > MAX_RESPONSE_SIZE_BYTES) {
-      return jsonResponse(
-        { error: "Response te groot van upstream server" },
-        413
-      );
-    }
+    // Create promise for this request
+    const requestPromise = (async () => {
+      try {
+        const upstreamUrl = buildUpstreamUrl(requestUrl, resource);
+        const upstreamResponse = await fetchUpstream(upstreamUrl, resource, apiKey);
 
-    if (!upstreamResponse.ok) {
-      if (resource === "realtime" && isTemporaryUpstreamStatus(upstreamResponse.status)) {
-        const staleResponse = await matchCachedRealtimeResponse(cache, cacheKey);
-        if (staleResponse) return staleResponse;
+        if (!upstreamResponse.ok) {
+          if (isTemporaryUpstreamStatus(upstreamResponse.status)) {
+            const staleCache = await getRealtimeFromCache(true); // Try stale cache
+            if (staleCache) return staleCache;
+          }
+
+          const errorText = await readErrorText(upstreamResponse);
+          return jsonResponse(
+            {
+              error: resource === "weather" ? "Fout van weerbron" : "Fout van De Lijn API",
+              status: upstreamResponse.status,
+              detail: truncate(errorText, 200)
+            },
+            upstreamResponse.status
+          );
+        }
+
+        // Stream response or parse for caching
+        if (resource === "realtime") {
+          const payloadText = await readWithSizeLimit(upstreamResponse);
+          const payload = payloadText ? JSON.parse(payloadText) : {};
+          
+          // Cache asynchronously without blocking response
+          if (cacheKey && payloadText.length < 2000000) {
+            context.waitUntil(storeCachedRealtimeResponse(cacheKey, payload));
+          }
+          
+          return jsonResponse(payload, 200);
+        } else {
+          // For other resources, stream directly
+          return new Response(upstreamResponse.body, {
+            status: 200,
+            headers: JSON_HEADERS
+          });
+        }
+      } finally {
+        REQUEST_DEDUP_MAP.delete(dedupKey);
       }
+    })();
 
-      return jsonResponse(
-        {
-          error: resource === "weather" ? "Fout van weerbron" : "Fout van De Lijn API",
-          status: upstreamResponse.status,
-          upstreamUrl,
-          detail: truncate(payloadText, 240)
-        },
-        upstreamResponse.status
-      );
-    }
+    // Store dedup promise briefly
+    REQUEST_DEDUP_MAP.set(dedupKey, requestPromise);
+    setTimeout(() => REQUEST_DEDUP_MAP.delete(dedupKey), 100);
 
-    const parsedPayload = payloadText ? JSON.parse(payloadText) : {};
-    if (resource === "realtime" && cache && cacheKey && payloadText.length < 2097152) { // Only cache if < 2MB
-      await storeCachedRealtimeResponse(cache, cacheKey, parsedPayload);
-    }
-    return jsonResponse(parsedPayload, 200);
+    return await requestPromise;
   } catch (error) {
-    if (resource === "realtime" && error instanceof UpstreamUnavailableError) {
-      const staleResponse = await matchCachedRealtimeResponse(caches.default, buildRealtimeCacheKey(requestUrl));
-      if (staleResponse) return staleResponse;
+    if (resource === "realtime") {
+      const staleCache = await getRealtimeFromCache(true);
+      if (staleCache) return staleCache;
     }
 
-    const status = error instanceof RequestValidationError
-      ? 400
-      : error instanceof UpstreamUnavailableError
-        ? 503
-        : 500;
-
+    const status = error instanceof RequestValidationError ? 400 : 503;
     return jsonResponse(
       {
         error: error instanceof RequestValidationError
           ? error.message
-          : error instanceof UpstreamUnavailableError
-            ? error.message
-            : "Fout bij ophalen data",
-        detail: error instanceof Error ? truncate(error.message, 240) : ""
+          : "Fout bij ophalen data",
+        detail: error instanceof Error ? truncate(error.message, 200) : ""
       },
       status
     );
@@ -113,6 +123,63 @@ function jsonResponse(payload, status = 200) {
   });
 }
 
+async function getRealtimeFromCache(allowStale = false) {
+  try {
+    const cache = caches.default;
+    const cacheKey = new Request("https://api.busbibliotheek.local/__cache/realtime", { method: "GET" });
+    const cached = await cache.match(cacheKey);
+    if (!cached) return null;
+
+    const cacheControl = cached.headers.get("Cache-Control") || "";
+    const isStale = cached.headers.get("X-Busbibliotheek-Realtime-Cache") === "stale";
+    
+    if (isStale && !allowStale) return null;
+    
+    const response = new Response(cached.body, { status: 200, headers: JSON_HEADERS });
+    response.headers.set("X-Busbibliotheek-Cache", isStale ? "stale" : "fresh");
+    return response;
+  } catch {
+    return null;
+  }
+}
+
+async function readErrorText(response) {
+  try {
+    const text = await response.text();
+    return text.slice(0, 500); // Limit error details
+  } catch {
+    return "Onbekende fout";
+  }
+}
+
+async function readWithSizeLimit(response) {
+  try {
+    const reader = response.body?.getReader();
+    if (!reader) return await response.text();
+
+    let received = 0;
+    let result = "";
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      received += value.length;
+      if (received > MAX_RESPONSE_SIZE_BYTES) {
+        reader.cancel();
+        throw new Error("Response exceeds size limit");
+      }
+
+      result += decoder.decode(value, { stream: true });
+    }
+
+    return result;
+  } catch (error) {
+    throw new Error("Fout bij lezen response: " + (error instanceof Error ? error.message : ""));
+  }
+}
+
 function normalizeResource(value) {
   const normalized = (value || "realtime").toString().trim().toLowerCase();
   if (normalized === "weather" || normalized === "haltes" || normalized === "realtime") {
@@ -123,7 +190,8 @@ function normalizeResource(value) {
 
 async function fetchUpstream(url, resource, apiKey) {
   const requestHeaders = {
-    Accept: "application/json"
+    Accept: "application/json",
+    "User-Agent": "Busbibliotheek/1.0"
   };
 
   if (resource === "realtime" || resource === "haltes") {
@@ -131,55 +199,24 @@ async function fetchUpstream(url, resource, apiKey) {
   }
 
   try {
-    return await fetchWithRetries(url, {
-      method: "GET",
-      headers: requestHeaders
-    });
-  } catch (_) {
-    throw new UpstreamUnavailableError(
-      resource === "weather"
-        ? "Weerbron is tijdelijk niet bereikbaar"
-        : "De Lijn API is tijdelijk niet bereikbaar"
-    );
-  }
-}
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
 
-async function fetchWithRetries(url, options = {}, retries = 0) {
-  let lastResponse = null;
-  let lastError = null;
-
-  for (let attempt = 0; attempt <= retries; attempt += 1) {
     try {
-      const response = await fetchWithTimeout(url, options);
-      if (!isTemporaryUpstreamStatus(response.status) || attempt === retries) {
-        return response;
-      }
-      lastResponse = response;
-    } catch (error) {
-      lastError = error;
-      if (attempt === retries) throw error;
+      return await fetch(url, {
+        method: "GET",
+        headers: requestHeaders,
+        signal: controller.signal,
+        cf: { cacheTtl: 30, cacheEverything: false, mirage: false }
+      });
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    if (attempt < retries) {
-      await wait(200 * (attempt + 1)); // Reduced wait time from 450ms
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("API request timeout");
     }
-  }
-
-  if (lastResponse) return lastResponse;
-  throw lastError || new Error("Upstream request mislukt");
-}
-
-async function fetchWithTimeout(url, options = {}) {
-  const controller = new AbortController();
-  const timeoutHandle = setTimeout(() => controller.abort("timeout"), UPSTREAM_TIMEOUT_MS);
-
-  try {
-    return await fetch(url, {
-      ...options,
-      signal: controller.signal
-    });
-  } finally {
-    clearTimeout(timeoutHandle);
+    throw error;
   }
 }
 
@@ -241,36 +278,27 @@ function normalizeIntegerParam(value) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
-function buildRealtimeCacheKey(requestUrl) {
-  // Use string-based key instead of Request object to reduce memory usage
-  return new Request(`${requestUrl.origin}/__cache/realtime`, { method: "GET" });
+function buildRealtimeCacheKey() {
+  // Use consistent static key for realtime cache
+  return new Request("https://api.busbibliotheek.local/__cache/realtime", { method: "GET" });
 }
 
-async function storeCachedRealtimeResponse(cache, cacheKey, payload) {
-  const cacheHeaders = new Headers(JSON_HEADERS);
-  cacheHeaders.set("Cache-Control", `public, max-age=${REALTIME_EDGE_CACHE_TTL_SECONDS}, stale-while-revalidate=${REALTIME_EDGE_STALE_WINDOW_SECONDS}`);
-  cacheHeaders.set("X-Busbibliotheek-Realtime-Cache", "fresh");
-  await cache.put(
-    cacheKey,
-    new Response(JSON.stringify(payload), {
-      status: 200,
-      headers: cacheHeaders
-    })
-  );
-}
-
-async function matchCachedRealtimeResponse(cache, cacheKey) {
-  if (!cache || !cacheKey) return null;
-  const cached = await cache.match(cacheKey);
-  if (!cached) return null;
-
-  const headers = new Headers(cached.headers);
-  headers.set("Cache-Control", "no-store");
-  headers.set("X-Busbibliotheek-Realtime-Cache", "stale");
-  return new Response(cached.body, {
-    status: 200,
-    headers
-  });
+async function storeCachedRealtimeResponse(cacheKey, payload) {
+  try {
+    const cache = caches.default;
+    const cacheHeaders = new Headers(JSON_HEADERS);
+    cacheHeaders.set("Cache-Control", `public, max-age=${REALTIME_EDGE_CACHE_TTL_SECONDS}, stale-while-revalidate=${REALTIME_EDGE_STALE_WINDOW_SECONDS}`);
+    cacheHeaders.set("X-Busbibliotheek-Realtime-Cache", "fresh");
+    cacheHeaders.set("X-Cache-Time", new Date().toISOString());
+    
+    await cache.put(
+      cacheKey,
+      new Response(JSON.stringify(payload), { status: 200, headers: cacheHeaders })
+    );
+  } catch (error) {
+    console.error("Cache storage error:", error);
+    // Don't throw - cache failure shouldn't break API
+  }
 }
 
 function isTemporaryUpstreamStatus(status) {
@@ -288,4 +316,4 @@ function wait(ms) {
 }
 
 class RequestValidationError extends Error {}
-class UpstreamUnavailableError extends Error {}
+
