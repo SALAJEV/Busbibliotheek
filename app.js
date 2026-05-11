@@ -7967,7 +7967,23 @@ function toonVasteData(id){
 async function initMap(lat,lon){
   const L = await ensureLeafletLoaded();
   if(!map){
-    map=L.map("map").setView([lat,lon],14);
+    const mapEl = document.getElementById("map");
+    if(!mapEl) return;
+    
+    map=L.map("map", {
+      attributionControl: true,
+      preferCanvas: true,
+      fadeAnimation: true,
+      markerZoomAnimation: true
+    }).setView([lat,lon],14);
+    
+    // Force map to recalculate its size
+    setTimeout(() => {
+      if(map) {
+        map.invalidateSize(false);
+      }
+    }, 150);
+    
     lastRealtimeMapCenter = { latitude: Number(lat), longitude: Number(lon) };
     lastRealtimeMapCenteredAt = Date.now();
 

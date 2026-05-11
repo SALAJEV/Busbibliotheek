@@ -6,9 +6,10 @@ const JSON_HEADERS = {
   "Cache-Control": "no-store"
 };
 
-const UPSTREAM_TIMEOUT_MS = 12000;
+const UPSTREAM_TIMEOUT_MS = 8000;
 const REALTIME_EDGE_CACHE_TTL_SECONDS = 20;
 const REALTIME_EDGE_STALE_WINDOW_SECONDS = 180;
+const MAX_RESPONSE_SIZE_BYTES = 5242880; // 5MB limit
 
 export async function onRequest(context) {
   const { request, env } = context;
@@ -37,7 +38,25 @@ export async function onRequest(context) {
     const cache = resource === "realtime" ? caches.default : null;
     const cacheKey = resource === "realtime" ? buildRealtimeCacheKey(requestUrl) : null;
     const upstreamResponse = await fetchUpstream(upstreamUrl, resource, apiKey);
+    
+    // Check Content-Length header first
+    const contentLength = parseInt(upstreamResponse.headers.get("content-length") || "0", 10);
+    if (contentLength > MAX_RESPONSE_SIZE_BYTES) {
+      return jsonResponse(
+        { error: "Response te groot van upstream server" },
+        413
+      );
+    }
+
     const payloadText = await upstreamResponse.text();
+    
+    // Check actual response size
+    if (payloadText.length > MAX_RESPONSE_SIZE_BYTES) {
+      return jsonResponse(
+        { error: "Response te groot van upstream server" },
+        413
+      );
+    }
 
     if (!upstreamResponse.ok) {
       if (resource === "realtime" && isTemporaryUpstreamStatus(upstreamResponse.status)) {
@@ -57,7 +76,7 @@ export async function onRequest(context) {
     }
 
     const parsedPayload = payloadText ? JSON.parse(payloadText) : {};
-    if (resource === "realtime" && cache && cacheKey) {
+    if (resource === "realtime" && cache && cacheKey && payloadText.length < 2097152) { // Only cache if < 2MB
       await storeCachedRealtimeResponse(cache, cacheKey, parsedPayload);
     }
     return jsonResponse(parsedPayload, 200);
@@ -125,7 +144,7 @@ async function fetchUpstream(url, resource, apiKey) {
   }
 }
 
-async function fetchWithRetries(url, options = {}, retries = 1) {
+async function fetchWithRetries(url, options = {}, retries = 0) {
   let lastResponse = null;
   let lastError = null;
 
@@ -141,7 +160,9 @@ async function fetchWithRetries(url, options = {}, retries = 1) {
       if (attempt === retries) throw error;
     }
 
-    await wait(450 * (attempt + 1));
+    if (attempt < retries) {
+      await wait(200 * (attempt + 1)); // Reduced wait time from 450ms
+    }
   }
 
   if (lastResponse) return lastResponse;
@@ -221,6 +242,7 @@ function normalizeIntegerParam(value) {
 }
 
 function buildRealtimeCacheKey(requestUrl) {
+  // Use string-based key instead of Request object to reduce memory usage
   return new Request(`${requestUrl.origin}/__cache/realtime`, { method: "GET" });
 }
 
