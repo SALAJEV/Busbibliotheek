@@ -97,6 +97,10 @@ function syncTrackingStatusBanner() {
   }
 }
 
+function isTrackingTemporarilyUnavailable() {
+  return TRACKING_STATUS_BANNER_ENABLED === 1;
+}
+
 // Constants
 const BASE_URL = "https://pub-611b5bc156eb455ba86d9bcece9aea1c.r2.dev";
 const API_URL = `${window.location.origin}/api`;
@@ -577,6 +581,8 @@ let vehicleSuggestionIndex = [];
 let map, marker, refresh;
 let trailLine = null;
 let routeTrail = [];
+let lastRealtimeMapCenter = null;
+let lastRealtimeMapCenteredAt = 0;
 let delayMinutes = 0;
 let currentVehicleId = "";
 let compareVehicleId = "";
@@ -594,6 +600,7 @@ let favoritesPanelRestoreFocusEl = null;
 let feedEndDateValue = "";
 let vehiclesSourceUpdatedAt = "";
 let vehiclePhotoLookupToken = 0;
+let vehiclePhotoRenderToken = 0;
 const photoCaptureDateCache = new Map();
 const photoExifMetadataCache = new Map();
 const photoReverseGeocodeCache = new Map();
@@ -1335,7 +1342,11 @@ const ALLOWED_COLOR_THEMES = ["classic", "blue", "green", "yellow", "orange", "r
 const ALLOWED_UPDATE_INTERVALS = [10000, 15000, 30000];
 const REQUEST_TIMEOUT_MS = 12000;
 const REALTIME_FETCH_TIMEOUT_MS = 10000;
-const REALTIME_FEED_CACHE_MS = 4000;
+const REALTIME_FEED_CACHE_MS = 9000;
+const STARTUP_DATASET_STEP_DELAY_MS = 450;
+const REALTIME_ROUTE_TRAIL_MAX_POINTS = 20;
+const REALTIME_MAP_RECENTER_MIN_DISTANCE_METERS = 120;
+const REALTIME_MAP_RECENTER_MIN_INTERVAL_MS = 15000;
 const VEHICLE_DISPLAY_FIELD_MAP = {
   vehicle_id: "Voertuignummer",
   bus: "Type",
@@ -2609,6 +2620,15 @@ async function refreshDashboardPanel(options = {}) {
   if (!dashboardPanelEl || !dashboardGridEl || !dashboardVehicleIds.length) return;
   if (showLoading) setDashboardLoading(true);
   try {
+    if (isTrackingTemporarilyUnavailable()) {
+      await renderDashboardMap([]);
+      dashboardGridEl.innerHTML = `<div class="dashboard-empty">${escapeHtml(getLabel("trackingStatusBanner", "Trackinginformatie is tijdelijk niet beschikbaar."))}</div>`;
+      if (dashboardSummaryEl) {
+        dashboardSummaryEl.textContent = getLabel("trackingStatusBanner", "Trackinginformatie is tijdelijk niet beschikbaar.");
+      }
+      return;
+    }
+
     const hasInternet = await verifyInternetConnection();
     if (requestToken !== dashboardRequestToken) return;
     if (!hasInternet) {
@@ -2809,9 +2829,11 @@ function setVehiclePhotoFrameLoading(active, label = "") {
 }
 
 function clearVehiclePhotoImageElement(removeFromDom = false) {
+  vehiclePhotoRenderToken += 1;
   if (!vehiclePhotoImgEl) return;
   vehiclePhotoImgEl.onload = null;
   vehiclePhotoImgEl.onerror = null;
+  vehiclePhotoImgEl.classList.remove("is-pending", "is-visible");
   vehiclePhotoImgEl.removeAttribute("src");
   vehiclePhotoImgEl.alt = "";
   if (removeFromDom) {
@@ -3917,18 +3939,48 @@ function renderActiveVehiclePhoto() {
   currentVehiclePhotoIndex = safeIndex;
   const activeEntry = currentVehiclePhotoEntries[safeIndex];
   const copy = buildVehiclePhotoCopy(activeEntry, currentPhotoVehicleId);
+  const nextPhotoUrl = buildVehiclePhotoRequestUrl(activeEntry.src);
+  const renderToken = ++vehiclePhotoRenderToken;
   setVehiclePhotoFrameLoading(true, getLabel("photoLoading", "Foto wordt geladen..."));
   vehiclePhotoFrameEl?.classList.remove("is-portrait", "is-landscape");
   vehiclePhotoFrameEl?.classList.add(getVehiclePhotoOrientationClass(activeEntry));
-  photoImgEl.onload = () => setVehiclePhotoFrameLoading(false);
-  photoImgEl.onerror = () => setVehiclePhotoFrameLoading(false);
-  photoImgEl.src = buildVehiclePhotoRequestUrl(activeEntry.src);
+  photoImgEl.classList.remove("is-visible");
+  photoImgEl.classList.add("is-pending");
   photoImgEl.alt = copy.alt;
   vehiclePhotoCaptionEl.textContent = copy.caption;
   vehiclePhotoCaptionEl.hidden = !copy.caption;
   renderVehiclePhotoMeta(copy);
   updateVehiclePhotoNavigation();
   void hydrateActiveVehiclePhotoLocation(activeEntry, currentPhotoVehicleId, safeIndex);
+
+  if (photoImgEl.getAttribute("src") === nextPhotoUrl && photoImgEl.complete && photoImgEl.naturalWidth > 0) {
+    photoImgEl.classList.remove("is-pending");
+    photoImgEl.classList.add("is-visible");
+    setVehiclePhotoFrameLoading(false);
+    return;
+  }
+
+  const preloadImage = new Image();
+  preloadImage.decoding = "async";
+  preloadImage.onload = async () => {
+    try {
+      if (typeof preloadImage.decode === "function") {
+        await preloadImage.decode();
+      }
+    } catch {}
+    if (renderToken !== vehiclePhotoRenderToken) return;
+    photoImgEl.src = nextPhotoUrl;
+    photoImgEl.alt = copy.alt;
+    photoImgEl.classList.remove("is-pending");
+    photoImgEl.classList.add("is-visible");
+    setVehiclePhotoFrameLoading(false);
+  };
+  preloadImage.onerror = () => {
+    if (renderToken !== vehiclePhotoRenderToken) return;
+    photoImgEl.classList.remove("is-pending");
+    setVehiclePhotoFrameLoading(false);
+  };
+  preloadImage.src = nextPhotoUrl;
 }
 
 function setPageLoading(active) {
@@ -4474,8 +4526,10 @@ function renderWeatherBlock(weatherData, latitude, longitude) {
           <span class="weather-source">${escapeHtml(getLabel("weatherSource", "Tik voor meer weerinfo"))}</span>
           <span class="weather-source weather-source-meta">${escapeHtml(getWeatherSourceText())}</span>
         </div>
-        <span class="weather-temperature weather-temperature--inline" aria-hidden="true">${escapeHtml(temperature)}</span>
-        <span class="weather-card-chevron" aria-hidden="true">${getWeatherIconMarkup("arrow", "weather-svg--arrow")}</span>
+        <div class="weather-card-side" aria-hidden="true">
+          <span class="weather-temperature weather-temperature--inline">${escapeHtml(temperature)}</span>
+          <span class="weather-card-chevron">${getWeatherIconMarkup("arrow", "weather-svg--arrow")}</span>
+        </div>
       </div>
     </button>
   `;
@@ -5980,7 +6034,7 @@ function removeFavorite(id) {
 
 function restartRealtimeRefresh() {
   if (refresh) clearInterval(refresh);
-  if (!currentVehicleId || realtimePausedByInactivity) return;
+  if (!currentVehicleId || realtimePausedByInactivity || isTrackingTemporarilyUnavailable()) return;
   refresh = setInterval(() => updateRealtime(currentVehicleId), updateIntervalMs);
 }
 
@@ -6104,7 +6158,15 @@ voertuigInput.addEventListener("keydown", (event) => {
       openExternalUrl(suggestieLijst.dataset.zone01Url, { forceSameTab: true });
       return;
     }
-    if (hasActiveSuggestion) return;
+    if (hasActiveSuggestion) {
+      event.preventDefault();
+      const activeIndex = Number(suggestieLijst.dataset.activeIndex || -1);
+      const activeSuggestionEl = suggestieLijst.querySelector(`[data-index="${activeIndex}"]`);
+      if (activeSuggestionEl instanceof HTMLElement) {
+        activeSuggestionEl.click();
+        return;
+      }
+    }
     event.preventDefault();
     dismissPrimaryVehicleSearchInput({ closeKeyboard: true });
     zoekAlles({ closeKeyboard: true });
@@ -7534,12 +7596,15 @@ function warmUpVehiclesAndDeepLinks() {
 
 function warmUpStaticDatasets() {
   if (staticDatasetsWarmupPromise) return staticDatasetsWarmupPromise;
-  staticDatasetsWarmupPromise = Promise.allSettled([
-    laadVoertuigen(),
-    laadTrips(),
-    laadRoutes(),
-    laadStops()
-  ]).finally(() => {
+  staticDatasetsWarmupPromise = (async () => {
+    await laadVoertuigen();
+    await wait(STARTUP_DATASET_STEP_DELAY_MS);
+    await laadTrips();
+    await wait(STARTUP_DATASET_STEP_DELAY_MS);
+    await laadRoutes();
+    await wait(STARTUP_DATASET_STEP_DELAY_MS);
+    await laadStops();
+  })().finally(() => {
     staticDatasetsWarmupPromise = null;
   });
   return staticDatasetsWarmupPromise;
@@ -7651,6 +7716,21 @@ async function zoekAlles(options = {}) {
   renderComparison();
   lastUpdateEl.hidden = true;
   lastUpdateEl.textContent = `${t("lastUpdate")}: -`;
+
+  if (isTrackingTemporarilyUnavailable()) {
+    renderRealtimeUnavailableState(activeVehicleId, {
+      withTracker: false,
+      reason: getLabel("trackingStatusBanner", "Trackinginformatie is tijdelijk niet beschikbaar.")
+    });
+    resetWeatherBlock();
+    mapEl.classList.add("hidden");
+    if (refresh) {
+      clearInterval(refresh);
+      refresh = null;
+    }
+    setPageLoading(false);
+    return;
+  }
 
   if (isOutOfService(bus)) {
     realtimeEl.innerHTML = t("outOfServiceNoRealtime");
@@ -7816,6 +7896,8 @@ async function initMap(lat,lon){
   const L = await ensureLeafletLoaded();
   if(!map){
     map=L.map("map").setView([lat,lon],14);
+    lastRealtimeMapCenter = { latitude: Number(lat), longitude: Number(lon) };
+    lastRealtimeMapCenteredAt = Date.now();
 
     // Cleaner base map suitable for transit (CartoDB Positron)
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -7823,6 +7905,34 @@ async function initMap(lat,lon){
     }).addTo(map);
 
   }
+}
+
+function calculateApproxDistanceMeters(latitudeA, longitudeA, latitudeB, longitudeB) {
+  const earthRadiusMeters = 6371000;
+  const toRadians = (value) => value * (Math.PI / 180);
+  const deltaLatitude = toRadians(latitudeB - latitudeA);
+  const deltaLongitude = toRadians(longitudeB - longitudeA);
+  const latitudeARadians = toRadians(latitudeA);
+  const latitudeBRadians = toRadians(latitudeB);
+  const a = Math.sin(deltaLatitude / 2) ** 2 +
+    Math.cos(latitudeARadians) * Math.cos(latitudeBRadians) *
+    Math.sin(deltaLongitude / 2) ** 2;
+  return 2 * earthRadiusMeters * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function shouldRecenterRealtimeMap(latitude, longitude) {
+  if (!lastRealtimeMapCenter) return true;
+  const elapsedMs = Date.now() - lastRealtimeMapCenteredAt;
+  const movedDistanceMeters = calculateApproxDistanceMeters(
+    lastRealtimeMapCenter.latitude,
+    lastRealtimeMapCenter.longitude,
+    Number(latitude),
+    Number(longitude)
+  );
+  return (
+    movedDistanceMeters >= REALTIME_MAP_RECENTER_MIN_DISTANCE_METERS &&
+    elapsedMs >= REALTIME_MAP_RECENTER_MIN_INTERVAL_MS
+  );
 }
 
 function getEntityVehiclePayload(entity) {
@@ -8236,6 +8346,18 @@ function getStopByStopId(stopId) {
 async function updateRealtime(id){
   const requestToken = ++realtimeRequestToken;
   const bus = findBusById(id);
+  if (isTrackingTemporarilyUnavailable()) {
+    renderRealtimeUnavailableState(id, {
+      withTracker: false,
+      reason: getLabel("trackingStatusBanner", "Trackinginformatie is tijdelijk niet beschikbaar.")
+    });
+    resetWeatherBlock();
+    mapEl.classList.add("hidden");
+    lastUpdateEl.textContent = `${t("lastUpdate")}: -`;
+    lastUpdateEl.hidden = true;
+    setPageLoading(false);
+    return;
+  }
   if (bus && !canUseRealtimeForOperator(bus)) {
     renderRealtimeUnavailableState(id, {
       withTracker: false,
@@ -8410,7 +8532,7 @@ async function updateRealtime(id){
     if (requestToken !== realtimeRequestToken || id !== currentVehicleId || !map) return;
     const L = window.L;
     routeTrail.push([v.position.latitude, v.position.longitude]);
-    if (routeTrail.length > 35) routeTrail.shift();
+    if (routeTrail.length > REALTIME_ROUTE_TRAIL_MAX_POINTS) routeTrail.shift();
     if (routeTrail.length >= 2) {
       if (!trailLine) {
         trailLine = L.polyline(routeTrail, { color: "#ef4444", weight: 4, opacity: 0.75 }).addTo(map);
@@ -8419,7 +8541,14 @@ async function updateRealtime(id){
       }
     }
 
-    map.setView([v.position.latitude,v.position.longitude],15);
+    if (shouldRecenterRealtimeMap(v.position.latitude, v.position.longitude)) {
+      map.setView([v.position.latitude, v.position.longitude], 15);
+      lastRealtimeMapCenter = {
+        latitude: Number(v.position.latitude),
+        longitude: Number(v.position.longitude)
+      };
+      lastRealtimeMapCenteredAt = Date.now();
+    }
 
     const bearing = v.position.bearing || 0;
 

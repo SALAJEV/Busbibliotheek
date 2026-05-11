@@ -3285,10 +3285,18 @@ body.platform-android-tv .inline-suggestion-list {
 
 .weather-card-main {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   width: 100%;
   gap: 0.72rem;
+}
+
+.weather-card-side {
+  display: inline-flex;
+  align-items: center;
+  justify-self: end;
+  gap: 0.55rem;
+  min-width: 0;
 }
 
 .weather-icon {
@@ -3913,13 +3921,35 @@ tr + tr td {
   height: auto;
   aspect-ratio: 16 / 9;
   object-fit: cover;
-  transition: transform 0.24s ease;
+  opacity: 0;
+  filter: saturate(0.92);
+  transform: scale(1.018);
+  transition:
+    opacity 240ms ease,
+    transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 240ms ease;
 }
 
-.vehicle-photo-frame.is-loading .vehicle-photo-image {
-  opacity: 0.22;
-  filter: blur(10px) saturate(0.7);
-  transform: scale(1.03);
+.vehicle-photo-image.is-visible {
+  opacity: 1;
+  filter: none;
+  transform: scale(1);
+}
+
+.vehicle-photo-image.is-pending {
+  opacity: 0.16;
+}
+
+.vehicle-photo-frame.is-loading .vehicle-photo-image.is-visible {
+  opacity: 0.34;
+  filter: blur(6px) saturate(0.74);
+  transform: scale(1.018);
+}
+
+.vehicle-photo-frame.is-loading .vehicle-photo-image.is-pending {
+  opacity: 0.12;
+  filter: blur(12px) saturate(0.68);
+  transform: scale(1.035);
 }
 
 .vehicle-photo-frame.is-portrait {
@@ -5879,33 +5909,51 @@ body.platform-phone.platform-ios .instagram-help-text {
     align-items: flex-start;
   }
 
-  .weather-card-main,
+  .weather-card-main {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "icon copy"
+      "side side";
+    align-items: start;
+  }
+
   .weather-stats {
     grid-template-columns: 1fr;
   }
 
+  .weather-icon {
+    grid-area: icon;
+  }
+
+  .weather-copy {
+    grid-area: copy;
+  }
+
+  .weather-card-side {
+    grid-area: side;
+    width: 100%;
+    justify-content: space-between;
+    padding-top: 0.2rem;
+  }
+
   .weather-temperature {
-    justify-self: end;
-  }
-
-  .weather-card-main {
-    grid-template-columns: auto minmax(0, 1fr) auto auto;
-  }
-
-  .weather-card-chevron {
-    display: inline-flex;
+    justify-self: start;
   }
 
   .weather-headline-row {
-    align-items: center;
-    flex-direction: row;
-    gap: 0.75rem;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.25rem;
   }
 
   .weather-temperature--inline {
     font-size: 1.32rem;
-    justify-self: center;
+    justify-self: start;
     align-self: center;
+  }
+
+  .weather-source {
+    line-height: 1.42;
   }
 
   .weather-modal-hero {
@@ -9841,6 +9889,15 @@ footer h3 {
 
   .weather-card-main {
     gap: 0.72rem !important;
+  }
+
+  .weather-card,
+  .weather-card-link {
+    padding: 0.92rem 0.94rem !important;
+  }
+
+  .weather-card-side {
+    gap: 0.7rem;
   }
 
   .dashboard-map {
