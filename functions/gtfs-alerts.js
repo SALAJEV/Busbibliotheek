@@ -9,8 +9,8 @@ const JSON_HEADERS = {
 const DEFAULT_DELIJN_API_KEY = "c8d86e3f6d9d40828e5193af47ee4fef";
 const UPSTREAM_URL = "https://api-management-opendata-production.azure-api.net/api/gtfs/feed/delijn/rt/alert";
 const UPSTREAM_TIMEOUT_MS = 10000;
-const GTFS_ALERTS_CACHE_TTL_MS = 5 * 60 * 1000;
-const GTFS_ALERTS_CACHE = { payload: null, expiresAt: 0, fetchedAt: 0 };
+const GTFS_ALERTS_CACHE_TTL_MS = 10 * 60 * 1000;
+const GTFS_ALERTS_CACHE = { payload: null, expiresAt: 0, fetchedAt: 0, lastFailureAt: 0, consecutiveFailures: 0 };
 
 export async function onRequest(context) {
   const { request, env } = context;
@@ -35,6 +35,18 @@ export async function onRequest(context) {
     return jsonResponse({ error: "Geen De Lijn API-key beschikbaar." }, 500);
   }
 
+  const cachedPayload = getCachedAlertsPayload();
+  if (cachedPayload && isRateLimitedRecently()) {
+    return jsonResponse({
+      ...cachedPayload,
+      meta: {
+        source: "cache",
+        cachedAt: GTFS_ALERTS_CACHE.fetchedAt,
+        retryAfterMs: Math.max(0, GTFS_ALERTS_CACHE.lastFailureAt + 2000 - Date.now())
+      }
+    }, 200);
+  }
+
   try {
     const upstreamUrl = new URL(UPSTREAM_URL);
     upstreamUrl.searchParams.set("format", format);
@@ -55,13 +67,15 @@ export async function onRequest(context) {
 
       if (!response.ok) {
         const detail = await response.text().catch(() => "");
-        const cachedPayload = getCachedAlertsPayload();
-        if (isQuotaError(detail, response.status) && cachedPayload) {
+        recordRateLimitFailure(detail, response.status);
+        const fallbackPayload = getCachedAlertsPayload();
+        if (isQuotaError(detail, response.status) && fallbackPayload) {
           return jsonResponse({
-            ...cachedPayload,
+            ...fallbackPayload,
             meta: {
               source: "cache",
-              cachedAt: GTFS_ALERTS_CACHE.fetchedAt
+              cachedAt: GTFS_ALERTS_CACHE.fetchedAt,
+              retryAfterMs: Math.max(0, GTFS_ALERTS_CACHE.lastFailureAt + 2000 - Date.now())
             }
           }, 200);
         }
@@ -71,14 +85,15 @@ export async function onRequest(context) {
             error: "Fout bij ophalen GTFS RT Alerts",
             status: response.status,
             detail: detail.slice(0, 500),
-            cached: Boolean(cachedPayload)
+            cached: Boolean(fallbackPayload)
           },
-          response.status === 403 ? 503 : response.status
+          response.status === 403 || response.status === 429 ? 503 : response.status
         );
       }
 
       if (format === "protobuf") {
         const bytes = await response.arrayBuffer();
+        resetRateLimitState();
         return new Response(bytes, {
           status: 200,
           headers: {
@@ -94,6 +109,7 @@ export async function onRequest(context) {
       try {
         const payload = JSON.parse(payloadText);
         storeCachedAlertsPayload(payload);
+        resetRateLimitState();
         return jsonResponse(payload, 200);
       } catch {
         return jsonResponse({ error: "Ongeldige JSON-response van De Lijn API", raw: payloadText.slice(0, 1000) }, 502);
@@ -134,7 +150,24 @@ function storeCachedAlertsPayload(payload) {
   GTFS_ALERTS_CACHE.expiresAt = Date.now() + GTFS_ALERTS_CACHE_TTL_MS;
 }
 
+function recordRateLimitFailure(detail, status) {
+  GTFS_ALERTS_CACHE.lastFailureAt = Date.now();
+  GTFS_ALERTS_CACHE.consecutiveFailures += 1;
+  if (status === 429 || isQuotaError(detail, status)) {
+    GTFS_ALERTS_CACHE.lastFailureAt = Date.now();
+  }
+}
+
+function resetRateLimitState() {
+  GTFS_ALERTS_CACHE.lastFailureAt = 0;
+  GTFS_ALERTS_CACHE.consecutiveFailures = 0;
+}
+
+function isRateLimitedRecently() {
+  return GTFS_ALERTS_CACHE.lastFailureAt > 0 && Date.now() - GTFS_ALERTS_CACHE.lastFailureAt < 2000;
+}
+
 function isQuotaError(detail, status) {
-  if (status === 403) return true;
-  return /quota|call volume/i.test(detail || "");
+  if (status === 403 || status === 429) return true;
+  return /quota|call volume|rate limit/i.test(detail || "");
 }
