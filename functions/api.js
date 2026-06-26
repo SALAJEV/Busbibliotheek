@@ -27,7 +27,7 @@ export async function onRequest(context) {
   const requestUrl = new URL(request.url);
   const resource = normalizeResource(requestUrl.searchParams.get("resource"));
 
-  if ((resource === "realtime" || resource === "haltes") && !apiKey) {
+  if ((resource === "realtime" || resource === "haltes" || resource === "gtfsalerts") && !apiKey) {
     return jsonResponse({ error: "Serverconfiguratie mist DELIJN_API_KEY" }, 500);
   }
 
@@ -214,7 +214,7 @@ async function readWithSizeLimit(response) {
 
 function normalizeResource(value) {
   const normalized = (value || "realtime").toString().trim().toLowerCase();
-  if (normalized === "weather" || normalized === "haltes" || normalized === "realtime") {
+  if (normalized === "weather" || normalized === "haltes" || normalized === "realtime" || normalized === "gtfsalerts") {
     return normalized;
   }
   throw new RequestValidationError("Onbekende resource");
@@ -226,7 +226,7 @@ async function fetchUpstream(url, resource, apiKey) {
     "User-Agent": "Busbibliotheek/1.0"
   };
 
-  if (resource === "realtime" || resource === "haltes") {
+  if (resource === "realtime" || resource === "haltes" || resource === "gtfsalerts") {
     requestHeaders["Ocp-Apim-Subscription-Key"] = apiKey;
   }
 
@@ -269,6 +269,13 @@ function buildUpstreamUrl(requestUrl, resource) {
     );
     upstreamUrl.searchParams.set("timezone", "auto");
     upstreamUrl.searchParams.set("forecast_days", "1");
+    return upstreamUrl.toString();
+  }
+
+  if (resource === "gtfsalerts") {
+    const format = (requestUrl.searchParams.get("format") || "json").toLowerCase();
+    const upstreamUrl = new URL("https://api-management-opendata-production.azure-api.net/api/gtfs/feed/delijn/rt/alert");
+    upstreamUrl.searchParams.set("format", format === "protobuf" ? "protobuf" : "json");
     return upstreamUrl.toString();
   }
 
