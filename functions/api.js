@@ -11,6 +11,8 @@ const REALTIME_EDGE_CACHE_TTL_SECONDS = 25;
 const REALTIME_EDGE_STALE_WINDOW_SECONDS = 300;
 const MAX_RESPONSE_SIZE_BYTES = 8388608; // 8MB limit for realtime data
 const REQUEST_DEDUP_MAP = new Map();
+const GTFS_ALERTS_CACHE_TTL_MS = 5 * 60 * 1000;
+const GTFS_ALERTS_CACHE = { payload: null, expiresAt: 0, fetchedAt: 0 };
 
 export async function onRequest(context) {
   const { request, env } = context;
@@ -33,6 +35,13 @@ export async function onRequest(context) {
 
   try {
     const upstreamUrl = buildUpstreamUrl(requestUrl, resource);
+
+    if (resource === "gtfsalerts") {
+      const cachedPayload = getCachedGtfsAlertsPayload();
+      if (cachedPayload) {
+        return jsonResponse({ ...cachedPayload, meta: { source: "cache", cachedAt: GTFS_ALERTS_CACHE.fetchedAt } }, 200);
+      }
+    }
 
     // Check cache FIRST for realtime data
     if (resource === "realtime") {
@@ -60,13 +69,20 @@ export async function onRequest(context) {
           }
 
           const errorText = await readErrorText(upstreamResponse);
+          if (resource === "gtfsalerts") {
+            const cachedPayload = getCachedGtfsAlertsPayload();
+            if (cachedPayload) {
+              return jsonResponse({ ...cachedPayload, meta: { source: "cache", cachedAt: GTFS_ALERTS_CACHE.fetchedAt } }, 200);
+            }
+          }
+
           return jsonResponse(
             {
               error: resource === "weather" ? "Fout van weerbron" : "Fout van De Lijn API",
               status: upstreamResponse.status,
               detail: truncate(errorText, 200)
             },
-            upstreamResponse.status
+            upstreamResponse.status === 403 ? 503 : upstreamResponse.status
           );
         }
 
@@ -87,6 +103,19 @@ export async function onRequest(context) {
             const staleCache = await getRealtimeFromCache(true);
             if (staleCache) return staleCache;
             
+            throw readError;
+          }
+        } else if (resource === "gtfsalerts") {
+          try {
+            const payloadText = await readWithSizeLimit(upstreamResponse);
+            const payload = payloadText ? JSON.parse(payloadText) : {};
+            storeCachedGtfsAlertsPayload(payload);
+            return jsonResponse(payload, 200);
+          } catch (readError) {
+            const cachedPayload = getCachedGtfsAlertsPayload();
+            if (cachedPayload) {
+              return jsonResponse({ ...cachedPayload, meta: { source: "cache", cachedAt: GTFS_ALERTS_CACHE.fetchedAt } }, 200);
+            }
             throw readError;
           }
         } else {
@@ -342,6 +371,21 @@ async function storeCachedRealtimeResponse(cacheKey, payload) {
 
 function isTemporaryUpstreamStatus(status) {
   return status === 502 || status === 503 || status === 504;
+}
+
+function getCachedGtfsAlertsPayload() {
+  if (!GTFS_ALERTS_CACHE.payload) return null;
+  if (Date.now() >= GTFS_ALERTS_CACHE.expiresAt) {
+    GTFS_ALERTS_CACHE.payload = null;
+    return null;
+  }
+  return GTFS_ALERTS_CACHE.payload;
+}
+
+function storeCachedGtfsAlertsPayload(payload) {
+  GTFS_ALERTS_CACHE.payload = payload;
+  GTFS_ALERTS_CACHE.fetchedAt = Date.now();
+  GTFS_ALERTS_CACHE.expiresAt = Date.now() + GTFS_ALERTS_CACHE_TTL_MS;
 }
 
 function truncate(value, maxLength) {
