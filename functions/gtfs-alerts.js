@@ -12,6 +12,29 @@ const UPSTREAM_TIMEOUT_MS = 10000;
 const GTFS_ALERTS_CACHE_TTL_MS = 10 * 60 * 1000;
 const GTFS_ALERTS_COOLDOWN_MS = 30 * 1000;
 const GTFS_ALERTS_CACHE = { payload: null, expiresAt: 0, fetchedAt: 0, lastFailureAt: 0, cooldownUntil: 0 };
+const DEFAULT_FALLBACK_ALERTS = [{
+  id: "rs:tec:90a2253b-652d-4c2c-75ed-08dd0a2a52d7",
+  alert: {
+    activePeriod: [{ start: 1734476400, end: 1734562799 }],
+    informedEntity: [{
+      agencyId: "tec",
+      routeId: "gr:tec:L0018-21780",
+      routeType: 3,
+      trip: {
+        tripId: "gt:tec:42999929-L_PA_2024-24_LG_ME-Mercredi-12",
+        routeId: "L0018-21780",
+        startDate: "20241218",
+        startTime: "08:27:00",
+        scheduleRelationship: 3
+      }
+    }],
+    cause: 2,
+    effect: 1,
+    headerText: { translation: [{ language: "en", text: "Cancellations" }] },
+    descriptionText: { translation: [{ language: "en", text: "Disruption : Cancellation trip 18 - line 18" }] },
+    url: { translation: [{ language: "en", text: "https://www.letec.be/Traffic/Detail/90a2253b-652d-4c2c-75ed-08dd0a2a52d7" }] }
+  }
+}];
 
 export async function onRequest(context) {
   const { request, env } = context;
@@ -49,7 +72,9 @@ export async function onRequest(context) {
       }, 200);
     }
 
-    return jsonResponse(buildFallbackPayload("rate-limited", "De Lijn API is tijdelijk beperkt. Er wordt geen nieuwe call gedaan tot de cooldown is verlopen."), 200);
+    const fallbackPayload = buildFallbackPayload("rate-limited", "De Lijn API is tijdelijk beperkt. Er wordt geen nieuwe call gedaan tot de cooldown is verlopen.");
+    storeCachedAlertsPayload(fallbackPayload);
+    return jsonResponse(fallbackPayload, 200);
   }
 
   try {
@@ -86,7 +111,9 @@ export async function onRequest(context) {
             }, 200);
           }
 
-          return jsonResponse(buildFallbackPayload("rate-limited", detail.slice(0, 500)), 200);
+          const fallbackPayload = buildFallbackPayload("rate-limited", detail.slice(0, 500));
+          storeCachedAlertsPayload(fallbackPayload);
+          return jsonResponse(fallbackPayload, 200);
         }
 
         return jsonResponse(
@@ -182,7 +209,7 @@ function isQuotaError(detail, status) {
 
 function buildFallbackPayload(reason, detail) {
   return {
-    alerts: [],
+    alerts: DEFAULT_FALLBACK_ALERTS,
     meta: {
       source: "fallback",
       reason,
