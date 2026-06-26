@@ -10,7 +10,8 @@ const DEFAULT_DELIJN_API_KEY = "c8d86e3f6d9d40828e5193af47ee4fef";
 const UPSTREAM_URL = "https://api-management-opendata-production.azure-api.net/api/gtfs/feed/delijn/rt/alert";
 const UPSTREAM_TIMEOUT_MS = 10000;
 const GTFS_ALERTS_CACHE_TTL_MS = 10 * 60 * 1000;
-const GTFS_ALERTS_CACHE = { payload: null, expiresAt: 0, fetchedAt: 0, lastFailureAt: 0, consecutiveFailures: 0 };
+const GTFS_ALERTS_COOLDOWN_MS = 30 * 1000;
+const GTFS_ALERTS_CACHE = { payload: null, expiresAt: 0, fetchedAt: 0, lastFailureAt: 0, cooldownUntil: 0 };
 
 export async function onRequest(context) {
   const { request, env } = context;
@@ -36,15 +37,19 @@ export async function onRequest(context) {
   }
 
   const cachedPayload = getCachedAlertsPayload();
-  if (cachedPayload && isRateLimitedRecently()) {
-    return jsonResponse({
-      ...cachedPayload,
-      meta: {
-        source: "cache",
-        cachedAt: GTFS_ALERTS_CACHE.fetchedAt,
-        retryAfterMs: Math.max(0, GTFS_ALERTS_CACHE.lastFailureAt + 2000 - Date.now())
-      }
-    }, 200);
+  if (isInCooldown()) {
+    if (cachedPayload) {
+      return jsonResponse({
+        ...cachedPayload,
+        meta: {
+          source: "cache",
+          cachedAt: GTFS_ALERTS_CACHE.fetchedAt,
+          retryAfterMs: Math.max(0, GTFS_ALERTS_CACHE.cooldownUntil - Date.now())
+        }
+      }, 200);
+    }
+
+    return jsonResponse(buildFallbackPayload("rate-limited", "De Lijn API is tijdelijk beperkt. Er wordt geen nieuwe call gedaan tot de cooldown is verlopen."), 200);
   }
 
   try {
@@ -69,15 +74,19 @@ export async function onRequest(context) {
         const detail = await response.text().catch(() => "");
         recordRateLimitFailure(detail, response.status);
         const fallbackPayload = getCachedAlertsPayload();
-        if (isQuotaError(detail, response.status) && fallbackPayload) {
-          return jsonResponse({
-            ...fallbackPayload,
-            meta: {
-              source: "cache",
-              cachedAt: GTFS_ALERTS_CACHE.fetchedAt,
-              retryAfterMs: Math.max(0, GTFS_ALERTS_CACHE.lastFailureAt + 2000 - Date.now())
-            }
-          }, 200);
+        if (isQuotaError(detail, response.status)) {
+          if (fallbackPayload) {
+            return jsonResponse({
+              ...fallbackPayload,
+              meta: {
+                source: "cache",
+                cachedAt: GTFS_ALERTS_CACHE.fetchedAt,
+                retryAfterMs: GTFS_ALERTS_COOLDOWN_MS
+              }
+            }, 200);
+          }
+
+          return jsonResponse(buildFallbackPayload("rate-limited", detail.slice(0, 500)), 200);
         }
 
         return jsonResponse(
@@ -87,7 +96,7 @@ export async function onRequest(context) {
             detail: detail.slice(0, 500),
             cached: Boolean(fallbackPayload)
           },
-          response.status === 403 || response.status === 429 ? 503 : response.status
+          response.status
         );
       }
 
@@ -151,23 +160,34 @@ function storeCachedAlertsPayload(payload) {
 }
 
 function recordRateLimitFailure(detail, status) {
-  GTFS_ALERTS_CACHE.lastFailureAt = Date.now();
-  GTFS_ALERTS_CACHE.consecutiveFailures += 1;
   if (status === 429 || isQuotaError(detail, status)) {
-    GTFS_ALERTS_CACHE.lastFailureAt = Date.now();
+    GTFS_ALERTS_CACHE.cooldownUntil = Date.now() + GTFS_ALERTS_COOLDOWN_MS;
   }
+  GTFS_ALERTS_CACHE.lastFailureAt = Date.now();
 }
 
 function resetRateLimitState() {
   GTFS_ALERTS_CACHE.lastFailureAt = 0;
-  GTFS_ALERTS_CACHE.consecutiveFailures = 0;
+  GTFS_ALERTS_CACHE.cooldownUntil = 0;
 }
 
-function isRateLimitedRecently() {
-  return GTFS_ALERTS_CACHE.lastFailureAt > 0 && Date.now() - GTFS_ALERTS_CACHE.lastFailureAt < 2000;
+function isInCooldown() {
+  return GTFS_ALERTS_CACHE.cooldownUntil > Date.now();
 }
 
 function isQuotaError(detail, status) {
   if (status === 403 || status === 429) return true;
   return /quota|call volume|rate limit/i.test(detail || "");
+}
+
+function buildFallbackPayload(reason, detail) {
+  return {
+    alerts: [],
+    meta: {
+      source: "fallback",
+      reason,
+      detail,
+      timestamp: new Date().toISOString()
+    }
+  };
 }
