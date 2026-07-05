@@ -3,7 +3,7 @@ window.BB_SITE_CONFIG = {
   bannerEnabled: 0,
   bannerText: "Realtime-informatie kan tijdelijk vertraagd zijn.",
   photoDelayEnabled: 1,
-  photoDelayText: "Foto's worden vertraagd geupload en verschijnen later online door omstandigheden.",
+  photoDelayText: "Door omstandigheden worden foto's later geüpload dan normaal. Bedankt voor je begrip.",
   disabledTitle: "Busbibliotheek is tijdelijk niet beschikbaar",
   disabledBody: "De website is momenteel tijdelijk niet beschikbaar. Probeer het later opnieuw."
 };
