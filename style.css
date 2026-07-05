@@ -16,19 +16,30 @@
 
 .tracking-status-banner {
   margin: 0 0 0.95rem;
-  padding: 0.85rem 1rem;
-  border: 1px solid rgba(226, 160, 24, 0.35);
-  border-radius: 16px;
-  background: linear-gradient(135deg, rgba(255, 247, 204, 0.96), rgba(255, 237, 168, 0.92));
-  color: #5f4100;
-  box-shadow: 0 10px 24px rgba(148, 103, 6, 0.12);
+  padding: 0.95rem 1.05rem;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 248, 221, 0.98), rgba(255, 234, 166, 0.94));
+  color: #5b3e00;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(10px);
 }
 
 .tracking-status-banner__text {
   display: block;
-  font-size: 0.98rem;
+  font-size: 0.96rem;
   font-weight: 700;
-  line-height: 1.45;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+}
+
+#photoDelayBanner {
+  background:
+    linear-gradient(135deg, rgba(232, 245, 255, 0.98), rgba(191, 219, 254, 0.94));
+  border-color: rgba(59, 130, 246, 0.24);
+  color: #1e3a8a;
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.1);
 }
 
 body.site-disabled {

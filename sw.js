@@ -7,10 +7,10 @@ const CORE_ASSETS = [
   '/manifest.json',
   '/style.css?v=20260511-5',
   '/translations.js?v=20260511-5',
-  '/media/logo.png',
-  '/media/navicon.png',
-  '/media/hansea.png',
-  '/media/favicon.ico'
+  '/media/icons/logo.png',
+  '/media/icons/navicon.png',
+  '/media/icons/hansea.png',
+  '/media/icons/favicon.ico'
 ];
 
 async function putInCache(requestOrUrl, response) {
@@ -77,7 +77,7 @@ self.addEventListener('fetch', event => {
   const isUncachedVehiclePhotoRequest =
     url.origin === self.location.origin &&
     url.pathname.startsWith('/media/') &&
-    !['/media/logo.png', '/media/navicon.png', '/media/hansea.png', '/media/favicon.ico', '/media/logo.svg'].includes(url.pathname);
+    !['/media/icons/logo.png', '/media/icons/navicon.png', '/media/icons/hansea.png', '/media/icons/favicon.ico', '/media/icons/logo.svg'].includes(url.pathname);
 
   if (isUncachedVehiclePhotoRequest) {
     event.respondWith(fetch(request, { cache: 'no-store' }).catch(() => offlineTextResponse));

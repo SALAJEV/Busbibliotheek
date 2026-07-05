@@ -86,11 +86,12 @@ function syncHeaderActionPlacement() {
 
 function syncTrackingStatusBanner() {
   if (!trackingStatusBannerEl || !trackingStatusBannerTextEl) return;
-  const isEnabled = TRACKING_STATUS_BANNER_ENABLED === 1;
+  const config = window.BB_SITE_CONFIG || {};
+  const isEnabled = Number(config.bannerEnabled ?? TRACKING_STATUS_BANNER_ENABLED) === 1;
   trackingStatusBannerEl.hidden = !isEnabled;
   trackingStatusBannerEl.setAttribute("aria-hidden", String(!isEnabled));
   if (isEnabled) {
-    trackingStatusBannerTextEl.textContent = getLabel(
+    trackingStatusBannerTextEl.textContent = config.bannerText || getLabel(
       "trackingStatusBanner",
       "Trackinginformatie is tijdelijk niet beschikbaar."
     );
@@ -98,7 +99,18 @@ function syncTrackingStatusBanner() {
 }
 
 function isTrackingTemporarilyUnavailable() {
-  return TRACKING_STATUS_BANNER_ENABLED === 1;
+  return Number(window.BB_SITE_CONFIG?.bannerEnabled ?? TRACKING_STATUS_BANNER_ENABLED) === 1;
+}
+
+function syncPhotoDelayBanner() {
+  if (!photoDelayBannerEl || !photoDelayBannerTextEl) return;
+  const config = window.BB_SITE_CONFIG || {};
+  const isEnabled = Number(config.photoDelayEnabled ?? 0) === 1;
+  photoDelayBannerEl.hidden = !isEnabled;
+  photoDelayBannerEl.setAttribute("aria-hidden", String(!isEnabled));
+  if (isEnabled) {
+    photoDelayBannerTextEl.textContent = config.photoDelayText || "Foto's worden later online gezet.";
+  }
 }
 
 // Constants
@@ -125,7 +137,7 @@ const SETTINGS_KEY = "bb_settings_v1";
 const REALTIME_PERSISTED_CACHE_KEY = "bb_realtime_feed_cache_v1";
 const REALTIME_PERSISTED_MAX_AGE_MS = 3 * 60 * 1000;
 const DASHBOARD_MAX_VEHICLES = 9;
-const TRACKING_STATUS_BANNER_ENABLED = 0;
+const TRACKING_STATUS_BANNER_ENABLED = Number(window.BB_SITE_CONFIG?.bannerEnabled ?? 0);
 let updateIntervalMs = 10000;
 
 const voertuigInput = document.getElementById("voertuignummer");
@@ -351,6 +363,8 @@ window.addEventListener("orientationchange", syncPlatformBodyClasses, { passive:
 const lastUpdateEl = document.getElementById("lastUpdate");
 const trackingStatusBannerEl = document.getElementById("trackingStatusBanner");
 const trackingStatusBannerTextEl = document.getElementById("trackingStatusBannerText");
+const photoDelayBannerEl = document.getElementById("photoDelayBanner");
+const photoDelayBannerTextEl = document.getElementById("photoDelayBannerText");
 const appTitleBtnEl = document.getElementById("appTitleBtn");
 const appTitleEl = document.getElementById("appTitle");
 const appSubtitleEl = document.getElementById("appSubtitle");
@@ -5086,6 +5100,7 @@ function applyTranslations() {
   if (metaDescriptionEl) metaDescriptionEl.setAttribute("content", getLabel("metaDescription", "Busbibliotheek voor bussen van De Lijn: zoek een voertuig en volg het live."));
   splash?.setAttribute("aria-label", getLabel("splashAria", "Busbibliotheek laden"));
   syncTrackingStatusBanner();
+  syncPhotoDelayBanner();
   appTitleEl.textContent = getLabel("appTitle", "Busbibliotheek");
   if (splashTitleEl) splashTitleEl.textContent = getLabel("appTitle", "Busbibliotheek");
   appSubtitleEl.textContent = t("subtitle").replace(/\.\s*$/, "");
@@ -7331,7 +7346,7 @@ function getBusIcon() {
   if (busIcon || !window.L) return busIcon;
   busIcon = window.L.divIcon({
     className: "bus-div-icon",
-    html: '<img class="bus-div-icon__img" src="media/navicon.png" alt="Bus"/>',
+    html: '<img class="bus-div-icon__img" src="media/icons/navicon.png" alt="Bus"/>',
     iconSize: [36, 36],
     iconAnchor: [18, 36]
   });
@@ -8007,7 +8022,7 @@ function toonVasteData(id){
     if (row.isHansea) {
       waardeMarkup = `
         <span class="hansea-number-display">
-          <img src="media/hansea.png" alt="Hansea" class="hansea-logo" loading="lazy" decoding="async">
+          <img src="media/icons/hansea.png" alt="Hansea" class="hansea-logo" loading="lazy" decoding="async">
           <span>${escapeHtml(row.value)}</span>
         </span>
       `;

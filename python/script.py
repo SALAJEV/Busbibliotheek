@@ -17,7 +17,7 @@ from io import StringIO
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 VEHICLES_FILE = "vehicles.txt"
 DOWNLOAD_URL = "https://pub-611b5bc156eb455ba86d9bcece9aea1c.r2.dev/vehicles.txt"
-PDF_LOGO_URL = "https://busbibliotheek95.pages.dev/media/logo.png"
+PDF_LOGO_URL = "https://busbibliotheek95.pages.dev/media/icons/logo.png"
 SITE_URL = "https://sites.google.com/view/delijn-busspotter"
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '

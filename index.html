@@ -11,18 +11,20 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Busbibliotheek">
-<link rel="icon" type="image/x-icon" href="media/favicon.ico">
-<link rel="shortcut icon" href="media/favicon.ico">
-<link rel="apple-touch-icon" href="media/logo.png">
+<link rel="icon" type="image/x-icon" href="media/icons/favicon.ico">
+<link rel="shortcut icon" href="media/icons/favicon.ico">
+<link rel="apple-touch-icon" href="media/icons/logo.png">
 <link rel="manifest" href="manifest.json">
 <!-- Preload critical resources -->
-<link rel="preload" href="media/logo.png" as="image">
+<link rel="preload" href="media/icons/logo.png" as="image">
 <link rel="dns-prefetch" href="//fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <title>Busbibliotheek</title>
 <link rel="stylesheet" href="style.css?v=20260511-5">
+<script src="site-config.js?v=20260705-1"></script>
 <script>
-  window.BB_SITE_ENABLED = 1;
+  var siteConfig = window.BB_SITE_CONFIG || {};
+  window.BB_SITE_ENABLED = siteConfig.siteEnabled ?? 1;
   window.BB_ASSET_VERSION = "20260511-5";
 </script>
 </head>
@@ -30,7 +32,7 @@
 <div class="app-shell">
 <div id="splash" role="img" aria-label="Busbibliotheek laden">
   <picture class="logo">
-    <img src="media/logo.png" alt="Busbibliotheek">
+    <img src="media/icons/logo.png" alt="Busbibliotheek">
   </picture>
   <h1 id="splashTitle" class="splash-title">Busbibliotheek</h1>
   <p id="splashCredit" class="splash-credit">Made by Busspotter 95</p>
@@ -38,8 +40,9 @@
 <div class="container">
   <div id="trackingStatusBanner" class="tracking-status-banner" hidden aria-hidden="true" role="status">
     <span id="trackingStatusBannerText" class="tracking-status-banner__text">Trackinginformatie is tijdelijk niet beschikbaar.</span>
-  </div>
-  <div class="header-bar">
+  </div>  <div id="photoDelayBanner" class="tracking-status-banner" hidden aria-hidden="true" role="status">
+    <span id="photoDelayBannerText" class="tracking-status-banner__text">Foto's worden later online gezet.</span>
+  </div>  <div class="header-bar">
     <div class="header-intro">
       <button id="appTitleBtn" class="title-home-btn" type="button">
         <h1 id="appTitle">Busbibliotheek</h1>
@@ -608,6 +611,7 @@
 <script>
   (function () {
     var assetVersion = window.BB_ASSET_VERSION || "20260511-5";
+    var siteConfig = window.BB_SITE_CONFIG || {};
     var compatibilityCopy = {
       nl: {
         badge: "Browser update nodig",
@@ -707,9 +711,8 @@
       document.body.innerHTML = [
         '<div class="site-disabled-shell">',
         '  <div class="site-disabled-card" role="alert" aria-live="assertive">',
-        '    <span class="site-disabled-badge">Tijdelijk uitgeschakeld</span>',
-        '    <h1>Busbibliotheek is tijdelijk niet beschikbaar</h1>',
-        '    <p>De website is momenteel uitgeschakeld. Zet de schakelaar terug op 1 om de site opnieuw te laden.</p>',
+        '    <h1>' + escapeHtml(siteConfig.disabledTitle || "Busbibliotheek is tijdelijk niet beschikbaar") + '</h1>',
+        '    <p>' + escapeHtml(siteConfig.disabledBody || "De website is momenteel uitgeschakeld. Zet de schakelaar terug op 1 om de site opnieuw te laden.") + '</p>',
         '  </div>',
         '</div>'
       ].join("");
@@ -739,7 +742,8 @@
       document.body.appendChild(script);
     }
 
-    if (window.BB_SITE_ENABLED !== 1) {
+    var siteEnabled = window.BB_SITE_ENABLED ?? (siteConfig.siteEnabled ?? 1);
+    if (siteEnabled !== 1) {
       renderSiteDisabled();
       return;
     }
