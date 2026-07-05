@@ -170,7 +170,6 @@ const colorBlueOptEl = document.getElementById("colorBlueOpt");
 const colorOrangeOptEl = document.getElementById("colorOrangeOpt");
 const colorRedOptEl = document.getElementById("colorRedOpt");
 const colorPurpleOptEl = document.getElementById("colorPurpleOpt");
-const colorNeonOptEl = document.getElementById("colorNeonOpt");
 const themeColorMetaEls = Array.from(document.querySelectorAll('meta[name="theme-color"]'));
 const colorSchemeMetaEl = document.querySelector('meta[name="color-scheme"]');
 const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
@@ -459,7 +458,6 @@ const firstRunColorYellowOptEl = document.getElementById("firstRunColorYellowOpt
 const firstRunColorOrangeOptEl = document.getElementById("firstRunColorOrangeOpt");
 const firstRunColorRedOptEl = document.getElementById("firstRunColorRedOpt");
 const firstRunColorPurpleOptEl = document.getElementById("firstRunColorPurpleOpt");
-const firstRunColorNeonOptEl = document.getElementById("firstRunColorNeonOpt");
 const firstRunSkipBtnEl = document.getElementById("firstRunSkipBtn");
 const firstRunConfirmBtnEl = document.getElementById("firstRunConfirmBtn");
 const appDialogModalEl = document.getElementById("appDialogModal");
@@ -561,7 +559,6 @@ const dashboardColorYellowOptEl = document.getElementById("dashboardColorYellowO
 const dashboardColorOrangeOptEl = document.getElementById("dashboardColorOrangeOpt");
 const dashboardColorRedOptEl = document.getElementById("dashboardColorRedOpt");
 const dashboardColorPurpleOptEl = document.getElementById("dashboardColorPurpleOpt");
-const dashboardColorNeonOptEl = document.getElementById("dashboardColorNeonOpt");
 const dashboardSetupGridEl = document.getElementById("dashboardSetupGrid");
 const dashboardSetupSummaryEl = document.getElementById("dashboardSetupSummary");
 const dashboardSetupErrorEl = document.getElementById("dashboardSetupError");
@@ -643,7 +640,7 @@ let realtimePausedByInactivity = false;
 let deeplinkHandled = false;
 let routeNavigationLocked = false;
 let injectedInitialHomeHistoryState = false;
-const APP_VERSION = "2026.05.11-5";
+const APP_VERSION = "2026.07.05-3";
 const dataLoadTimestamps = {
   realtime: 0
 };
@@ -1358,7 +1355,7 @@ const delayLexicon = translationsConfig.delayLexicon || {};
 const DEFAULT_LANG = "nl";
 const FALLBACK_LANG = "en";
 const ALLOWED_LANGUAGES = ["nl", "fr", "en", "de", "pl", "es", "ru"];
-const ALLOWED_COLOR_THEMES = ["classic", "blue", "green", "yellow", "orange", "red", "purple", "neon"];
+const ALLOWED_COLOR_THEMES = ["classic", "blue", "green", "yellow", "orange", "red", "purple"];
 const ALLOWED_UPDATE_INTERVALS = [10000, 15000, 30000];
 const REQUEST_TIMEOUT_MS = 12000;
 const REALTIME_FETCH_TIMEOUT_MS = 10000;
@@ -4996,27 +4993,21 @@ function applyFirstRunPreviewSettings() {
   syncFirstRunSetupControls();
 }
 
-function isNeonThemeActive(colorTheme = settings.colorTheme) {
-  return normalizeColorTheme(colorTheme) === "neon";
-}
-
 function getEffectiveThemeSetting(theme = settings.theme, colorTheme = settings.colorTheme) {
-  if (isNeonThemeActive(colorTheme)) return "dark";
   return normalizeTheme(theme);
 }
 
 function syncThemeControlState() {
-  const neonThemeActive = isNeonThemeActive(settings.colorTheme);
   const visibleThemeValue = getEffectiveThemeSetting(settings.theme, settings.colorTheme);
   const themeOptionBindings = [
-    [themeAutoOptEl, !neonThemeActive],
-    [themeLightOptEl, !neonThemeActive],
+    [themeAutoOptEl, true],
+    [themeLightOptEl, true],
     [themeDarkOptEl, true],
-    [dashboardThemeAutoOptEl, !neonThemeActive],
-    [dashboardThemeLightOptEl, !neonThemeActive],
+    [dashboardThemeAutoOptEl, true],
+    [dashboardThemeLightOptEl, true],
     [dashboardThemeDarkOptEl, true],
-    [firstRunThemeAutoOptEl, !neonThemeActive],
-    [firstRunThemeLightOptEl, !neonThemeActive],
+    [firstRunThemeAutoOptEl, true],
+    [firstRunThemeLightOptEl, true],
     [firstRunThemeDarkOptEl, true]
   ];
 
@@ -5148,7 +5139,6 @@ function applyTranslations() {
   colorOrangeOptEl.textContent = t("colorOrange");
   colorRedOptEl.textContent = t("colorRed");
   colorPurpleOptEl.textContent = t("colorPurple");
-  colorNeonOptEl.textContent = t("colorNeon");
   if (dashboardTitleEl) dashboardTitleEl.textContent = getLabel("dashboard", "Stalk modus");
   dashboardToggleBtn.textContent = getLabel("dashboard", "Stalk modus");
   dashboardToggleBtn.title = getLabel("dashboardButtonTitle", "Stalk modus");
@@ -5223,7 +5213,6 @@ function applyTranslations() {
   if (dashboardColorOrangeOptEl) dashboardColorOrangeOptEl.textContent = t("colorOrange");
   if (dashboardColorRedOptEl) dashboardColorRedOptEl.textContent = t("colorRed");
   if (dashboardColorPurpleOptEl) dashboardColorPurpleOptEl.textContent = t("colorPurple");
-  if (dashboardColorNeonOptEl) dashboardColorNeonOptEl.textContent = t("colorNeon");
   dashboardSetupCloseBtn.setAttribute("aria-label", getLabel("close", "Sluiten"));
   dashboardSetupCancelBtn.textContent = getLabel("cancel", "Annuleren");
   dashboardSetupConfirmBtn.textContent = getLabel("dashboardSetupConfirm", "Stalk modus openen");
@@ -5260,7 +5249,6 @@ function applyTranslations() {
   if (firstRunColorOrangeOptEl) firstRunColorOrangeOptEl.textContent = t("colorOrange");
   if (firstRunColorRedOptEl) firstRunColorRedOptEl.textContent = t("colorRed");
   if (firstRunColorPurpleOptEl) firstRunColorPurpleOptEl.textContent = t("colorPurple");
-  if (firstRunColorNeonOptEl) firstRunColorNeonOptEl.textContent = t("colorNeon");
   if (firstRunSkipBtnEl) firstRunSkipBtnEl.textContent = getLabel("firstRunSkip", "Standaard gebruiken");
   if (firstRunConfirmBtnEl) firstRunConfirmBtnEl.textContent = getLabel("firstRunConfirm", "Busbibliotheek starten");
   if (appDialogTitleEl && appDialogModalEl?.hidden) appDialogTitleEl.textContent = getLabel("dialogInfoTitle", "Melding");
@@ -7583,21 +7571,29 @@ async function laadVoertuigen() {
   if (voertuigen.length) return;
   if (voertuigenLoadPromise) return voertuigenLoadPromise;
   voertuigenLoadPromise = (async () => {
-    const res = await fetchWithTimeout(`${BASE_URL}/vehicles.txt`, { cache: "default" });
-    const text = await res.text();
-    vehiclesSourceUpdatedAt = parseVehiclesSourceUpdatedAt(text);
-    const { headers, rows } = parseDelimitedTable(text, {
-      delimiter: ";",
-      commentPrefix: "#",
-      sourceLabel: "vehicles.txt"
-    });
-    vehiclePlateFieldKey = "Nummerplaat";
-    oldVehicleNumbersFieldKey = "Oude voertuignummers";
-    oldLicensePlatesFieldKey = "Oude nummerplaten";
-    vehicleHideVinFieldKey = "hide-vin";
-    voertuigen = rows.map((record) => mapVehicleRecord(headers, headers.map((header) => record[header] || "/")));
-    rebuildVehicleIndexes();
-    renderFavorites();
+    try {
+      const res = await fetchWithTimeout(`${BASE_URL}/vehicles.txt`, { cache: "default" });
+      const text = await res.text();
+      vehiclesSourceUpdatedAt = parseVehiclesSourceUpdatedAt(text);
+      const { headers, rows } = parseDelimitedTable(text, {
+        delimiter: ";",
+        commentPrefix: "#",
+        sourceLabel: "vehicles.txt"
+      });
+      vehiclePlateFieldKey = "Nummerplaat";
+      oldVehicleNumbersFieldKey = "Oude voertuignummers";
+      oldLicensePlatesFieldKey = "Oude nummerplaten";
+      vehicleHideVinFieldKey = "hide-vin";
+      voertuigen = rows.map((record) => mapVehicleRecord(headers, headers.map((header) => record[header] || "/")));
+      rebuildVehicleIndexes();
+      renderFavorites();
+    } catch (error) {
+      console.warn("Voertuigen laden mislukt; gebruik lege state.", error);
+      voertuigen = [];
+      rebuildVehicleIndexes();
+      renderFavorites();
+      if (realtimeEl) realtimeEl.textContent = getLabel("noData", "Geen realtimegegevens beschikbaar.");
+    }
   })();
   try {
     await voertuigenLoadPromise;
@@ -7610,21 +7606,29 @@ async function laadTrips() {
   if (trips.length) return;
   if (tripsLoadPromise) return tripsLoadPromise;
   tripsLoadPromise = (async () => {
-    const res = await fetchWithTimeout(`${BASE_URL}/trips.txt`, { cache: "default" });
-    const text = await res.text();
-    trips = parseDelimitedTable(text, { sourceLabel: "trips.txt" }).rows;
+    try {
+      const res = await fetchWithTimeout(`${BASE_URL}/trips.txt`, { cache: "default" });
+      const text = await res.text();
+      trips = parseDelimitedTable(text, { sourceLabel: "trips.txt" }).rows;
 
-    tripsById.clear();
-    tripsByRouteId.clear();
-    tripsByRouteKey.clear();
-    trips.forEach((trip) => {
-      const tripId = normalize(trip.trip_id);
-      if (tripId) tripsById.set(tripId, trip);
-      const routeId = normalize(trip.route_id);
-      addTripToLookup(tripsByRouteId, routeId, trip);
-      const routeKey = getRouteKey(routeId);
-      addTripToLookup(tripsByRouteKey, routeKey, trip);
-    });
+      tripsById.clear();
+      tripsByRouteId.clear();
+      tripsByRouteKey.clear();
+      trips.forEach((trip) => {
+        const tripId = normalize(trip.trip_id);
+        if (tripId) tripsById.set(tripId, trip);
+        const routeId = normalize(trip.route_id);
+        addTripToLookup(tripsByRouteId, routeId, trip);
+        const routeKey = getRouteKey(routeId);
+        addTripToLookup(tripsByRouteKey, routeKey, trip);
+      });
+    } catch (error) {
+      console.warn("Trips laden mislukt; gebruik lege state.", error);
+      trips = [];
+      tripsById.clear();
+      tripsByRouteId.clear();
+      tripsByRouteKey.clear();
+    }
   })();
   try {
     await tripsLoadPromise;
@@ -7637,18 +7641,25 @@ async function laadRoutes() {
   if (routes.length) return;
   if (routesLoadPromise) return routesLoadPromise;
   routesLoadPromise = (async () => {
-    const res = await fetchWithTimeout(`${BASE_URL}/routes.txt`, { cache: "default" });
-    const text = await res.text();
-    routes = parseDelimitedTable(text, { sourceLabel: "routes.txt" }).rows;
+    try {
+      const res = await fetchWithTimeout(`${BASE_URL}/routes.txt`, { cache: "default" });
+      const text = await res.text();
+      routes = parseDelimitedTable(text, { sourceLabel: "routes.txt" }).rows;
 
-    routesById.clear();
-    routesByKey.clear();
-    routes.forEach((route) => {
-      const routeId = normalize(route.route_id);
-      if (routeId) routesById.set(routeId, route);
-      const routeKey = getRouteKey(routeId);
-      if (routeKey && !routesByKey.has(routeKey)) routesByKey.set(routeKey, route);
-    });
+      routesById.clear();
+      routesByKey.clear();
+      routes.forEach((route) => {
+        const routeId = normalize(route.route_id);
+        if (routeId) routesById.set(routeId, route);
+        const routeKey = getRouteKey(routeId);
+        if (routeKey && !routesByKey.has(routeKey)) routesByKey.set(routeKey, route);
+      });
+    } catch (error) {
+      console.warn("Routes laden mislukt; gebruik lege state.", error);
+      routes = [];
+      routesById.clear();
+      routesByKey.clear();
+    }
   })();
   try {
     await routesLoadPromise;
@@ -7661,23 +7672,33 @@ async function laadStops() {
   if (stopsById.size) return;
   if (stopsLoadPromise) return stopsLoadPromise;
   stopsLoadPromise = (async () => {
-    const res = await fetchWithTimeout(`${BASE_URL}/stops.txt`, { cache: "default" });
-    const text = await res.text();
-    stops = parseDelimitedTable(text, { sourceLabel: "stops.txt" }).rows;
+    try {
+      const res = await fetchWithTimeout(`${BASE_URL}/stops.txt`, { cache: "default" });
+      const text = await res.text();
+      stops = parseDelimitedTable(text, { sourceLabel: "stops.txt" }).rows;
 
-    stopsById.clear();
-    stops.forEach((stop) => {
-      const stopId = normalize(stop.stop_id);
-      const stopCode = normalize(stop.stop_code);
-      if (stopId) stopsById.set(stopId, stop);
-      if (stopCode) stopsById.set(stopCode, stop);
-    });
+      stopsById.clear();
+      stops.forEach((stop) => {
+        const stopId = normalize(stop.stop_id);
+        const stopCode = normalize(stop.stop_code);
+        if (stopId) stopsById.set(stopId, stop);
+        if (stopCode) stopsById.set(stopCode, stop);
+      });
+    } catch (error) {
+      console.warn("Stops laden mislukt; gebruik lege state.", error);
+      stops = [];
+      stopsById.clear();
+    }
   })();
   try {
     await stopsLoadPromise;
   } finally {
     stopsLoadPromise = null;
   }
+}
+
+function wait(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 initAppPreferences();

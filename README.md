@@ -322,7 +322,7 @@ Vertalingen zitten in `translations.js`. Datum- en tijdformattering gebruikt loc
 De app ondersteunt:
 
 - automatisch licht/donker;
-- aparte kleurthemas zoals classic, yellow, green, blue, orange, red, purple en neon.
+- aparte kleurthemas zoals classic, yellow, green, blue, orange, red en purple.
 
 De UI is mobile-first en heeft aparte platformklassen voor onder meer:
 
