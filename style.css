@@ -100,6 +100,15 @@ body.site-disabled {
   text-transform: uppercase;
 }
 
+.site-maintenance-card {
+  border-color: rgba(180, 83, 9, 0.2);
+}
+
+.site-maintenance-badge {
+  background: rgba(245, 158, 11, 0.14);
+  color: #92400e;
+}
+
 /* ===============================
    DESIGN TOKENS
 ================================ */

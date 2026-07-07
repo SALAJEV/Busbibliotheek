@@ -6707,8 +6707,10 @@ languageSelect.addEventListener("change", () => {
 });
 footerReviewBtn?.addEventListener("click", showReviewModal);
 footerTermsBtn?.addEventListener("click", showTermsModal);
-footerContactBtn?.addEventListener("click", () => {
-  openExternalUrl(CONTACT_PAGE_URL, { preferSameTab: true });
+footerContactBtn?.addEventListener("click", (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  openExternalUrl(CONTACT_PAGE_URL, { forceSameTab: true });
 });
 reviewModalCloseBtn?.addEventListener("click", hideReviewModal);
 reviewModalDoneBtn?.addEventListener("click", hideReviewModal);

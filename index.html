@@ -21,7 +21,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <title>Busbibliotheek</title>
 <link rel="stylesheet" href="style.css?v=20260708-1">
-<script src="site-config.js?v=20260708-2"></script>
+<script src="site-config.js?v=20260708-3"></script>
 <script>
   var siteConfig = window.BB_SITE_CONFIG || {};
   window.BB_SITE_ENABLED = siteConfig.siteEnabled ?? 1;
@@ -726,6 +726,19 @@
       ].join("");
     }
 
+    function renderMaintenanceMode() {
+      document.body.classList.add("site-disabled", "site-maintenance");
+      document.body.innerHTML = [
+        '<div class="site-disabled-shell">',
+        '  <div class="site-disabled-card site-maintenance-card" role="alert" aria-live="assertive">',
+        '    <span class="site-disabled-badge site-maintenance-badge">' + escapeHtml(siteConfig.maintenanceBadge || "Onderhoudsmodus") + '</span>',
+        '    <h1>' + escapeHtml(siteConfig.maintenanceTitle || "Busbibliotheek is in onderhoud") + '</h1>',
+        '    <p>' + escapeHtml(siteConfig.maintenanceBody || "De site is momenteel in onderhoudsmodus en is tijdelijk niet bereikbaar. Probeer het later opnieuw.") + '</p>',
+        '  </div>',
+        '</div>'
+      ].join("");
+    }
+
     function renderCompatibilityDisabled() {
       var language = getPreferredLanguage();
       var copy = compatibilityCopy[language] || compatibilityCopy.nl;
@@ -751,6 +764,11 @@
     }
 
     var siteEnabled = window.BB_SITE_ENABLED ?? (siteConfig.siteEnabled ?? 1);
+    if (Number(siteConfig.maintenanceModeEnabled ?? 0) === 1) {
+      renderMaintenanceMode();
+      return;
+    }
+
     if (siteEnabled !== 1) {
       renderSiteDisabled();
       return;
