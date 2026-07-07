@@ -20,12 +20,12 @@
 <link rel="dns-prefetch" href="//fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <title>Busbibliotheek</title>
-<link rel="stylesheet" href="style.css?v=20260705-3">
-<script src="site-config.js?v=20260705-2"></script>
+<link rel="stylesheet" href="style.css?v=20260708-1">
+<script src="site-config.js?v=20260708-2"></script>
 <script>
   var siteConfig = window.BB_SITE_CONFIG || {};
   window.BB_SITE_ENABLED = siteConfig.siteEnabled ?? 1;
-  window.BB_ASSET_VERSION = "20260705-3";
+  window.BB_ASSET_VERSION = "20260708-1";
 </script>
 </head>
 <body>
@@ -96,6 +96,17 @@
       </div>
     </div>
   </div>
+  <section id="homeGtfsMapPanel" class="home-gtfs-map-panel" aria-labelledby="homeGtfsMapTitle">
+    <div class="home-gtfs-map-head">
+      <div>
+        <h2 id="homeGtfsMapTitle">Live GTFS-kaart</h2>
+        <p id="homeGtfsMapSummary">Alle voertuigen uit de GTFS realtime feed.</p>
+      </div>
+      <button id="homeGtfsMapRefreshBtn" class="btn home-gtfs-map-refresh-btn" type="button">Vernieuwen</button>
+    </div>
+    <div id="homeGtfsMapStatus" class="home-gtfs-map-status" role="status">Kaart wordt geladen...</div>
+    <div id="homeGtfsMap" class="home-gtfs-map" aria-label="Kaart met alle live GTFS-bussen"></div>
+  </section>
   <section id="dashboardPanel" class="dashboard-panel" hidden aria-hidden="true">
     <div class="dashboard-panel-header">
       <div>

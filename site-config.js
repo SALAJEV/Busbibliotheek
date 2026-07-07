@@ -1,5 +1,8 @@
 window.BB_SITE_CONFIG = {
   siteEnabled: 1,
+  trackingStatusBannerEnabled: 0,
+  trackingStatusBannerText: "Realtime-informatie kan tijdelijk vertraagd zijn.",
+  trackingUnavailableEnabled: 0,
   bannerEnabled: 0,
   bannerText: "Realtime-informatie kan tijdelijk vertraagd zijn.",
   photoDelayEnabled: 1,

@@ -87,11 +87,11 @@ function syncHeaderActionPlacement() {
 function syncTrackingStatusBanner() {
   if (!trackingStatusBannerEl || !trackingStatusBannerTextEl) return;
   const config = window.BB_SITE_CONFIG || {};
-  const isEnabled = Number(config.bannerEnabled ?? TRACKING_STATUS_BANNER_ENABLED) === 1;
+  const isEnabled = Number(config.trackingStatusBannerEnabled ?? config.bannerEnabled ?? TRACKING_STATUS_BANNER_ENABLED) === 1;
   trackingStatusBannerEl.hidden = !isEnabled;
   trackingStatusBannerEl.setAttribute("aria-hidden", String(!isEnabled));
   if (isEnabled) {
-    trackingStatusBannerTextEl.textContent = config.bannerText || getLabel(
+    trackingStatusBannerTextEl.textContent = config.trackingStatusBannerText || config.bannerText || getLabel(
       "trackingStatusBanner",
       "Trackinginformatie is tijdelijk niet beschikbaar."
     );
@@ -99,7 +99,8 @@ function syncTrackingStatusBanner() {
 }
 
 function isTrackingTemporarilyUnavailable() {
-  return Number(window.BB_SITE_CONFIG?.bannerEnabled ?? TRACKING_STATUS_BANNER_ENABLED) === 1;
+  const config = window.BB_SITE_CONFIG || {};
+  return Number(config.trackingUnavailableEnabled ?? config.bannerEnabled ?? TRACKING_STATUS_BANNER_ENABLED) === 1;
 }
 
 function syncPhotoDelayBanner() {
@@ -137,7 +138,8 @@ const SETTINGS_KEY = "bb_settings_v1";
 const REALTIME_PERSISTED_CACHE_KEY = "bb_realtime_feed_cache_v1";
 const REALTIME_PERSISTED_MAX_AGE_MS = 3 * 60 * 1000;
 const DASHBOARD_MAX_VEHICLES = 9;
-const TRACKING_STATUS_BANNER_ENABLED = Number(window.BB_SITE_CONFIG?.bannerEnabled ?? 0);
+const HOME_GTFS_MAP_REFRESH_MS = 30000;
+const TRACKING_STATUS_BANNER_ENABLED = Number(window.BB_SITE_CONFIG?.trackingStatusBannerEnabled ?? window.BB_SITE_CONFIG?.bannerEnabled ?? 0);
 let updateIntervalMs = 10000;
 
 const voertuigInput = document.getElementById("voertuignummer");
@@ -540,6 +542,12 @@ const dashboardLoadingStateEl = document.getElementById("dashboardLoadingState")
 const dashboardLoadingTextEl = document.getElementById("dashboardLoadingText");
 const dashboardEditBtn = document.getElementById("dashboardEditBtn");
 const dashboardCloseBtn = document.getElementById("dashboardCloseBtn");
+const homeGtfsMapPanelEl = document.getElementById("homeGtfsMapPanel");
+const homeGtfsMapTitleEl = document.getElementById("homeGtfsMapTitle");
+const homeGtfsMapSummaryEl = document.getElementById("homeGtfsMapSummary");
+const homeGtfsMapStatusEl = document.getElementById("homeGtfsMapStatus");
+const homeGtfsMapEl = document.getElementById("homeGtfsMap");
+const homeGtfsMapRefreshBtn = document.getElementById("homeGtfsMapRefreshBtn");
 const dashboardSetupModalEl = document.getElementById("dashboardSetupModal");
 const dashboardSetupTitleEl = document.getElementById("dashboardSetupTitle");
 const dashboardTvSettingsEl = document.getElementById("dashboardTvSettings");
@@ -608,6 +616,11 @@ let dashboardVehicleIds = [];
 let dashboardRefreshHandle = null;
 let dashboardMap = null;
 let dashboardMapMarkers = null;
+let homeGtfsMap = null;
+let homeGtfsMapMarkers = null;
+let homeGtfsMapRefreshHandle = null;
+let homeGtfsMapRequestToken = 0;
+let homeGtfsMapHasLoaded = false;
 let currentPhotoVehicleId = "";
 let currentVehiclePhotoEntries = [];
 let currentVehiclePhotoIndex = 0;
@@ -1661,7 +1674,8 @@ function showInfoModal() {
     {
       label: getLabel("infoGithubProject", "Dit project op GitHub"),
       value: "SALAJEV/Busbibliotheek",
-      href: "https://github.com/SALAJEV/Busbibliotheek"
+      href: "https://github.com/SALAJEV/Busbibliotheek",
+      icon: "github"
     }
   ];
   infoModalBodyEl.textContent = "";
@@ -1678,12 +1692,40 @@ function showInfoModal() {
 
     const valueEl = row.href ? document.createElement("a") : document.createElement("span");
     valueEl.className = "info-value";
-    valueEl.textContent = row.value;
 
     if (row.href && valueEl instanceof HTMLAnchorElement) {
       valueEl.href = row.href;
       valueEl.target = "_blank";
       valueEl.rel = "noopener noreferrer";
+      if (row.icon === "github") {
+        valueEl.classList.add("info-value--github");
+
+        const blackIconEl = document.createElement("img");
+        blackIconEl.className = "info-value-icon info-value-icon--light";
+        blackIconEl.src = "media/icons/github_black.png";
+        blackIconEl.alt = "";
+        blackIconEl.width = 16;
+        blackIconEl.height = 16;
+        blackIconEl.loading = "lazy";
+        blackIconEl.decoding = "async";
+
+        const whiteIconEl = document.createElement("img");
+        whiteIconEl.className = "info-value-icon info-value-icon--dark";
+        whiteIconEl.src = "media/icons/github_white.png";
+        whiteIconEl.alt = "";
+        whiteIconEl.width = 16;
+        whiteIconEl.height = 16;
+        whiteIconEl.loading = "lazy";
+        whiteIconEl.decoding = "async";
+
+        const textEl = document.createElement("span");
+        textEl.textContent = row.value;
+        valueEl.append(blackIconEl, whiteIconEl, textEl);
+      } else {
+        valueEl.textContent = row.value;
+      }
+    } else {
+      valueEl.textContent = row.value;
     }
 
     rowEl.append(labelEl, valueEl);
@@ -2556,6 +2598,204 @@ async function renderDashboardMap(snapshots) {
     }
     dashboardMap.fitBounds(bounds, { padding: [28, 28], maxZoom: 15 });
   }, 0);
+}
+
+function setHomeGtfsMapStatus(message, tone = "") {
+  if (!homeGtfsMapStatusEl) return;
+  homeGtfsMapStatusEl.textContent = message;
+  homeGtfsMapStatusEl.dataset.tone = tone;
+}
+
+function setHomeGtfsMapVisible(visible) {
+  if (!homeGtfsMapPanelEl) return;
+  homeGtfsMapPanelEl.hidden = !visible;
+  homeGtfsMapPanelEl.setAttribute("aria-hidden", String(!visible));
+  if (visible && homeGtfsMap) {
+    window.setTimeout(() => homeGtfsMap.invalidateSize(), 0);
+  }
+}
+
+async function initHomeGtfsMap() {
+  if (!homeGtfsMapEl || homeGtfsMap) return;
+  const L = await ensureLeafletLoaded();
+  homeGtfsMap = L.map("homeGtfsMap", {
+    zoomControl: true,
+    preferCanvas: true
+  }).setView([51.0, 4.4], 8);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors &amp; <a href="https://carto.com/">CARTO</a>'
+  }).addTo(homeGtfsMap);
+  homeGtfsMapMarkers = L.layerGroup().addTo(homeGtfsMap);
+}
+
+function findVehicleFromGtfsVehicleId(vehicleId = "") {
+  const normalizedVehicleId = normalizeLookup(vehicleId);
+  if (!normalizedVehicleId) return null;
+  const directMatch = resolveVehicleSearch(vehicleId).bus;
+  if (directMatch) return directMatch;
+  return voertuigen.find((vehicle) => normalizeLookup(getVisibleVehicleId(vehicle?.Voertuignummer || "")) === normalizedVehicleId) || null;
+}
+
+function getHomeGtfsMapSnapshot(vehicleId, entity) {
+  const payload = getEntityVehiclePayload(entity);
+  const position = payload?.position || {};
+  const latitude = Number(position.latitude ?? position.lat);
+  const longitude = Number(position.longitude ?? position.lon ?? position.lng);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+
+  const vehicle = findVehicleFromGtfsVehicleId(vehicleId);
+  const descriptor = extractTripDescriptor(payload);
+  const timestamp = getEntityRealtimeTimestamp(entity);
+  return {
+    vehicleId: cleanText(vehicleId),
+    vehicle,
+    displayVehicleId: vehicle ? getVehicleDisplayId(vehicle) : cleanText(vehicleId),
+    known: !!vehicle,
+    latitude,
+    longitude,
+    bearing: Number(position.bearing || 0),
+    routeShort: descriptor.routeShortName || getRouteKey(descriptor.routeId) || "",
+    destinationText: descriptor.headsign || "",
+    updatedAt: timestamp
+  };
+}
+
+function buildHomeGtfsMapPopup(snapshot) {
+  const statusText = snapshot.known
+    ? getLabel("homeGtfsMapKnownBus", "Bus bekend")
+    : getLabel("homeGtfsMapUnknownBus", "Bus onbekend");
+  const updatedText = formatRealtimeTimestampForUi(snapshot.updatedAt);
+  const routeText = snapshot.routeShort
+    ? `<div class="home-gtfs-map-popup-row"><span>${escapeHtml(localWord("line"))}</span><strong>${escapeHtml(snapshot.routeShort)}</strong></div>`
+    : "";
+  const destinationText = snapshot.destinationText
+    ? `<div class="home-gtfs-map-popup-row"><span>${escapeHtml(localWord("destination"))}</span><strong>${escapeHtml(snapshot.destinationText)}</strong></div>`
+    : "";
+  const updatedMarkup = updatedText
+    ? `<div class="home-gtfs-map-popup-row"><span>${escapeHtml(t("lastUpdate"))}</span><strong>${escapeHtml(updatedText)}</strong></div>`
+    : "";
+  const actionMarkup = snapshot.known
+    ? `<button class="home-gtfs-map-popup-action" type="button" data-home-gtfs-vehicle-id="${escapeHtml(snapshot.vehicleId)}">${escapeHtml(getLabel("openVehicle", "Open voertuig"))}</button>`
+    : "";
+
+  return `
+    <div class="home-gtfs-map-popup">
+      <div class="home-gtfs-map-popup-head">
+        <strong>${escapeHtml(snapshot.displayVehicleId || snapshot.vehicleId)}</strong>
+        <span class="${snapshot.known ? "is-known" : "is-unknown"}">${escapeHtml(statusText)}</span>
+      </div>
+      ${routeText}
+      ${destinationText}
+      ${updatedMarkup}
+      ${actionMarkup}
+    </div>
+  `;
+}
+
+async function renderHomeGtfsMap(snapshots) {
+  if (!homeGtfsMapPanelEl || !homeGtfsMapEl) return;
+  await initHomeGtfsMap();
+  if (!homeGtfsMapMarkers || !homeGtfsMap) return;
+  homeGtfsMapMarkers.clearLayers();
+  const L = window.L;
+  const bounds = [];
+
+  snapshots.forEach((snapshot) => {
+    const markerOptions = snapshot.known
+      ? {
+          radius: 6,
+          color: "#0f766e",
+          weight: 2,
+          fillColor: "#14b8a6",
+          fillOpacity: 0.85
+        }
+      : {
+          radius: 6,
+          color: "#92400e",
+          weight: 2,
+          fillColor: "#f59e0b",
+          fillOpacity: 0.9
+        };
+    L.circleMarker([snapshot.latitude, snapshot.longitude], markerOptions)
+      .bindPopup(buildHomeGtfsMapPopup(snapshot), {
+        closeButton: true,
+        maxWidth: 280,
+        className: "home-gtfs-map-popup-shell"
+      })
+      .addTo(homeGtfsMapMarkers);
+    bounds.push([snapshot.latitude, snapshot.longitude]);
+  });
+
+  window.setTimeout(() => {
+    homeGtfsMap.invalidateSize();
+    if (!bounds.length) return;
+    if (bounds.length === 1) {
+      homeGtfsMap.setView(bounds[0], 14);
+      return;
+    }
+    homeGtfsMap.fitBounds(bounds, { padding: [34, 34], maxZoom: 13 });
+  }, 0);
+}
+
+async function refreshHomeGtfsMap(options = {}) {
+  if (!homeGtfsMapPanelEl || !homeGtfsMapEl) return;
+  const { force = false } = options;
+  const requestToken = ++homeGtfsMapRequestToken;
+  setHomeGtfsMapStatus(getLabel("homeGtfsMapLoading", "Kaart wordt geladen..."));
+  homeGtfsMapRefreshBtn?.setAttribute("disabled", "disabled");
+
+  try {
+    await laadVoertuigen();
+    const data = await fetchRealtimeFeed({ force });
+    if (requestToken !== homeGtfsMapRequestToken) return;
+    const derivedData = getRealtimeFeedDerivedData(data);
+    const snapshots = Array.from(derivedData.gpsEntityByVehicleId.entries())
+      .map(([vehicleId, entity]) => getHomeGtfsMapSnapshot(vehicleId, entity))
+      .filter(Boolean)
+      .sort((left, right) => {
+        if (left.known !== right.known) return left.known ? -1 : 1;
+        return (left.displayVehicleId || left.vehicleId).localeCompare(right.displayVehicleId || right.vehicleId, undefined, { numeric: true });
+      });
+
+    await renderHomeGtfsMap(snapshots);
+    if (requestToken !== homeGtfsMapRequestToken) return;
+    homeGtfsMapHasLoaded = true;
+    const unknownCount = snapshots.filter((snapshot) => !snapshot.known).length;
+    setHomeGtfsMapStatus(
+      snapshots.length
+        ? getLabel(
+            "homeGtfsMapLoaded",
+            "{count} live bussen op de kaart. {unknown} onbekend."
+          ).replace("{count}", String(snapshots.length)).replace("{unknown}", String(unknownCount))
+        : getLabel("homeGtfsMapEmpty", "Geen live GTFS-bussen gevonden."),
+      snapshots.length ? "" : "muted"
+    );
+  } catch (error) {
+    console.warn("GTFS-overzichtskaart laden mislukt", error);
+    setHomeGtfsMapStatus(getLabel("homeGtfsMapError", "Live GTFS-kaart kon niet geladen worden."), "error");
+  } finally {
+    homeGtfsMapRefreshBtn?.removeAttribute("disabled");
+  }
+}
+
+function startHomeGtfsMapRefresh() {
+  if (!homeGtfsMapEl || homeGtfsMapRefreshHandle) return;
+  scheduleNonCriticalTask(() => {
+    void refreshHomeGtfsMap().catch((error) => console.warn("GTFS-overzichtskaart warm-up mislukt", error));
+  }, 900);
+  homeGtfsMapRefreshHandle = setInterval(() => {
+    if (document.hidden || homeGtfsMapPanelEl?.hidden) return;
+    void refreshHomeGtfsMap().catch((error) => console.warn("GTFS-overzichtskaart verversen mislukt", error));
+  }, HOME_GTFS_MAP_REFRESH_MS);
+}
+
+function openHomeGtfsMapVehicle(vehicleId = "") {
+  const vehicle = findVehicleFromGtfsVehicleId(vehicleId);
+  if (!vehicle) return;
+  const resolvedId = normalize(vehicle.Voertuignummer || vehicleId);
+  setVehicleInputResolvedId(voertuigInput, resolvedId);
+  voertuigInput.value = getVehicleDisplayId(vehicle) || getVisibleVehicleId(vehicleId);
+  zoekAlles({ queryOverride: resolvedId, closeKeyboard: true });
 }
 
 function closeDashboardPanel(options = {}) {
@@ -5154,6 +5394,13 @@ function applyTranslations() {
     dashboardCloseBtn.hidden = isAndroidTvPlatform;
   }
   if (dashboardMapEl) dashboardMapEl.setAttribute("aria-label", getLabel("dashboardMapAria", "Kaart met live voertuigen"));
+  if (homeGtfsMapTitleEl) homeGtfsMapTitleEl.textContent = getLabel("homeGtfsMapTitle", "Live GTFS-kaart");
+  if (homeGtfsMapSummaryEl) homeGtfsMapSummaryEl.textContent = getLabel("homeGtfsMapSummary", "Alle voertuigen uit de GTFS realtime feed.");
+  if (homeGtfsMapRefreshBtn) homeGtfsMapRefreshBtn.textContent = getLabel("refresh", "Vernieuwen");
+  if (homeGtfsMapEl) homeGtfsMapEl.setAttribute("aria-label", getLabel("homeGtfsMapAria", "Kaart met alle live GTFS-bussen"));
+  if (homeGtfsMapStatusEl && !homeGtfsMapHasLoaded) {
+    homeGtfsMapStatusEl.textContent = getLabel("homeGtfsMapLoading", "Kaart wordt geladen...");
+  }
   staticCardTitleEl.textContent = t("staticCard");
   realtimeCardTitleEl.textContent = t("realtimeCard");
   if (compareCardTitleEl) compareCardTitleEl.textContent = getLabel("compareTitle", "Vergelijking");
@@ -6312,6 +6559,17 @@ dashboardToggleBtn?.addEventListener("click", () => {
   setFavoritesPanel(false);
   showDashboardSetupModal();
 });
+homeGtfsMapRefreshBtn?.addEventListener("click", () => {
+  void refreshHomeGtfsMap({ force: true });
+});
+homeGtfsMapEl?.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const vehicleButton = target.closest("[data-home-gtfs-vehicle-id]");
+  if (!vehicleButton) return;
+  const vehicleId = vehicleButton.getAttribute("data-home-gtfs-vehicle-id") || "";
+  openHomeGtfsMapVehicle(vehicleId);
+});
 dashboardEditBtn?.addEventListener("click", showDashboardSetupModal);
 dashboardCloseBtn?.addEventListener("click", () => {
   if (getCurrentRouteState().view === "stalk") {
@@ -6648,6 +6906,9 @@ window.addEventListener("popstate", () => {
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) {
     verifyInternetConnection(true).catch(() => {});
+    if (!homeGtfsMapPanelEl?.hidden && !homeGtfsMapHasLoaded) {
+      void refreshHomeGtfsMap().catch((error) => console.warn("GTFS-overzichtskaart hervatten mislukt", error));
+    }
   }
 });
 
@@ -7796,6 +8057,7 @@ function scheduleStaticDatasetsWarmup() {
 
 warmUpVehiclesAndDeepLinks();
 scheduleStaticDatasetsWarmup();
+startHomeGtfsMapRefresh();
 
 async function zoekAlles(options = {}) {
   const {
@@ -7868,6 +8130,7 @@ async function zoekAlles(options = {}) {
   }
   currentVehicleId = activeVehicleId;
   realtimePausedByInactivity = false;
+  setHomeGtfsMapVisible(false);
   if (compareVehicleId === currentVehicleId) compareVehicleId = "";
   if (resolved.vehicleId) {
     setVehicleInputResolvedId(voertuigInput, activeVehicleId);
@@ -7947,6 +8210,10 @@ function terug(options = {}) {
   resultsGridEl.classList.remove("show");
   resultsWrapEl.classList.remove("show");
   closeBtnEl.style.display = "none";
+  setHomeGtfsMapVisible(true);
+  if (!homeGtfsMapHasLoaded) {
+    void refreshHomeGtfsMap().catch((error) => console.warn("GTFS-overzichtskaart terug laden mislukt", error));
+  }
   renderRealtimeUnavailableState("", { withTracker: false });
   vasteDataEl.innerHTML = t("noneSelected");
   hideVehiclePhotoCard();
