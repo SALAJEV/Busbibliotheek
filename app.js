@@ -626,6 +626,7 @@ let homeGtfsMapMarkers = null;
 let homeGtfsMapRefreshHandle = null;
 let homeGtfsMapRequestToken = 0;
 let homeGtfsMapHasLoaded = false;
+let homeGtfsMapIsRefreshing = false;
 let currentPhotoVehicleId = "";
 let currentVehiclePhotoEntries = [];
 let currentVehiclePhotoIndex = 0;
@@ -1345,6 +1346,7 @@ let dashboardSetupDraftResolvedIds = [];
 let dashboardAutoStarted = false;
 let leafletLoadPromise = null;
 let busIcon = null;
+let homeGtfsCanvasLayerClass = null;
 let androidViewportSyncInitialized = false;
 let androidKeyboardFocusHandle = 0;
 let hasStoredSettings = false;
@@ -2733,26 +2735,15 @@ async function renderHomeGtfsMap(snapshots) {
   await initHomeGtfsMap();
   if (!homeGtfsMapMarkers || !homeGtfsMap) return;
   homeGtfsMapMarkers.clearLayers();
-  const L = window.L;
   const bounds = [];
 
   snapshots.forEach((snapshot) => {
-    const markerInstance = L.marker([snapshot.latitude, snapshot.longitude], { icon: getBusIcon() })
-      .bindPopup(buildHomeGtfsMapPopup(snapshot), {
-        closeButton: true,
-        maxWidth: 280,
-        className: "home-gtfs-map-popup-shell"
-      })
-      .addTo(homeGtfsMapMarkers);
-    const rotateMarker = () => {
-      const markerEl = markerInstance.getElement && markerInstance.getElement();
-      const img = markerEl?.querySelector("img");
-      if (img) img.style.transform = `rotate(${snapshot.bearing || 0}deg)`;
-    };
-    rotateMarker();
-    markerInstance.on("add", rotateMarker);
     bounds.push([snapshot.latitude, snapshot.longitude]);
   });
+  const CanvasLayer = getHomeGtfsCanvasLayerClass();
+  if (CanvasLayer) {
+    homeGtfsMapMarkers.addLayer(new CanvasLayer(snapshots));
+  }
 
   window.setTimeout(() => {
     homeGtfsMap.invalidateSize();
@@ -2765,9 +2756,15 @@ async function renderHomeGtfsMap(snapshots) {
   }, 0);
 }
 
+function getHomeGtfsMapRefreshIntervalMs() {
+  return isIosPlatform ? Math.max(HOME_GTFS_MAP_REFRESH_MS, 60000) : HOME_GTFS_MAP_REFRESH_MS;
+}
+
 async function refreshHomeGtfsMap(options = {}) {
   if (!homeGtfsMapPanelEl || !homeGtfsMapEl) return;
   const { force = false } = options;
+  if (homeGtfsMapIsRefreshing) return;
+  homeGtfsMapIsRefreshing = true;
   const requestToken = ++homeGtfsMapRequestToken;
   setHomeGtfsMapStatus(getLabel("homeGtfsMapLoading", "Kaart wordt geladen..."));
   homeGtfsMapRefreshBtn?.setAttribute("disabled", "disabled");
@@ -2802,6 +2799,7 @@ async function refreshHomeGtfsMap(options = {}) {
     console.warn("GTFS-overzichtskaart laden mislukt", error);
     setHomeGtfsMapStatus(getLabel("homeGtfsMapError", "Live GTFS-kaart kon niet geladen worden."), "error");
   } finally {
+    homeGtfsMapIsRefreshing = false;
     homeGtfsMapRefreshBtn?.removeAttribute("disabled");
   }
 }
@@ -2814,7 +2812,7 @@ function startHomeGtfsMapRefresh() {
   homeGtfsMapRefreshHandle = setInterval(() => {
     if (document.hidden || homeGtfsMapPanelEl?.hidden) return;
     void refreshHomeGtfsMap().catch((error) => console.warn("GTFS-overzichtskaart verversen mislukt", error));
-  }, HOME_GTFS_MAP_REFRESH_MS);
+  }, getHomeGtfsMapRefreshIntervalMs());
 }
 
 function openHomeGtfsMapVehicle(vehicleId = "") {
@@ -7630,6 +7628,111 @@ function getBusIcon() {
     iconAnchor: [18, 36]
   });
   return busIcon;
+}
+
+function getHomeGtfsCanvasLayerClass() {
+  if (homeGtfsCanvasLayerClass || !window.L) return homeGtfsCanvasLayerClass;
+  const L = window.L;
+  homeGtfsCanvasLayerClass = L.Layer.extend({
+    initialize(snapshots = [], options = {}) {
+      L.setOptions(this, options);
+      this._snapshots = snapshots;
+      this._icon = new Image();
+      this._iconLoaded = false;
+      this._icon.onload = () => {
+        this._iconLoaded = true;
+        this._redraw();
+      };
+      this._icon.src = "media/icons/navicon.png";
+    },
+    onAdd(mapInstance) {
+      this._map = mapInstance;
+      this._canvas = L.DomUtil.create("canvas", "home-gtfs-map-canvas-layer");
+      this._canvas.setAttribute("aria-hidden", "true");
+      this._ctx = this._canvas.getContext("2d");
+      mapInstance.getPanes().overlayPane.appendChild(this._canvas);
+      this._reset();
+      mapInstance.on("move zoom resize viewreset zoomend", this._scheduleReset, this);
+      mapInstance.on("click", this._handleClick, this);
+    },
+    onRemove(mapInstance) {
+      mapInstance.off("move zoom resize viewreset zoomend", this._scheduleReset, this);
+      mapInstance.off("click", this._handleClick, this);
+      if (this._frameHandle) {
+        cancelAnimationFrame(this._frameHandle);
+        this._frameHandle = 0;
+      }
+      if (this._canvas?.parentNode) this._canvas.parentNode.removeChild(this._canvas);
+      this._canvas = null;
+      this._ctx = null;
+      this._map = null;
+    },
+    _scheduleReset() {
+      if (this._frameHandle) return;
+      this._frameHandle = requestAnimationFrame(() => {
+        this._frameHandle = 0;
+        this._reset();
+      });
+    },
+    _reset() {
+      if (!this._map || !this._canvas) return;
+      const size = this._map.getSize();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      this._dpr = dpr;
+      this._canvas.width = Math.max(1, Math.round(size.x * dpr));
+      this._canvas.height = Math.max(1, Math.round(size.y * dpr));
+      this._canvas.style.width = `${size.x}px`;
+      this._canvas.style.height = `${size.y}px`;
+      this._topLeft = this._map.containerPointToLayerPoint([0, 0]);
+      L.DomUtil.setPosition(this._canvas, this._topLeft);
+      this._redraw();
+    },
+    _redraw() {
+      if (!this._map || !this._ctx || !this._canvas || !this._iconLoaded) return;
+      const ctx = this._ctx;
+      const dpr = this._dpr || 1;
+      const size = this._map.getSize();
+      const topLeft = this._topLeft || this._map.containerPointToLayerPoint([0, 0]);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, size.x, size.y);
+      const iconSize = isIosPlatform || isTouchPlatform() ? 24 : 30;
+      const half = iconSize / 2;
+      const paddedBounds = L.bounds([-iconSize, -iconSize], [size.x + iconSize, size.y + iconSize]);
+      this._snapshots.forEach((snapshot) => {
+        const point = this._map.latLngToLayerPoint([snapshot.latitude, snapshot.longitude]).subtract(topLeft);
+        if (!paddedBounds.contains(point)) return;
+        ctx.save();
+        ctx.translate(point.x, point.y);
+        ctx.rotate(((Number(snapshot.bearing) || 0) * Math.PI) / 180);
+        ctx.drawImage(this._icon, -half, -iconSize, iconSize, iconSize);
+        ctx.restore();
+      });
+    },
+    _handleClick(event) {
+      if (!this._map || !event?.containerPoint) return;
+      let closestSnapshot = null;
+      let closestDistance = Infinity;
+      const hitRadius = isTouchPlatform() ? 24 : 18;
+      this._snapshots.forEach((snapshot) => {
+        const point = this._map.latLngToContainerPoint([snapshot.latitude, snapshot.longitude]);
+        const distance = point.distanceTo(event.containerPoint);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestSnapshot = snapshot;
+        }
+      });
+      if (!closestSnapshot || closestDistance > hitRadius) return;
+      L.popup({
+        closeButton: true,
+        maxWidth: 280,
+        className: "home-gtfs-map-popup-shell"
+      })
+        .setLatLng([closestSnapshot.latitude, closestSnapshot.longitude])
+        .setContent(buildHomeGtfsMapPopup(closestSnapshot))
+        .openOn(this._map);
+    }
+  });
+  return homeGtfsCanvasLayerClass;
 }
 
 function renderSuggestionList(listEl, inputEl, onSelect) {

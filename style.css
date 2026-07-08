@@ -2582,6 +2582,10 @@ body.dashboard-open {
   width: 100% !important;
 }
 
+.home-gtfs-map-canvas-layer {
+  pointer-events: none;
+}
+
 @media (max-width: 640px) {
   .home-gtfs-map-panel {
     margin-top: 0.82rem;
