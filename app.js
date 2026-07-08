@@ -128,6 +128,8 @@ const LEAFLET_CSS_URL = "https://unpkg.com/leaflet/dist/leaflet.css";
 const LEAFLET_JS_URL = "https://unpkg.com/leaflet/dist/leaflet.js";
 const PUBLIC_TRANSPORT_TILE_URL = "https://tile.memomaps.de/tilegen/{z}/{x}/{y}.png";
 const PUBLIC_TRANSPORT_TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors &amp; <a href="https://www.xn--pnvkarte-m4a.de/">OPNVKarte</a>';
+const FALLBACK_TILE_URL = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+const FALLBACK_TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors &amp; <a href="https://carto.com/">CARTO</a>';
 const BUSBIBLIOTHEEK_PUBLIC_BUS_URL = "https://busbibliotheek95.pages.dev/";
 const NETWORK_CHECK_URL = `${window.location.origin}/manifest.json?network-check=1`;
 const NETWORK_CHECK_TIMEOUT_MS = 5000;
@@ -2620,10 +2622,21 @@ function setHomeGtfsMapVisible(visible) {
 
 function addPublicTransportTileLayer(mapInstance) {
   if (!mapInstance || !window.L) return null;
-  return window.L.tileLayer(PUBLIC_TRANSPORT_TILE_URL, {
+  const L = window.L;
+  const publicTransportLayer = L.tileLayer(PUBLIC_TRANSPORT_TILE_URL, {
     attribution: PUBLIC_TRANSPORT_TILE_ATTRIBUTION,
     maxZoom: 18
-  }).addTo(mapInstance);
+  });
+  let fallbackAdded = false;
+  publicTransportLayer.on("tileerror", () => {
+    if (fallbackAdded) return;
+    fallbackAdded = true;
+    mapInstance.removeLayer(publicTransportLayer);
+    L.tileLayer(FALLBACK_TILE_URL, {
+      attribution: FALLBACK_TILE_ATTRIBUTION
+    }).addTo(mapInstance);
+  });
+  return publicTransportLayer.addTo(mapInstance);
 }
 
 async function initHomeGtfsMap() {

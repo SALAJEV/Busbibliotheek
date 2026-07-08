@@ -2569,10 +2569,17 @@ body.dashboard-open {
 .home-gtfs-map {
   height: clamp(360px, 58vh, 640px);
   min-height: 360px;
+  width: 100%;
   border-radius: 18px;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--accent) 14%, var(--stroke-strong));
   background: #dce6f4;
+}
+
+#homeGtfsMap.leaflet-container {
+  height: clamp(360px, 58vh, 640px) !important;
+  min-height: 360px !important;
+  width: 100% !important;
 }
 
 @media (max-width: 640px) {
@@ -2595,6 +2602,11 @@ body.dashboard-open {
     height: min(64vh, 520px);
     min-height: 340px;
     border-radius: 14px;
+  }
+
+  #homeGtfsMap.leaflet-container {
+    height: min(64vh, 520px) !important;
+    min-height: 340px !important;
   }
 }
 
