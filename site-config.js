@@ -1,6 +1,6 @@
 window.BB_SITE_CONFIG = {
   siteEnabled: 1,
-  maintenanceModeEnabled: 1,
+  maintenanceModeEnabled: 0,
   maintenanceBadge: "Onderhoudsmodus",
   maintenanceTitle: "Busbibliotheek is in onderhoud",
   maintenanceBody: "De site is momenteel in onderhoudsmodus en is tijdelijk niet bereikbaar. Probeer het later opnieuw.",
