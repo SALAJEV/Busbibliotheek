@@ -4806,10 +4806,25 @@ body.offline-active {
 }
 
 .home-gtfs-map-popup-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin-top: 0.2rem;
   min-height: 2.35rem;
   width: 100%;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--stroke-strong));
   border-radius: 12px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: var(--shadow-soft);
+}
+
+.home-gtfs-map-popup-action:hover {
+  background: color-mix(in srgb, var(--accent) 88%, white);
+  color: var(--accent-contrast);
 }
 
 #dashboardMap .leaflet-tooltip.dashboard-map-tooltip {

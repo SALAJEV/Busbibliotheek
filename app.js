@@ -126,6 +126,9 @@ const ZONE01_HERCULES_SEARCH_URL = "https://www.zone01.be/hercules/resultaten";
 const DE_LIJN_VEHICLE_TRACKING_URL = "https://vehicletracking.delijn.be";
 const LEAFLET_CSS_URL = "https://unpkg.com/leaflet/dist/leaflet.css";
 const LEAFLET_JS_URL = "https://unpkg.com/leaflet/dist/leaflet.js";
+const PUBLIC_TRANSPORT_TILE_URL = "https://tile.memomaps.de/tilegen/{z}/{x}/{y}.png";
+const PUBLIC_TRANSPORT_TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors &amp; <a href="https://www.xn--pnvkarte-m4a.de/">OPNVKarte</a>';
+const BUSBIBLIOTHEEK_PUBLIC_BUS_URL = "https://busbibliotheek95.pages.dev/";
 const NETWORK_CHECK_URL = `${window.location.origin}/manifest.json?network-check=1`;
 const NETWORK_CHECK_TIMEOUT_MS = 5000;
 const NETWORK_CHECK_INTERVAL_MS = 120000;
@@ -2615,6 +2618,14 @@ function setHomeGtfsMapVisible(visible) {
   }
 }
 
+function addPublicTransportTileLayer(mapInstance) {
+  if (!mapInstance || !window.L) return null;
+  return window.L.tileLayer(PUBLIC_TRANSPORT_TILE_URL, {
+    attribution: PUBLIC_TRANSPORT_TILE_ATTRIBUTION,
+    maxZoom: 18
+  }).addTo(mapInstance);
+}
+
 async function initHomeGtfsMap() {
   if (!homeGtfsMapEl || homeGtfsMap) return;
   const L = await ensureLeafletLoaded();
@@ -2622,9 +2633,7 @@ async function initHomeGtfsMap() {
     zoomControl: true,
     preferCanvas: true
   }).setView([51.0, 4.4], 8);
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors &amp; <a href="https://carto.com/">CARTO</a>'
-  }).addTo(homeGtfsMap);
+  addPublicTransportTileLayer(homeGtfsMap);
   homeGtfsMapMarkers = L.layerGroup().addTo(homeGtfsMap);
 }
 
@@ -2660,11 +2669,25 @@ function getHomeGtfsMapSnapshot(vehicleId, entity) {
   };
 }
 
+function getHomeGtfsMapVehicleLinkId(snapshot) {
+  const vehicleId = snapshot?.vehicle?.Voertuignummer || snapshot?.vehicleId || "";
+  return getVisibleVehicleId(vehicleId);
+}
+
+function getHomeGtfsMapVehicleUrl(snapshot) {
+  const linkId = getHomeGtfsMapVehicleLinkId(snapshot);
+  if (!linkId) return "";
+  const url = new URL(BUSBIBLIOTHEEK_PUBLIC_BUS_URL);
+  url.searchParams.set("bus", linkId);
+  return url.toString();
+}
+
 function buildHomeGtfsMapPopup(snapshot) {
   const statusText = snapshot.known
     ? getLabel("homeGtfsMapKnownBus", "Bus bekend")
     : getLabel("homeGtfsMapUnknownBus", "Bus onbekend");
   const updatedText = formatRealtimeTimestampForUi(snapshot.updatedAt);
+  const vehicleUrl = getHomeGtfsMapVehicleUrl(snapshot);
   const routeText = snapshot.routeShort
     ? `<div class="home-gtfs-map-popup-row"><span>${escapeHtml(localWord("line"))}</span><strong>${escapeHtml(snapshot.routeShort)}</strong></div>`
     : "";
@@ -2674,8 +2697,8 @@ function buildHomeGtfsMapPopup(snapshot) {
   const updatedMarkup = updatedText
     ? `<div class="home-gtfs-map-popup-row"><span>${escapeHtml(t("lastUpdate"))}</span><strong>${escapeHtml(updatedText)}</strong></div>`
     : "";
-  const actionMarkup = snapshot.known
-    ? `<button class="home-gtfs-map-popup-action" type="button" data-home-gtfs-vehicle-id="${escapeHtml(snapshot.vehicleId)}">${escapeHtml(getLabel("openVehicle", "Open voertuig"))}</button>`
+  const actionMarkup = vehicleUrl
+    ? `<a class="home-gtfs-map-popup-action" href="${escapeHtml(vehicleUrl)}">${escapeHtml(getLabel("openVehicle", "Open voertuig"))}</a>`
     : "";
 
   return `
@@ -2701,28 +2724,20 @@ async function renderHomeGtfsMap(snapshots) {
   const bounds = [];
 
   snapshots.forEach((snapshot) => {
-    const markerOptions = snapshot.known
-      ? {
-          radius: 6,
-          color: "#0f766e",
-          weight: 2,
-          fillColor: "#14b8a6",
-          fillOpacity: 0.85
-        }
-      : {
-          radius: 6,
-          color: "#92400e",
-          weight: 2,
-          fillColor: "#f59e0b",
-          fillOpacity: 0.9
-        };
-    L.circleMarker([snapshot.latitude, snapshot.longitude], markerOptions)
+    const markerInstance = L.marker([snapshot.latitude, snapshot.longitude], { icon: getBusIcon() })
       .bindPopup(buildHomeGtfsMapPopup(snapshot), {
         closeButton: true,
         maxWidth: 280,
         className: "home-gtfs-map-popup-shell"
       })
       .addTo(homeGtfsMapMarkers);
+    const rotateMarker = () => {
+      const markerEl = markerInstance.getElement && markerInstance.getElement();
+      const img = markerEl?.querySelector("img");
+      if (img) img.style.transform = `rotate(${snapshot.bearing || 0}deg)`;
+    };
+    rotateMarker();
+    markerInstance.on("add", rotateMarker);
     bounds.push([snapshot.latitude, snapshot.longitude]);
   });
 
