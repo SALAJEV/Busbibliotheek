@@ -4587,6 +4587,19 @@ body.offline-active {
   border-radius: 6px;
 }
 
+.realtime-block-id {
+  margin-top: -0.12rem;
+  color: color-mix(in srgb, var(--muted) 82%, var(--text) 18%);
+  font-size: 0.76rem;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.realtime-block-id strong {
+  color: color-mix(in srgb, var(--text) 82%, var(--muted) 18%);
+  font-weight: 800;
+}
+
 .realtime-empty-state {
   display: grid;
   align-content: start;

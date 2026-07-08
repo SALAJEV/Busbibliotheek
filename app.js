@@ -9004,6 +9004,7 @@ async function updateRealtime(id){
     const nTripId = cleanText(tripid);
     const provisionalRouteId = pickFirstText(cleanText(descriptor.routeId), getRouteKeyFromTripId(nTripId));
     const tripData = findTripData(provisionalRouteId, nTripId, descriptor.headsign);
+    const blockId = cleanText(tripData?.block_id || "");
     
     const routeId = pickFirstText(
       tripData?.route_id,
@@ -9080,6 +9081,9 @@ async function updateRealtime(id){
     const currentStopValueMarkup = currentStopUrl
       ? `<a class="current-stop-link" href="${escapeHtml(currentStopUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(currentStopName)}</a>`
       : `<span class="current-stop-link">${escapeHtml(currentStopName)}</span>`;
+    const blockIdMarkup = blockId
+      ? `<div class="realtime-block-id"><span>Block ID:</span> <strong>${escapeHtml(blockId)}</strong></div>`
+      : "";
 
     const realtimeMarkup = `
       <div class="realtime-summary-card">
@@ -9090,12 +9094,13 @@ async function updateRealtime(id){
             ${currentStopValueMarkup}
           </div>
           <span class="delay-status ${delayClass}">${escapeHtml(msgDelay)}</span>
+          ${blockIdMarkup}
         </div>
       </div>
     `;
     setRealtimeMarkup(
       realtimeMarkup,
-      `live:${normalizedRequestedId}:${routeShort}:${destinationText}:${currentStopName}:${delayClass}:${msgDelay}:${settings.language}`
+      `live:${normalizedRequestedId}:${routeShort}:${destinationText}:${currentStopName}:${delayClass}:${msgDelay}:${blockId}:${settings.language}`
     );
     if (canUseLocationForOperator(bus)) {
       await initMap(v.position.latitude,v.position.longitude);
