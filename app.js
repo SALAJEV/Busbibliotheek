@@ -144,6 +144,8 @@ const REALTIME_PERSISTED_CACHE_KEY = "bb_realtime_feed_cache_v1";
 const REALTIME_PERSISTED_MAX_AGE_MS = 3 * 60 * 1000;
 const DASHBOARD_MAX_VEHICLES = 9;
 const HOME_GTFS_MAP_REFRESH_MS = 30000;
+const HOME_GTFS_MAP_CENTER = [51.037778, 4.240556];
+const HOME_GTFS_MAP_ZOOM = 9;
 const TRACKING_STATUS_BANNER_ENABLED = Number(window.BB_SITE_CONFIG?.trackingStatusBannerEnabled ?? window.BB_SITE_CONFIG?.bannerEnabled ?? 0);
 let updateIntervalMs = 10000;
 
@@ -2647,7 +2649,7 @@ async function initHomeGtfsMap() {
   homeGtfsMap = L.map("homeGtfsMap", {
     zoomControl: true,
     preferCanvas: true
-  }).setView([51.0, 4.4], 8);
+  }).setView(HOME_GTFS_MAP_CENTER, HOME_GTFS_MAP_ZOOM);
   addPublicTransportTileLayer(homeGtfsMap);
   homeGtfsMapMarkers = L.layerGroup().addTo(homeGtfsMap);
 }
@@ -2748,11 +2750,7 @@ async function renderHomeGtfsMap(snapshots) {
   window.setTimeout(() => {
     homeGtfsMap.invalidateSize();
     if (!bounds.length) return;
-    if (bounds.length === 1) {
-      homeGtfsMap.setView(bounds[0], 14);
-      return;
-    }
-    homeGtfsMap.fitBounds(bounds, { padding: [34, 34], maxZoom: 13 });
+    homeGtfsMap.setView(HOME_GTFS_MAP_CENTER, homeGtfsMap.getZoom() || HOME_GTFS_MAP_ZOOM, { animate: false });
   }, 0);
 }
 
@@ -2785,13 +2783,12 @@ async function refreshHomeGtfsMap(options = {}) {
     await renderHomeGtfsMap(snapshots);
     if (requestToken !== homeGtfsMapRequestToken) return;
     homeGtfsMapHasLoaded = true;
-    const unknownCount = snapshots.filter((snapshot) => !snapshot.known).length;
     setHomeGtfsMapStatus(
       snapshots.length
         ? getLabel(
             "homeGtfsMapLoaded",
-            "{count} live bussen op de kaart. {unknown} onbekend."
-          ).replace("{count}", String(snapshots.length)).replace("{unknown}", String(unknownCount))
+            "{count} voertuigen actief op de kaart"
+          ).replace("{count}", String(snapshots.length))
         : getLabel("homeGtfsMapEmpty", "Geen live GTFS-bussen gevonden."),
       snapshots.length ? "" : "muted"
     );
@@ -5420,8 +5417,8 @@ function applyTranslations() {
     dashboardCloseBtn.hidden = isAndroidTvPlatform;
   }
   if (dashboardMapEl) dashboardMapEl.setAttribute("aria-label", getLabel("dashboardMapAria", "Kaart met live voertuigen"));
-  if (homeGtfsMapTitleEl) homeGtfsMapTitleEl.textContent = getLabel("homeGtfsMapTitle", "Live GTFS-kaart");
-  if (homeGtfsMapSummaryEl) homeGtfsMapSummaryEl.textContent = getLabel("homeGtfsMapSummary", "Alle voertuigen uit de GTFS realtime feed.");
+  if (homeGtfsMapTitleEl) homeGtfsMapTitleEl.textContent = getLabel("homeGtfsMapTitle", "Realtime kaart");
+  if (homeGtfsMapSummaryEl) homeGtfsMapSummaryEl.remove();
   if (homeGtfsMapRefreshBtn) homeGtfsMapRefreshBtn.textContent = getLabel("refresh", "Vernieuwen");
   if (homeGtfsMapEl) homeGtfsMapEl.setAttribute("aria-label", getLabel("homeGtfsMapAria", "Kaart met alle live GTFS-bussen"));
   if (homeGtfsMapStatusEl && !homeGtfsMapHasLoaded) {
