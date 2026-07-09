@@ -4770,11 +4770,11 @@ body.offline-active {
 }
 
 #homeGtfsMap .leaflet-popup-content-wrapper {
-  border-radius: 16px;
+  border-radius: 18px;
   border: 1px solid color-mix(in srgb, var(--stroke-strong) 82%, white);
   background: color-mix(in srgb, var(--surface-strong) 96%, white 4%);
   color: var(--text);
-  box-shadow: var(--shadow-soft);
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.18);
 }
 
 #homeGtfsMap .leaflet-popup-content {
@@ -4787,9 +4787,10 @@ body.offline-active {
 
 .home-gtfs-map-popup {
   display: grid;
-  gap: 0.5rem;
-  min-width: 210px;
-  padding: 0.78rem;
+  gap: 0.62rem;
+  min-width: min(76vw, 250px);
+  max-width: min(82vw, 320px);
+  padding: 0.86rem;
 }
 
 .home-gtfs-map-popup-head {
@@ -4800,7 +4801,7 @@ body.offline-active {
 }
 
 .home-gtfs-map-popup-head strong {
-  font-size: 1rem;
+  font-size: 0.98rem;
 }
 
 .home-gtfs-map-popup-head span {
@@ -4821,12 +4822,38 @@ body.offline-active {
   background: color-mix(in srgb, #f59e0b 15%, transparent);
 }
 
+.home-gtfs-map-popup-route {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.72rem 0.78rem;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 12%, var(--stroke));
+  background: color-mix(in srgb, var(--surface-alt) 92%, transparent);
+}
+
+.home-gtfs-map-popup-route .line-badge {
+  min-width: 2.35rem;
+  justify-content: center;
+  border-radius: 10px;
+}
+
+.home-gtfs-map-popup-route strong {
+  min-width: 0;
+  color: var(--text);
+  font-size: 0.96rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
 .home-gtfs-map-popup-row {
   display: flex;
   justify-content: space-between;
-  gap: 0.8rem;
+  gap: 0.9rem;
   color: color-mix(in srgb, var(--muted) 80%, var(--text) 20%);
   font-size: 0.82rem;
+  line-height: 1.35;
 }
 
 .home-gtfs-map-popup-row strong {
@@ -4849,11 +4876,51 @@ body.offline-active {
   font-weight: 800;
   text-decoration: none;
   box-shadow: var(--shadow-soft);
+  transition:
+    transform 0.16s ease,
+    background 0.16s ease,
+    box-shadow 0.16s ease;
 }
 
 .home-gtfs-map-popup-action:hover {
   background: color-mix(in srgb, var(--accent) 88%, white);
   color: var(--accent-contrast);
+  transform: translateY(-1px);
+}
+
+.home-map-opening-vehicle .home-gtfs-map-panel {
+  animation: homeMapExitToVehicle 0.34s ease both;
+}
+
+.home-map-opening-vehicle .results-wrap.show {
+  animation: vehicleViewEnterFromMap 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.legal-sources-link {
+  width: fit-content;
+  margin-top: 0.3rem;
+}
+
+@keyframes homeMapExitToVehicle {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.985);
+  }
+}
+
+@keyframes vehicleViewEnterFromMap {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 #dashboardMap .leaflet-tooltip.dashboard-map-tooltip {
