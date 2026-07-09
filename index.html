@@ -153,28 +153,38 @@
       </div>
 
       <div id="vehiclePhotoCard" class="card photo-card" hidden aria-hidden="true">
-        <h2 id="photoCardTitle">Voertuigfoto</h2>
-        <div class="vehicle-photo-frame">
-          <button id="vehiclePhotoPrevBtn" class="photo-nav-btn photo-nav-btn--prev" type="button" hidden aria-label="Vorige foto">
-            <span aria-hidden="true">&#8249;</span>
-          </button>
-          <button id="vehiclePhotoNextBtn" class="photo-nav-btn photo-nav-btn--next" type="button" hidden aria-label="Volgende foto">
-            <span aria-hidden="true">&#8250;</span>
-          </button>
-          <div id="vehiclePhotoEmptyState" class="vehicle-photo-empty" hidden aria-hidden="true">
-            <span id="vehiclePhotoEmptyBadge" class="vehicle-photo-empty-badge">Nog geen foto</span>
-            <strong id="vehiclePhotoEmptyTitle" class="vehicle-photo-empty-title">Nog geen foto beschikbaar van dit voertuig.</strong>
-            <p id="vehiclePhotoEmptyText" class="vehicle-photo-empty-text">Heb jij wel een foto? Help Busbibliotheek aanvullen via het uploadformulier.</p>
+        <div class="vehicle-photo-shell">
+          <div class="vehicle-photo-header">
+            <h2 id="photoCardTitle">Voertuigfoto</h2>
+            <p id="vehiclePhotoCounter" class="vehicle-photo-counter" hidden></p>
           </div>
-        </div>
-        <div class="vehicle-photo-info">
-          <p id="vehiclePhotoCounter" class="vehicle-photo-counter" hidden></p>
-          <div id="vehiclePhotoMeta" class="vehicle-photo-meta" hidden aria-hidden="true"></div>
-        </div>
-        <p id="vehiclePhotoCaption" class="vehicle-photo-caption"></p>
-        <div id="vehiclePhotoUploadCta" class="vehicle-photo-upload-cta" hidden aria-hidden="true">
-          <p id="vehiclePhotoUploadHint" class="vehicle-photo-upload-hint">Heb jij ook een goede foto van dit voertuig? Help Busbibliotheek via het uploadformulier.</p>
-          <button id="vehiclePhotoUploadBtn" class="btn vehicle-photo-upload-btn vehicle-photo-upload-btn--footer" type="button">Open uploadformulier</button>
+          <div class="vehicle-photo-layout">
+            <div class="vehicle-photo-media-panel">
+              <div class="vehicle-photo-frame">
+                <button id="vehiclePhotoPrevBtn" class="photo-nav-btn photo-nav-btn--prev" type="button" hidden aria-label="Vorige foto">
+                  <span aria-hidden="true">&#8249;</span>
+                </button>
+                <button id="vehiclePhotoNextBtn" class="photo-nav-btn photo-nav-btn--next" type="button" hidden aria-label="Volgende foto">
+                  <span aria-hidden="true">&#8250;</span>
+                </button>
+                <div id="vehiclePhotoEmptyState" class="vehicle-photo-empty" hidden aria-hidden="true">
+                  <span id="vehiclePhotoEmptyBadge" class="vehicle-photo-empty-badge">Nog geen foto</span>
+                  <strong id="vehiclePhotoEmptyTitle" class="vehicle-photo-empty-title">Nog geen foto beschikbaar van dit voertuig.</strong>
+                  <p id="vehiclePhotoEmptyText" class="vehicle-photo-empty-text">Heb jij wel een foto? Help Busbibliotheek aanvullen via het uploadformulier.</p>
+                </div>
+              </div>
+            </div>
+            <aside class="vehicle-photo-side-panel">
+              <p id="vehiclePhotoCaption" class="vehicle-photo-caption"></p>
+              <div class="vehicle-photo-info">
+                <div id="vehiclePhotoMeta" class="vehicle-photo-meta" hidden aria-hidden="true"></div>
+              </div>
+              <div id="vehiclePhotoUploadCta" class="vehicle-photo-upload-cta" hidden aria-hidden="true">
+                <p id="vehiclePhotoUploadHint" class="vehicle-photo-upload-hint">Heb jij ook een goede foto van dit voertuig? Help Busbibliotheek via het uploadformulier.</p>
+                <button id="vehiclePhotoUploadBtn" class="btn vehicle-photo-upload-btn vehicle-photo-upload-btn--footer" type="button">Open uploadformulier</button>
+              </div>
+            </aside>
+          </div>
         </div>
       </div>
 
